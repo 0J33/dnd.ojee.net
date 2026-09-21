@@ -232,6 +232,70 @@ const SUBCLASS_RULES = {
   draconic: { unarmoredAc: 13, hpPerLevel: 1 }, // Draconic Resilience
 };
 
+// ---- Subclasses that make a non-casting class cast ----
+// One-third casters (the Eldritch Trickster pattern): they learn spells from
+// another class's list, and their slots and spells-known follow one table.
+const THIRD_SLOTS = {
+  3: [2], 4: [3], 5: [3], 6: [3], 7: [4, 2], 8: [4, 2], 9: [4, 2], 10: [4, 3], 11: [4, 3], 12: [4, 3],
+  13: [4, 3, 2], 14: [4, 3, 2], 15: [4, 3, 2], 16: [4, 3, 3], 17: [4, 3, 3], 18: [4, 3, 3], 19: [4, 3, 3, 1], 20: [4, 3, 3, 1],
+};
+const THIRD_KNOWN = { 3: 3, 4: 4, 5: 4, 6: 4, 7: 5, 8: 6, 9: 6, 10: 7, 11: 8, 12: 8, 13: 9, 14: 10, 15: 10, 16: 11, 17: 11, 18: 11, 19: 12, 20: 13 };
+
+// cantrips: known from `from`, one more at 10th. known: spells known by level
+// when it isn't the third-caster table. slots: false = no slots, each leveled
+// spell is cast once per long rest instead.
+const SUBCLASS_CASTING = {
+  'open5e-eldritch-trickster': { list: 'wizard', ability: 'int', from: 3, cantrips: 3 },
+  'open5e-arcane-warrior': { list: 'wizard', ability: 'int', from: 3, cantrips: 2 },
+  'toh-soulspy': { list: 'cleric', ability: 'wis', from: 3, cantrips: 3 },
+  'toh-underfoot': { list: 'druid', ability: 'wis', from: 3, cantrips: 3 },
+  'toh-smuggler': { list: 'wizard', ability: 'int', from: 3, cantrips: 2, cantripsAt10: 0, known: { 7: 1, 13: 2 }, maxLevel: { 7: 1, 13: 2 }, slots: false },
+};
+
+const byLevel = (table, level) => {
+  let v = 0;
+  for (const [l, n] of Object.entries(table)) if (level >= Number(l)) v = n;
+  return v;
+};
+
+/**
+ * How a sheet casts, or null: from its class (full/half/pact casters) or from
+ * a subclass that adds spellcasting. `kind` is 'known' | 'prepared' | 'spellbook'.
+ */
+export function castingFor(sheet) {
+  const meta = CLASS_META[sheet.classIndex] || {};
+  const level = sheet.level || 1;
+  if (meta.caster) {
+    return { ability: meta.castingAbility, list: sheet.classIndex, kind: meta.preparedKind, maxSlots: maxSpellSlots(sheet.classIndex, level) };
+  }
+  const sub = SUBCLASS_CASTING[subclassOf(sheet)];
+  if (!sub || level < sub.from) return null;
+  const maxSlots = {};
+  if (sub.slots !== false) (THIRD_SLOTS[level] || []).forEach((n, i) => { maxSlots[i + 1] = n; });
+  return { ability: sub.ability, list: sub.list, kind: 'known', maxSlots, innate: sub.slots === false };
+}
+
+/** A fresh spellcasting block for a hero who has just started casting through their subclass. */
+export function newSubclassSpellcasting(subclassIndex) {
+  const sub = SUBCLASS_CASTING[subclassIndex];
+  return sub ? { ability: sub.ability, cantrips: [], known: [], prepared: [], slotsUsed: {} } : null;
+}
+
+/**
+ * How many cantrips / spells a subclass caster knows at a level, and the
+ * highest spell level they can learn. Class casters read theirs from the SRD
+ * class table instead (the Learn spells dialog fetches it).
+ */
+export function subclassSpellLimits(sheet) {
+  const sub = SUBCLASS_CASTING[subclassOf(sheet)];
+  const level = sheet.level || 1;
+  if (!sub || level < sub.from) return null;
+  const extra = level >= 10 ? (sub.cantripsAt10 ?? 1) : 0;
+  const known = sub.known ? byLevel(sub.known, level) : THIRD_KNOWN[level] || 0;
+  const maxLevel = sub.maxLevel ? byLevel(sub.maxLevel, level) : (THIRD_SLOTS[level] || []).length;
+  return { cantrips: sub.cantrips + extra, known, maxLevel };
+}
+
 // Extra max HP per level from race (Dwarven Toughness...) and subclass.
 export function hpPerLevelBonus(sheet) {
   const racial = sheet.hpPerLevel ?? (sheet.race === 'dwarf' ? 1 : 0); // pre-expansion sheets: only Hill Dwarf had it
@@ -371,16 +435,20 @@ export function deriveSheet(sheet) {
   }
   for (const custom of sheet.attacksCustom || []) attacks.push(custom);
 
-  // Spellcasting
+  // Spellcasting - from the class, or from a subclass that grants it
   let spell = null;
-  if (meta.caster && sheet.spellcasting) {
-    const castMod = mods[meta.castingAbility];
+  const casting = sheet.spellcasting ? castingFor(sheet) : null;
+  if (casting) {
+    const castMod = mods[casting.ability];
     spell = {
-      ability: meta.castingAbility,
+      ability: casting.ability,
       dc: 8 + pb + castMod,
       attackBonus: pb + castMod,
-      maxSlots: maxSpellSlots(sheet.classIndex, level),
-      preparedMax: preparedCount(sheet.classIndex, level, abilities),
+      maxSlots: casting.maxSlots,
+      preparedMax: meta.caster ? preparedCount(sheet.classIndex, level, abilities) : null,
+      kind: casting.kind,
+      list: casting.list,
+      innate: !!casting.innate,
     };
   }
 

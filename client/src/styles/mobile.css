@@ -63,8 +63,13 @@
   /* ---------------- Character sheet ---------------- */
   .sheet { width: 100%; height: 100%; max-width: none; border-radius: 0; }
   .sheet-overlay { padding: 0; }
-  .sheet-head { padding: 12px 12px 8px; gap: 10px; flex-wrap: wrap; }
-  .sheet-name { font-size: 1.1em; max-width: 200px; }
+  /* The name gets the header's width: close pins to the corner and the
+     Level / Choose-subclass buttons drop to their own row. */
+  .sheet-head { padding: 12px 56px 8px 12px; gap: 10px; flex-wrap: wrap; position: relative; }
+  .sheet-name { font-size: 1em; letter-spacing: 0.5px; width: 100%; max-width: none; }
+  .sheet-title .row { flex-wrap: nowrap; }
+  .sheet-head-actions { order: 3; flex-basis: 100%; flex-wrap: wrap; }
+  .sheet-head-actions .close-btn { position: absolute; top: 6px; right: 6px; }
   .sheet-vitals { padding: 4px 12px 10px; gap: 6px; }
   .vital { min-width: 72px; padding: 6px 10px; }
   .hp-vital { min-width: 100%; }
@@ -76,16 +81,16 @@
   /* ---------------- Game board ---------------- */
   .board-main { position: relative; }
   .chat-panel { width: min(340px, 90vw); box-shadow: -8px 0 30px rgba(0,0,0,0.6); }
-  .roll-toasts { right: 10px; left: 10px; bottom: 78px; max-width: none; align-items: flex-end; }
+  /* bottom offsets for toasts, dice and zoom live in scenes.css, which stacks them above the tool dock */
+  .roll-toasts { right: 10px; left: 10px; max-width: none; align-items: flex-end; }
   .initiative-bar { top: 6px; max-width: 96%; padding: 6px 10px; gap: 6px; }
   .init-order { max-height: 96px; overflow-y: auto; }
-  .dice-tray { bottom: 8px; max-width: 96%; padding: 6px 8px; }
+  .dice-tray { padding: 6px 8px; }
   .dice-row { gap: 5px; justify-content: center; }
   .die-btn { padding: 3px 4px; }
   .dice-formula { width: 110px; }
   .tut-panel { left: 8px; right: 8px; width: auto; max-height: 56vh; bottom: 78px; }
   .tut-collapsed { left: 8px; bottom: 78px; }
-  .map-zoom-controls { bottom: 150px; right: 10px; }
 
   /* ---------------- Modals ---------------- */
   .modal { width: 94%; max-height: 90vh; }

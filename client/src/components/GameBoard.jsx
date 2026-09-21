@@ -257,7 +257,9 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   );
 
   const sheetRoll = useCallback(({ formula, label, mode }) => doRoll({ formula, label, mode: mode || diceModeRef.current }), [doRoll]);
-  const updateSheet = useCallback((characterId) => (sheet) => socket.emit('updateSheet', { characterId, sheet }), []);
+  // The sheet arrives with the `derived` it was opened with; recompute it so the
+  // server (the auto-DM reads derived.ac) never sees values one edit stale.
+  const updateSheet = useCallback((characterId) => (sheet) => socket.emit('updateSheet', { characterId, sheet: { ...sheet, derived: deriveSheet(sheet) } }), []);
   const announce = useCallback((text) => socket.emit('sendChatMessage', { text }), []);
 
   const paintCells = useCallback(
@@ -1048,7 +1050,7 @@ function CharacterPicker({ onPick, onBuild, canClose, onClose }) {
                     <div className="pregen-info">
                       <div className="card-title">{c.name}</div>
                       <div className="card-sub">
-                        Level {c.sheet.level} {c.sheet.raceName} {c.sheet.className}
+                        Level {c.sheet.level} {c.sheet.raceName} {c.sheet.className}{c.sheet.subclassName ? ` (${c.sheet.subclassName})` : ''}
                       </div>
                     </div>
                   </button>
@@ -1064,7 +1066,7 @@ function CharacterPicker({ onPick, onBuild, canClose, onClose }) {
                 <div className="pregen-info">
                   <div className="card-title">{p.sheet.name}</div>
                   <div className="card-sub">
-                    {p.sheet.raceName} {p.sheet.className}
+                    {p.sheet.raceName} {p.sheet.className}{p.sheet.subclassName ? ` (${p.sheet.subclassName})` : ''}
                   </div>
                   <p className="pregen-blurb">{p.tip}</p>
                 </div>

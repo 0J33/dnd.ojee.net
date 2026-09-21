@@ -230,7 +230,7 @@ export const TUTORIAL_STEPS = [
       `Skarn drops his scimitar, looks at it, looks at you, and falls over dramatically.\n\nSilence. Then - from the chest - the gleam of stolen goods: 50 GOLD each, and an old dagger with an ember-red edge: EMBERFANG (a fine dagger; +1 to hit and damage - give it to someone sneaky).\n\nYou did it. Your first dungeon, cleared.`,
     rule: {
       title: 'LEVEL UP!',
-      lines: ['Experience points (XP) from monsters and quests add up - you just crossed 300 XP: LEVEL 2!', 'Open your sheet and press the ▲ Level button (top right).', 'Take the average HP (recommended), read your new feature, done.', 'Most groups level at story milestones - the app supports both.'],
+      lines: ['Experience points (XP) from monsters and quests add up - you just crossed 300 XP: LEVEL 2!', 'Open your sheet and press the ▲ Level button (top right).', 'Take the average HP (recommended), read your new feature, done.', 'Wizards also choose an Arcane Tradition at level 2 - the classic pick is already selected.', 'Most groups level at story milestones - the app supports both.'],
     },
     instruction: 'Everyone: add your loot (Gear tab), then press ▲ Level on your sheet and level up to 2! Then Continue for the finale.',
     effectsOnEnter: [{ type: 'endCombat' }, { type: 'awardXp', amount: 225 }],

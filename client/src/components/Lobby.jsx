@@ -209,7 +209,7 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
                       <div className="char-card-info">
                         <div className="card-title">{c.name}</div>
                         <div className="card-sub">
-                          Level {sheet.level || 1} {sheet.raceName || ''} {meta.name || ''}
+                          Level {sheet.level || 1} {sheet.raceName || ''} {meta.name || ''}{sheet.subclassName ? ` (${sheet.subclassName})` : ''}
                           {sheet.background ? ` · ${sheet.background[0].toUpperCase()}${sheet.background.slice(1)}` : ''}
                         </div>
                         <div className="char-stats">

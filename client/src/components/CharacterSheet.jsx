@@ -4,7 +4,7 @@ import { useDialog, ModalOverlay } from '../utils';
 import {
   ABILITIES, ABILITY_NAMES, SKILLS, CONDITIONS, mod, fmtMod, proficiencyBonus,
   deriveSheet, CLASS_META, AVG_HIT_DIE, XP_THRESHOLDS, xpToLevel, maxSpellSlots, preparedCount, describeRoll,
-  subclassOf, subclassLevel, SUBCLASS_LABEL, levelUpHp,
+  subclassOf, subclassLevel, SUBCLASS_LABEL, levelUpHp, castingFor, newSubclassSpellcasting, subclassSpellLimits,
 } from '../rules/engine';
 import { SubclassPicker, useSubclass, subclassFeaturesBetween } from './ContentChoices';
 import { Avatar } from './Portrait';
@@ -31,6 +31,7 @@ export default function CharacterSheet({
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showPrepare, setShowPrepare] = useState(false);
   const [showSubclass, setShowSubclass] = useState(false);
+  const [showLearn, setShowLearn] = useState(false);
   const [localRoll, setLocalRoll] = useState(null);
   const saveTimer = useRef(null);
 
@@ -52,6 +53,13 @@ export default function CharacterSheet({
     }
   };
   useEffect(() => () => clearTimeout(saveTimer.current), []);
+
+  // Heroes who took a spellcasting subclass (Eldritch Trickster...) before the
+  // sheet knew those cast: give them the spellcasting block they're owed.
+  useEffect(() => {
+    if (readOnly || sheet.spellcasting || !castingFor(sheet)) return;
+    change({ spellcasting: newSubclassSpellcasting(subclassOf(sheet)) });
+  }, [sheet.subclass, sheet.level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- rolling ----
   const roll = (formula, label, opts = {}) => {
@@ -150,7 +158,7 @@ export default function CharacterSheet({
       <div className="tab-row sheet-tabs">
         <button className={tab === 'main' ? 'active' : ''} onClick={() => setTab('main')}>Abilities</button>
         <button className={tab === 'combat' ? 'active' : ''} onClick={() => setTab('combat')}>Combat</button>
-        {sheet.spellcasting && <button className={tab === 'spells' ? 'active' : ''} onClick={() => setTab('spells')}>Spells</button>}
+        {sheet.spellcasting && derived.spell && <button className={tab === 'spells' ? 'active' : ''} onClick={() => setTab('spells')}>Spells</button>}
         <button className={tab === 'gear' ? 'active' : ''} onClick={() => setTab('gear')}>Gear</button>
         <button className={tab === 'story' ? 'active' : ''} onClick={() => setTab('story')}>Story</button>
       </div>
@@ -240,7 +248,7 @@ export default function CharacterSheet({
           </div>
         )}
 
-        {tab === 'spells' && sheet.spellcasting && (
+        {tab === 'spells' && sheet.spellcasting && derived.spell && (
           <SpellsTab
             sheet={sheet}
             derived={derived}
@@ -251,6 +259,7 @@ export default function CharacterSheet({
             onAnnounce={onAnnounce}
             openDetail={setSpellDetail}
             openPrepare={() => setShowPrepare(true)}
+            openLearn={() => setShowLearn(true)}
           />
         )}
 
@@ -322,6 +331,7 @@ export default function CharacterSheet({
       {spellDetail && <SpellDetailModal index={spellDetail} onClose={() => setSpellDetail(null)} sheet={sheet} derived={derived} roll={roll} change={change} readOnly={readOnly} onAnnounce={onAnnounce} />}
       {showLevelUp && <LevelUpModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowLevelUp(false)} change={change} dialog={dialog} onAnnounce={onAnnounce} />}
       {showPrepare && <PrepareModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowPrepare(false)} change={change} />}
+      {showLearn && <LearnSpellsModal sheet={sheet} derived={derived} onClose={() => setShowLearn(false)} change={change} />}
       {showSubclass && <SubclassModal sheet={sheet} meta={meta} onClose={() => setShowSubclass(false)} change={change} onAnnounce={onAnnounce} />}
     </div>
   );
@@ -411,7 +421,7 @@ function DeathSaves({ sheet, change, roll, compact = false, readOnly = false }) 
   );
 }
 
-function SpellsTab({ sheet, derived, meta, readOnly, change, roll, onAnnounce, openDetail, openPrepare }) {
+function SpellsTab({ sheet, derived, meta, readOnly, change, roll, onAnnounce, openDetail, openPrepare, openLearn }) {
   const sc = sheet.spellcasting;
   const slots = derived.spell?.maxSlots || {};
   const used = sc.slotsUsed || {};
@@ -423,7 +433,8 @@ function SpellsTab({ sheet, derived, meta, readOnly, change, roll, onAnnounce, o
     change({ spellcasting: { ...sc, slotsUsed: { ...used, [lvl]: next } } });
   };
 
-  const list = meta.preparedKind === 'prepared' ? sc.prepared : sc.known.length ? sc.known : sc.prepared;
+  const kind = derived.spell.kind; // 'known' | 'prepared' | 'spellbook'
+  const list = kind === 'prepared' ? sc.prepared : (sc.known || []).length ? sc.known : sc.prepared;
   const preparedSet = new Set(sc.prepared || []);
 
   return (
@@ -432,7 +443,12 @@ function SpellsTab({ sheet, derived, meta, readOnly, change, roll, onAnnounce, o
         <span className="chip gold">Save DC {derived.spell.dc}</span>
         <span className="chip gold">Spell attack {fmtMod(derived.spell.attackBonus)}</span>
         <span className="chip">{ABILITY_NAMES[sc.ability]} caster</span>
-        {meta.preparedKind !== 'known' && !readOnly && (
+        {!readOnly && (
+          <button className="small-btn" onClick={openLearn} title="New cantrips and spells as you level up">
+            <SparkleIcon size={12} /> {kind === 'spellbook' ? 'Add to spellbook' : 'Learn spells'}
+          </button>
+        )}
+        {kind !== 'known' && !readOnly && (
           <button className="small-btn" onClick={openPrepare}><BookIcon size={12} /> Change prepared</button>
         )}
       </div>
@@ -474,14 +490,14 @@ function SpellsTab({ sheet, derived, meta, readOnly, change, roll, onAnnounce, o
       </div>
 
       <h4 className="mt">
-        {meta.preparedKind === 'prepared' ? 'Prepared spells' : meta.preparedKind === 'spellbook' ? 'Spellbook' : 'Spells known'}
-        {derived.spell.preparedMax && meta.preparedKind !== 'known' && <span className="muted small"> (prepare up to {derived.spell.preparedMax})</span>}
+        {kind === 'prepared' ? 'Prepared spells' : kind === 'spellbook' ? 'Spellbook' : 'Spells known'}
+        {derived.spell.preparedMax && kind !== 'known' && <span className="muted small"> (prepare up to {derived.spell.preparedMax})</span>}
       </h4>
       <div className="spell-rows">
         {(list || []).map((s) => (
-          <button key={s} className={`spell-row ${meta.preparedKind === 'spellbook' && !preparedSet.has(s) ? 'unprepared' : ''}`} onClick={() => openDetail(s)}>
+          <button key={s} className={`spell-row ${kind === 'spellbook' && !preparedSet.has(s) ? 'unprepared' : ''}`} onClick={() => openDetail(s)}>
             {nameFromIndex(s)}
-            {meta.preparedKind === 'spellbook' && (preparedSet.has(s) ? <span className="chip gold">prepared</span> : <span className="chip">in book</span>)}
+            {kind === 'spellbook' && (preparedSet.has(s) ? <span className="chip gold">prepared</span> : <span className="chip">in book</span>)}
           </button>
         ))}
       </div>
@@ -546,7 +562,8 @@ function SpellDetailModal({ index, onClose, sheet, derived, roll, change, readOn
                 {availableSlots.slice(0, 4).map((lvl) => (
                   <button key={lvl} className="primary-btn" onClick={() => cast(lvl)}>Cast (slot lvl {lvl})</button>
                 ))}
-                {spell.level > 0 && !availableSlots.length && <span className="muted small">No slots left - take a long rest.</span>}
+                {spell.level > 0 && derived.spell?.innate && <button className="primary-btn" onClick={() => cast(null)}>Cast (once per long rest)</button>}
+                {spell.level > 0 && !derived.spell?.innate && !availableSlots.length && <span className="muted small">No slots left - take a long rest.</span>}
               </div>
             )}
           </>
@@ -630,6 +647,21 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
   const subDetail = useSubclass(currentSub || picked?.index || null);
   // a late pick (hero made before subclasses were selectable) brings everything it would have granted
   const subFeatures = subclassFeaturesBetween(subDetail, currentSub ? newLevel : scLevel, newLevel);
+  // a subclass that grants spellcasting (Eldritch Trickster...) starts it here
+  const nextSheet = { ...sheet, level: newLevel, ...(subDetail ? { subclass: subDetail.index } : {}) };
+  const startsCasting = !sheet.spellcasting && !!subDetail && !!castingFor(nextSheet);
+
+  // Like the builder, start on the SRD option - the tutorial's "take the
+  // average, read your feature, done" still works for a wizard at level 2.
+  useEffect(() => {
+    if (!needsPick) return undefined;
+    let live = true;
+    srd.subclasses(sheet.classIndex).then((list) => {
+      const srdPick = Array.isArray(list) && list.find((x) => x.source === 'srd51');
+      if (live && srdPick) setPicked((prev) => prev || srdPick);
+    });
+    return () => { live = false; };
+  }, [needsPick, sheet.classIndex]);
 
   useEffect(() => {
     srd.classLevels(sheet.classIndex).then((levels) => {
@@ -656,7 +688,7 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
     newFeatures.push(...subFeatures);
     const sc = sheet.spellcasting
       ? { ...sheet.spellcasting, slotsUsed: {} }
-      : null;
+      : startsCasting ? newSubclassSpellcasting(subDetail.index) : null;
     change({
       level: newLevel,
       abilities: newAbilities,
@@ -744,7 +776,8 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
           ) : (
             <p className="muted">{needsPick && !subDetail ? 'Pick an option above to see its features.' : 'No new class features this level - but your numbers improve.'}</p>
           )}
-          {sheet.spellcasting && <p className="muted small mt">Spell slots refresh and increase per your class table. Casters may also swap/learn spells - manage them on the Spells tab.</p>}
+          {sheet.spellcasting && <p className="muted small mt">Spell slots refresh and increase per your class table. New cantrips and spells: Spells tab, then Learn spells.</p>}
+          {startsCasting && <p className="muted small mt">The {subDetail.name} casts spells: after confirming, open the Spells tab and use Learn spells to pick your cantrips and spells.</p>}
         </div>
         <div className="modal-actions">
           <button onClick={onClose}>Cancel</button>
@@ -764,9 +797,11 @@ function SubclassModal({ sheet, meta, onClose, change, onAnnounce }) {
   const gained = subclassFeaturesBetween(detail, from, sheet.level);
 
   const apply = () => {
+    const casts = !sheet.spellcasting && castingFor({ ...sheet, subclass: detail.index });
     change({
       subclass: detail.index,
       subclassName: detail.name,
+      ...(casts ? { spellcasting: newSubclassSpellcasting(detail.index) } : {}),
       features: [
         ...(sheet.features || []),
         { name: `${SUBCLASS_LABEL[sheet.classIndex]}: ${detail.name}`, source: `${meta.name} ${from}`, desc: detail.desc },
@@ -802,6 +837,106 @@ function SubclassModal({ sheet, meta, onClose, change, onAnnounce }) {
         <div className="modal-actions">
           <button onClick={onClose}>Cancel</button>
           <button className="primary-btn" onClick={apply} disabled={!detail}>Confirm</button>
+        </div>
+      </div>
+    </ModalOverlay>
+  );
+}
+
+// New cantrips and spells as a hero levels. Known casters (bard, sorcerer,
+// warlock, ranger, and subclass casters like the Eldritch Trickster) pick their
+// spells known, a wizard adds to the spellbook, and every caster tops up
+// cantrips. Limits come from the SRD class table or the subclass's own table.
+function LearnSpellsModal({ sheet, derived, onClose, change }) {
+  const sc = sheet.spellcasting;
+  const { kind, list } = derived.spell;
+  const [limits, setLimits] = useState(null);
+  const [available, setAvailable] = useState(null);
+  const [cantrips, setCantrips] = useState(sc.cantrips || []);
+  const [known, setKnown] = useState(sc.known || []);
+
+  useEffect(() => {
+    const slotLevels = Object.entries(derived.spell.maxSlots || {}).map(([k, v]) => (k === 'pact' ? v.level : Number(k)));
+    const maxSlotLevel = Math.max(0, ...slotLevels);
+    const sub = subclassSpellLimits(sheet);
+    if (sub) setLimits(sub);
+    else {
+      srd.classLevels(sheet.classIndex).then((levels) => {
+        const row = (Array.isArray(levels) ? levels.find((l) => l.level === sheet.level) : null)?.spellcasting || {};
+        setLimits({
+          cantrips: row.cantrips_known || 0,
+          known: kind === 'known' ? row.spells_known || 0 : kind === 'spellbook' ? 6 + 2 * (sheet.level - 1) : 0,
+          maxLevel: maxSlotLevel,
+        });
+      });
+    }
+    srd.spells(`?class=${list}`).then((all) => setAvailable(Array.isArray(all) ? [...all].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)) : []));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ready = limits && available;
+  const toggle = (arr, setArr, max) => (index) => {
+    if (arr.includes(index)) setArr(arr.filter((x) => x !== index));
+    else if (arr.length < max) setArr([...arr, index]);
+  };
+  // anything already on the sheet stays visible even if this list doesn't offer it
+  const withCurrent = (options, current) => [...options, ...current.filter((i) => !options.some((o) => o.index === i)).map((i) => ({ index: i, name: nameFromIndex(i), level: '?' }))];
+
+  const save = () => {
+    const next = { ...sc, cantrips, known };
+    if (kind === 'spellbook') next.prepared = (sc.prepared || []).filter((i) => known.includes(i));
+    change({ spellcasting: next });
+    onClose();
+  };
+
+  const section = (title, hint, options, picked, setPicked, max) => (
+    <>
+      <h4 className="mt">{title} ({picked.length}/{max})</h4>
+      {hint && <p className="muted small">{hint}</p>}
+      <div className="spell-pick-list">
+        {options.map((sp) => {
+          const on = picked.includes(sp.index);
+          return (
+            <button key={sp.index} className={`spell-pick ${on ? 'on' : ''}`} disabled={!on && picked.length >= max} onClick={() => toggle(picked, setPicked, max)(sp.index)}>
+              <span className="spell-pick-name">{sp.name}</span>
+              <span className="muted small">{sp.level === 0 ? 'Cantrip' : `Level ${sp.level}`}{sp.school ? ` · ${sp.school}` : ''}{sp.concentration ? ' · conc.' : ''}</span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <div className="modal" style={{ maxWidth: 680 }}>
+        <div className="modal-header">
+          <h3>{kind === 'spellbook' ? 'Your spellbook' : 'Learn spells'}</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {!ready ? (
+            <p className="muted">Loading...</p>
+          ) : (
+            <>
+              {(limits.cantrips > 0 || limits.known > 0) && (
+                <p className="muted small">
+                  At level {sheet.level} you know up to{' '}
+                  {[
+                    limits.cantrips > 0 && `${limits.cantrips} cantrip${limits.cantrips === 1 ? '' : 's'}`,
+                    limits.known > 0 && `${limits.known} spell${limits.known === 1 ? '' : 's'}${kind === 'spellbook' ? ' in your book' : ''} of up to level ${limits.maxLevel}`,
+                  ].filter(Boolean).join(' and ')}
+                  , from the {list} list. Swap freely - your DM may ask you to keep to one change per level.
+                </p>
+              )}
+              {limits.cantrips > 0 && section('Cantrips', null, withCurrent(available.filter((sp) => sp.level === 0), cantrips), cantrips, setCantrips, limits.cantrips)}
+              {limits.known > 0 && section(kind === 'spellbook' ? 'Spellbook' : 'Spells known', null, withCurrent(available.filter((sp) => sp.level > 0 && sp.level <= limits.maxLevel), known), known, setKnown, limits.known)}
+              {!limits.cantrips && !limits.known && <p className="muted">Nothing to learn at this level - your spells are prepared from the full list after a long rest.</p>}
+            </>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary-btn" onClick={save} disabled={!ready}>Save</button>
         </div>
       </div>
     </ModalOverlay>
@@ -871,11 +1006,11 @@ async function shortRest({ sheet, derived, change, dialog, onAnnounce }) {
   if (!n) return;
   let healed = 0;
   for (let i = 0; i < n; i++) healed += Math.max(1, 1 + Math.floor(Math.random() * derived.hitDie) + mod(sheet.abilities.con));
-  change({
-    currentHp: Math.min(sheet.maxHp, sheet.currentHp + healed),
-    hitDiceRemaining: available - n,
-  });
-  if (onAnnounce) onAnnounce(`⏳ ${sheet.name} takes a short rest: spends ${n} hit ${n === 1 ? 'die' : 'dice'}, heals ${healed} HP.`);
+  const currentHp = Math.min(sheet.maxHp, sheet.currentHp + healed);
+  change({ currentHp, hitDiceRemaining: available - n });
+  // report what was restored, not the raw roll - you can't heal past your maximum
+  const restored = currentHp - sheet.currentHp;
+  if (onAnnounce) onAnnounce(`⏳ ${sheet.name} takes a short rest: spends ${n} hit ${n === 1 ? 'die' : 'dice'}, heals ${restored} HP${restored < healed ? ` (rolled ${healed}, back to full)` : ''}.`);
 }
 
 async function longRest({ sheet, change, dialog, onAnnounce }) {

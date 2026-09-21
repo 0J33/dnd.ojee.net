@@ -1,6 +1,17 @@
-export const VERSION = '1.1.0';
+export const VERSION = '1.1.1';
 
 export const CHANGELOG = [
+  {
+    version: '1.1.1',
+    date: '2026-09-22',
+    notes: [
+      'Learn spells: new cantrips and spells as you level (bards, sorcerers, warlocks, rangers), a growing wizard spellbook, and extra cantrips for every caster',
+      'Subclasses that grant spellcasting (Eldritch Trickster, Arcane Warrior, Soulspy, Underfoot, Smuggler) now get spell slots and a Spells tab',
+      'Level-up starts on the classic subclass, as the builder does; Circle of Wind and Underfoot features arrive at the right levels',
+      'After an update the page reloads itself instead of running old code; subclass shown on hero cards',
+      'Fixes: short-rest healing message, phone dice tray covering the map tools, cramped sheet name on phones',
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-09-22',

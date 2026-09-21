@@ -18,7 +18,8 @@ with Wizards of the Coast. See the in-app "licenses & credits" for the required 
   Campaign Setting* and Open5e Originals. Picked at the class's subclass level (1, 2 or 3) and granted
   feature by feature on level-up.
 - **Interactive character sheets** — click any stat/skill/save/attack to roll it; spell slots,
-  rests, death saves, conditions, level-up, all math derived automatically (`client/src/rules/engine.js`).
+  rests, death saves, conditions, level-up (subclass picks, new cantrips and spells), all math
+  derived automatically (`client/src/rules/engine.js`).
 - **Portraits** — every hero gets a drawn likeness derived from their race, class and name
   (`client/src/components/Portrait.jsx`). The same artwork is the map token, the party-list row, the
   lobby card and the sheet header, so a character is recognisable everywhere. Monsters and NPCs get
