@@ -3,7 +3,7 @@ import { CONDITIONS } from '../rules/engine';
 import { drawTerrain, sceneBlocked, charAt } from '../render/sceneRender';
 import { TILES } from '../data/tiles';
 import { TokenFace } from './Portrait';
-import { ConditionIcon } from './Icons';
+import { ConditionIcon, FitIcon, MinusIcon, PlusIcon, XIcon } from './Icons';
 
 export const CELL = 56;
 const COND_LABEL = Object.fromEntries(CONDITIONS.map((c) => [c.index, c.name]));
@@ -496,9 +496,7 @@ export default function MapCanvas({
               <div className="token-disc">
                 {isDead ? (
                   <span className="token-down" aria-label="down">
-                    <svg viewBox="0 0 24 24" width={face * 0.6} height={face * 0.6} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M5 5l14 14M19 5 5 19" />
-                    </svg>
+                    <XIcon size={face * 0.6} />
                   </span>
                 ) : (
                   <TokenFace token={t} sheet={sheet} size={face} />
@@ -573,9 +571,7 @@ export default function MapCanvas({
           title="Zoom in"
           onClick={() => setView((v) => ({ ...v, k: Math.min(2.6, v.k * 1.2) }))}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 6v12M6 12h12" />
-          </svg>
+          <PlusIcon />
         </button>
         <button
           className="icon-btn"
@@ -583,14 +579,10 @@ export default function MapCanvas({
           title="Zoom out"
           onClick={() => setView((v) => ({ ...v, k: Math.max(0.2, v.k * 0.84) }))}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M6 12h12" />
-          </svg>
+          <MinusIcon />
         </button>
         <button className="icon-btn" aria-label="Fit map to screen" title="Fit map to screen" onClick={fitView}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-          </svg>
+          <FitIcon />
         </button>
       </div>
 
