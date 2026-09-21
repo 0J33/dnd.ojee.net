@@ -11,3 +11,6 @@ client/build/
 
 *.log
 .DS_Store
+
+# Deploy credentials.
+deploy.local.env
