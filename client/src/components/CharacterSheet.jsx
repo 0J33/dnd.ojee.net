@@ -4,7 +4,9 @@ import { useDialog, ModalOverlay } from '../utils';
 import {
   ABILITIES, ABILITY_NAMES, SKILLS, CONDITIONS, mod, fmtMod, proficiencyBonus,
   deriveSheet, CLASS_META, AVG_HIT_DIE, XP_THRESHOLDS, xpToLevel, maxSpellSlots, preparedCount, describeRoll,
+  subclassOf, subclassLevel, SUBCLASS_LABEL, levelUpHp,
 } from '../rules/engine';
+import { SubclassPicker, useSubclass, subclassFeaturesBetween } from './ContentChoices';
 import { Avatar } from './Portrait';
 import { HeartIcon, ShieldIcon, D20Icon, CampfireIcon, SparkleIcon, SkullIcon, PlusIcon, BookIcon, ChevronUp, XIcon, ConditionIcon } from './Icons';
 
@@ -28,6 +30,7 @@ export default function CharacterSheet({
   const [spellDetail, setSpellDetail] = useState(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showPrepare, setShowPrepare] = useState(false);
+  const [showSubclass, setShowSubclass] = useState(false);
   const [localRoll, setLocalRoll] = useState(null);
   const saveTimer = useRef(null);
 
@@ -93,11 +96,17 @@ export default function CharacterSheet({
             </button>
           </div>
           <div className="card-sub">
-            Level {sheet.level} {sheet.raceName} {meta.name || sheet.className} · {cap(sheet.background)} · {sheet.alignment}
+            Level {sheet.level} {sheet.raceName} {meta.name || sheet.className}{sheet.subclassName ? ` (${sheet.subclassName})` : ''} · {cap(sheet.background)} · {sheet.alignment}
             {' · '}XP {sheet.xp ?? 0}{sheet.level < 20 ? ` / ${XP_THRESHOLDS[sheet.level + 1]}` : ''}
           </div>
         </div>
         <div className="sheet-head-actions">
+          {/* heroes made before subclasses were selectable, now past the level they'd pick one */}
+          {!readOnly && !subclassOf(sheet) && meta.name && sheet.level >= subclassLevel(sheet.classIndex) && (
+            <button className="small-btn" onClick={() => setShowSubclass(true)} title={`You've reached level ${subclassLevel(sheet.classIndex)}: pick your ${SUBCLASS_LABEL[sheet.classIndex].toLowerCase()}`}>
+              Choose {SUBCLASS_LABEL[sheet.classIndex]}
+            </button>
+          )}
           {!readOnly && (
             <button className="small-btn primary-btn" onClick={() => setShowLevelUp(true)} title="Level up your hero">
               <ChevronUp size={12} /> Level {sheet.level + 1}
@@ -282,6 +291,12 @@ export default function CharacterSheet({
               rows={4}
               placeholder="Where do you come from? What do you want?"
             />
+            {sheet.size && (
+              <>
+                <label className="field-label">Size & senses</label>
+                <p>{sheet.size}{sheet.darkvision ? ` · Darkvision ${sheet.darkvision} ft` : ''}</p>
+              </>
+            )}
             <label className="field-label">Languages</label>
             <p>{(sheet.languages || []).join(', ') || '—'}</p>
             <label className="field-label">Proficiencies</label>
@@ -307,6 +322,7 @@ export default function CharacterSheet({
       {spellDetail && <SpellDetailModal index={spellDetail} onClose={() => setSpellDetail(null)} sheet={sheet} derived={derived} roll={roll} change={change} readOnly={readOnly} onAnnounce={onAnnounce} />}
       {showLevelUp && <LevelUpModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowLevelUp(false)} change={change} dialog={dialog} onAnnounce={onAnnounce} />}
       {showPrepare && <PrepareModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowPrepare(false)} change={change} />}
+      {showSubclass && <SubclassModal sheet={sheet} meta={meta} onClose={() => setShowSubclass(false)} change={change} onAnnounce={onAnnounce} />}
     </div>
   );
 }
@@ -589,7 +605,7 @@ function GearTab({ sheet, readOnly, change, dialog }) {
               {e.kind === 'armor' && e.stats && <span className="muted small"> · AC {e.stats.acBase} {e.stats.category}</span>}
               {e.kind === 'shield' && <span className="muted small"> · +2 AC</span>}
             </span>
-            {!readOnly && <button className="small-btn ghost-btn" onClick={() => change({ equipment: equipment.filter((_, idx) => idx !== i) })} aria-label={`Remove ${it.name || 'item'}`}><XIcon size={12} /></button>}
+            {!readOnly && <button className="small-btn ghost-btn" onClick={() => change({ equipment: equipment.filter((_, idx) => idx !== i) })} aria-label={`Remove ${e.name || 'item'}`}><XIcon size={12} /></button>}
           </div>
         ))}
       </div>
@@ -606,6 +622,15 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
   const [asi, setAsi] = useState({});
   const isAsiLevel = [4, 8, 12, 16, 19].includes(newLevel) || (sheet.classIndex === 'fighter' && [6, 14].includes(newLevel)) || (sheet.classIndex === 'rogue' && newLevel === 10);
 
+  // subclass: picked here the first time the class reaches its subclass level
+  const scLevel = subclassLevel(sheet.classIndex);
+  const currentSub = subclassOf(sheet);
+  const needsPick = !currentSub && newLevel >= scLevel;
+  const [picked, setPicked] = useState(null);
+  const subDetail = useSubclass(currentSub || picked?.index || null);
+  // a late pick (hero made before subclasses were selectable) brings everything it would have granted
+  const subFeatures = subclassFeaturesBetween(subDetail, currentSub ? newLevel : scLevel, newLevel);
+
   useEffect(() => {
     srd.classLevels(sheet.classIndex).then((levels) => {
       if (Array.isArray(levels)) {
@@ -616,17 +641,19 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
   }, [sheet.classIndex, newLevel]);
 
   if (newLevel > 20) return null;
-  const conMod = mod(sheet.abilities.con + (asi.con || 0));
-  const hpGain = Math.max(1, (hpMode === 'roll' && hpRoll ? hpRoll : AVG_HIT_DIE[meta.hitDie || 8]) + conMod + (sheet.race === 'dwarf' ? 1 : 0));
+  const hpGain = levelUpHp(sheet, hpMode === 'roll' && hpRoll ? hpRoll : null, sheet.abilities.con + (asi.con || 0));
   const asiSpent = Object.values(asi).reduce((a, b) => a + b, 0);
+  const subLoading = (currentSub || picked) && !subDetail;
 
   const apply = () => {
     const newAbilities = { ...sheet.abilities };
     for (const [a, v] of Object.entries(asi)) newAbilities[a] = Math.min(20, newAbilities[a] + v);
     const newFeatures = [...(sheet.features || [])];
     for (const f of features || []) {
-      newFeatures.push({ name: f.name, source: `${meta.name} ${newLevel}`, desc: (f.desc || []).join(' ').slice(0, 500) });
+      newFeatures.push({ name: f.name, source: `${meta.name} ${newLevel}`, desc: (f.desc || []).join(' ').slice(0, 1500) });
     }
+    if (needsPick && subDetail) newFeatures.push({ name: `${SUBCLASS_LABEL[sheet.classIndex]}: ${subDetail.name}`, source: `${meta.name} ${newLevel}`, desc: subDetail.desc });
+    newFeatures.push(...subFeatures);
     const sc = sheet.spellcasting
       ? { ...sheet.spellcasting, slotsUsed: {} }
       : null;
@@ -638,14 +665,15 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
       hitDiceRemaining: (sheet.hitDiceRemaining || 0) + 1,
       features: newFeatures,
       spellcasting: sc,
+      ...(subDetail ? { subclass: subDetail.index, subclassName: subDetail.name } : {}),
     });
-    if (onAnnounce) onAnnounce(`${sheet.name} reaches level ${newLevel}!`);
+    if (onAnnounce) onAnnounce(needsPick && subDetail ? `${sheet.name} reaches level ${newLevel} and follows the ${subDetail.name}!` : `${sheet.name} reaches level ${newLevel}!`);
     onClose();
   };
 
   return (
     <ModalOverlay onClose={onClose}>
-      <div className="modal">
+      <div className="modal" style={needsPick ? { maxWidth: 820 } : undefined}>
         <div className="modal-header">
           <h3>Level up! {sheet.level} to {newLevel}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
@@ -687,24 +715,93 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
             </>
           )}
 
+          {needsPick && (
+            <>
+              <h4 className="mt">Choose your {SUBCLASS_LABEL[sheet.classIndex].toLowerCase()}</h4>
+              <p className="muted small">Your speciality within the class - it grants features now and at later levels.</p>
+              <SubclassPicker classIndex={sheet.classIndex} value={picked?.index} onChange={setPicked} />
+            </>
+          )}
+
           <h4 className="mt">New at level {newLevel}</h4>
           {features === null ? (
             <p className="muted">Loading...</p>
-          ) : features.length ? (
-            features.map((f) => (
-              <details key={f.index} className="feature-item">
-                <summary><strong>{f.name}</strong></summary>
-                <p className="small">{(f.desc || []).join(' ')}</p>
-              </details>
-            ))
+          ) : features.length || subFeatures.length ? (
+            <>
+              {features.map((f) => (
+                <details key={f.index} className="feature-item">
+                  <summary><strong>{f.name}</strong></summary>
+                  <p className="small">{(f.desc || []).join(' ')}</p>
+                </details>
+              ))}
+              {subFeatures.map((f) => (
+                <details key={`${f.source}-${f.name}`} className="feature-item">
+                  <summary><strong>{f.name}</strong> <span className="muted small">· {f.source}</span></summary>
+                  <p className="small">{f.desc}</p>
+                </details>
+              ))}
+            </>
           ) : (
-            <p className="muted">No new class features this level - but your numbers improve.</p>
+            <p className="muted">{needsPick && !subDetail ? 'Pick an option above to see its features.' : 'No new class features this level - but your numbers improve.'}</p>
           )}
           {sheet.spellcasting && <p className="muted small mt">Spell slots refresh and increase per your class table. Casters may also swap/learn spells - manage them on the Spells tab.</p>}
         </div>
         <div className="modal-actions">
           <button onClick={onClose}>Cancel</button>
-          <button className="primary-btn" onClick={apply} disabled={isAsiLevel && asiSpent !== 2}>Confirm level {newLevel}</button>
+          <button className="primary-btn" onClick={apply} disabled={(isAsiLevel && asiSpent !== 2) || (needsPick && !subDetail) || subLoading}>Confirm level {newLevel}</button>
+        </div>
+      </div>
+    </ModalOverlay>
+  );
+}
+
+// For a hero already past their subclass level without one (made before
+// subclasses were selectable): pick now and receive everything up to today.
+function SubclassModal({ sheet, meta, onClose, change, onAnnounce }) {
+  const [picked, setPicked] = useState(null);
+  const detail = useSubclass(picked?.index || null);
+  const from = subclassLevel(sheet.classIndex);
+  const gained = subclassFeaturesBetween(detail, from, sheet.level);
+
+  const apply = () => {
+    change({
+      subclass: detail.index,
+      subclassName: detail.name,
+      features: [
+        ...(sheet.features || []),
+        { name: `${SUBCLASS_LABEL[sheet.classIndex]}: ${detail.name}`, source: `${meta.name} ${from}`, desc: detail.desc },
+        ...gained,
+      ],
+    });
+    if (onAnnounce) onAnnounce(`${sheet.name} follows the ${detail.name}.`);
+    onClose();
+  };
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <div className="modal" style={{ maxWidth: 820 }}>
+        <div className="modal-header">
+          <h3>Choose your {SUBCLASS_LABEL[sheet.classIndex].toLowerCase()}</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <p className="muted small">{meta.name}s pick this at level {from}. You'll get every feature it grants up to level {sheet.level}.</p>
+          <SubclassPicker classIndex={sheet.classIndex} value={picked?.index} onChange={setPicked} />
+          {gained.length > 0 && (
+            <>
+              <h4 className="mt">You gain</h4>
+              {gained.map((f) => (
+                <details key={`${f.source}-${f.name}`} className="feature-item">
+                  <summary><strong>{f.name}</strong> <span className="muted small">· {f.source}</span></summary>
+                  <p className="small">{f.desc}</p>
+                </details>
+              ))}
+            </>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary-btn" onClick={apply} disabled={!detail}>Confirm</button>
         </div>
       </div>
     </ModalOverlay>

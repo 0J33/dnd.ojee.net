@@ -40,9 +40,53 @@ const RACES = {
   'half-orc': { skins: [SKIN.green, SKIN.grey, SKIN.brown], ears: 'point', build: 1.16, tusks: true },
   dragonborn: { skins: [SKIN.scaled, SKIN.red, SKIN.blue, SKIN.grey], ears: 'frill', build: 1.1, snout: true },
   tiefling: { skins: [SKIN.red, SKIN.tan, SKIN.deep], ears: 'point', build: 1, horns: true },
+
+  // ---- SRD 5.2
+  goliath: { skins: ['#9aa0a8', '#8a8f96', '#b0a89c', '#7d8590'], ears: 'round', build: 1.2, markings: true },
+  orc: { skins: [SKIN.green, '#6f8a5a', SKIN.grey], ears: 'point', build: 1.16, tusks: true },
+
+  // ---- Tome of Heroes
+  // A soul in a clockwork body: metal plating, a visor with lit eyes, a glowing core.
+  gearforged: { skins: ['#b8923f', '#8e98a3', '#a0703e', '#b8734e', '#6f757c'], ears: 'bolt', build: 1.02, robot: true, hairless: true },
+  alseid: { skins: [SKIN.pale, SKIN.tan, SKIN.brown], ears: 'point', build: 0.96, antlers: true },
+  catfolk: { skins: ['#c9a068', '#9a9088', '#4a4038', '#c8844a', '#e0cfae'], ears: 'cat', build: 0.96, cat: true },
+  darakhul: { skins: ['#8f948c', '#7f8a78', '#a09a8e'], ears: 'point', build: 0.98, longFace: true, fangs: true, eyeColor: '#e6dc9a' },
+  derro: { skins: ['#8fa4c0', '#a7b6cc', '#9a94b8'], ears: 'round', build: 0.88, hairColors: ['#ece8e0', '#cfcac0', '#b8b2a8'] },
+  drow: { skins: ['#3d3446', '#4a3f5a', '#2f3440'], ears: 'point', build: 0.94, longFace: true, hairColors: ['#ece8f0', '#d8d2e0', '#c0b8d0'] },
+  erina: { skins: ['#8a6a4a', '#a8845c', '#6f5238'], ears: 'round', build: 0.86, roundFace: true, spines: true },
+  minotaur: { skins: ['#6b4a30', '#4a3426', '#8a6444', '#2f2622'], ears: 'point', build: 1.18, bull: true },
+  mushroomfolk: { skins: ['#d8ccb4', '#bdb4a4', '#c8b8c8'], ears: 'none', build: 0.98, cap: '#b0473a', hairless: true },
+  satarre: { skins: ['#6f6a85', '#5a6b6a', '#7a6a7a'], ears: 'point', build: 0.95, longFace: true, eyeColor: '#b8e090' },
+  shade: { skins: ['#b8c4d0', '#a9b8c8', '#c8d0d8'], ears: 'round', build: 1, ghostly: true },
 };
 
+// Looks that depend on the subrace: a gearforged's chassis, a mushroomfolk's
+// clan, a shade's living origin.
+const SUBRACE_LOOKS = {
+  'dwarf-chassis': { beard: 'full', build: 1.1 },
+  'gnome-chassis': { roundFace: true, build: 0.88 },
+  'kobold-chassis': { ears: 'frill', build: 0.9 },
+  malkin: { build: 0.86, roundFace: true },
+  'acid-cap': { cap: '#a8b83a' },
+  favored: { cap: '#8a5aa8' },
+  morel: { cap: '#7a5a3a', capPits: true, build: 0.9 },
+};
+const SHADE_SKINS = ['#b8c4d0', '#a9b8c8', '#c8d0d8'];
+
+function raceLook(sheet) {
+  const base = lookup(RACES, sheet?.raceIndex || sheet?.race || sheet?.raceName, 'human');
+  const sub = sheet?.subrace;
+  if (!sub) return base;
+  if (/^shade-/.test(sub)) {
+    // the shade keeps the shape of who they were, drained of colour
+    const origin = RACES[sub.replace(/^shade-/, '')] || RACES.human;
+    return { ...origin, skins: SHADE_SKINS, ghostly: true, hairColors: ['#d8dce4', '#b8c0cc'] };
+  }
+  return SUBRACE_LOOKS[sub] ? { ...base, ...SUBRACE_LOOKS[sub] } : base;
+}
+
 const HAIR = ['#2b2018', '#4a3320', '#6b4a28', '#8a6a3a', '#b8a068', '#a83a2a', '#d8d2c2', '#3a3a44'];
+const ROBOT_GLOW = ['#5ef0e0', '#7fd0ff', '#ffb347', '#9dff8a'];
 
 /* ---------------- classes ---------------- */
 // garb  - shoulder/torso colour   trim - accent   head - headwear shape
@@ -433,13 +477,17 @@ function lookup(table, value, fallbackKey) {
 }
 
 function HeroBust({ sheet, seed }) {
-  const race = lookup(RACES, sheet?.raceIndex || sheet?.race || sheet?.raceName, 'human');
+  const race = raceLook(sheet);
   const classSource = sheet?.classIndex || sheet?.className;
   const cls = lookup(CLASSES, classSource, 'npc');
   const classKey = String(classSource || 'npc').toLowerCase();
 
   const skin = pick(race.skins, hashString(`${seed}-skin`));
-  const hair = pick(HAIR, hashString(`${seed}-hair`));
+  // a robot's beard is metal strands, a shade's hair is washed out
+  const hair = race.robot ? '#4a4540' : pick(race.hairColors || HAIR, hashString(`${seed}-hair`));
+  const glow = pick(ROBOT_GLOW, hashString(`${seed}-glow`));
+  const showHair = !race.hairless;
+  const showHeadwear = !race.cap;
   const b = race.build;
 
   // Head geometry. Everything else is positioned relative to these, so a
@@ -454,11 +502,12 @@ function HeroBust({ sheet, seed }) {
   const mouthY = cy + 7;
 
   const dark = (c, amount = 0.72) => c; // colours are authored pre-shaded
-  const fullFace = cls.head === 'greathelm';
+  const fullFace = cls.head === 'greathelm' && showHeadwear;
+  const eyeFill = race.eyeColor || (race.ghostly ? '#bfe8ff' : '#1c1a18');
 
   return (
     // scaled about the bottom edge so the shoulders still fill the frame
-    <g transform="translate(3.2 6.4) scale(0.9)">
+    <g transform="translate(3.2 6.4) scale(0.9)" opacity={race.ghostly ? 0.88 : undefined}>
       {/* ---- shoulders ---- */}
       <path d={`M32 40 ${11 - b} 50 ${7 - b * 2} 64h${50 + b * 4}L${53 + b} 50z`} fill={cls.garb} />
       {/* collar: a V-neck in the trim colour, never a stripe down the chest */}
@@ -470,9 +519,16 @@ function HeroBust({ sheet, seed }) {
         </>
       )}
       {cls.mark === 'symbol' && <circle cx={cx} cy={54} r="4.6" fill={cls.trim} />}
+      {race.robot && cls.mark !== 'symbol' && (
+        <>
+          <circle cx={cx} cy={54} r="5.4" fill="#1c1f24" />
+          <circle cx={cx} cy={54} r="3.4" fill={glow} />
+          <circle cx={cx} cy={54} r="5.4" fill={glow} opacity="0.25" />
+        </>
+      )}
 
       {/* ---- hood sits behind the head so it frames the face ---- */}
-      {cls.head === 'hood' && (
+      {showHeadwear && cls.head === 'hood' && (
         <path
           d={`M${cx} ${top - 5}
               q-${rx + 7} 0 -${rx + 7} ${ry + 11}
@@ -484,8 +540,34 @@ function HeroBust({ sheet, seed }) {
         />
       )}
 
+      {/* hedgehog spines fan out behind the head */}
+      {race.spines && (
+        <path
+          d={Array.from({ length: 9 }, (_, i) => {
+            const a = Math.PI * (1.05 + (i / 8) * 0.9);
+            const tip = (r) => `${cx + Math.cos(a) * (rx + r)} ${cy + Math.sin(a) * (ry + r)}`;
+            const side = (d, r) => `${cx + Math.cos(a + d) * (rx + r)} ${cy + Math.sin(a + d) * (ry + r)}`;
+            return `M${side(-0.17, -1)} L${tip(10)} L${side(0.17, -1)}Z`;
+          }).join(' ')}
+          fill="#8a6a48"
+          stroke="#d8c4a0"
+          strokeWidth="0.5"
+        />
+      )}
+
       {/* ---- neck ---- */}
       <rect x={cx - 5} y={cy + ry - 6} width="10" height="12" fill={skin} />
+      {race.robot && <path d={`M${cx - 5} ${cy + ry - 1}h10M${cx - 5} ${cy + ry + 2.5}h10`} stroke="#1c1f24" strokeWidth="1" opacity="0.6" />}
+
+      {/* cat ears stand on the crown */}
+      {race.ears === 'cat' && (
+        <>
+          <path d={`M${cx - rx * 0.95} ${top + 7} L${cx - rx * 0.62} ${top - 6} L${cx - rx * 0.12} ${top + 2}Z`} fill={skin} />
+          <path d={`M${cx + rx * 0.95} ${top + 7} L${cx + rx * 0.62} ${top - 6} L${cx + rx * 0.12} ${top + 2}Z`} fill={skin} />
+          <path d={`M${cx - rx * 0.78} ${top + 5} L${cx - rx * 0.6} ${top - 2} L${cx - rx * 0.32} ${top + 3}Z`} fill="#d99a90" opacity="0.8" />
+          <path d={`M${cx + rx * 0.78} ${top + 5} L${cx + rx * 0.6} ${top - 2} L${cx + rx * 0.32} ${top + 3}Z`} fill="#d99a90" opacity="0.8" />
+        </>
+      )}
 
       {/* ---- ears ---- */}
       {(race.ears === 'point' || race.ears === 'halfpoint' || race.ears === 'frill') && (
@@ -512,7 +594,52 @@ function HeroBust({ sheet, seed }) {
       )}
 
       {/* ---- head ---- */}
-      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={skin} />
+      {race.robot
+        ? <rect x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2} rx={rx * 0.5} fill={skin} />
+        : <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={skin} />}
+
+      {/* gearforged: visor, lit eyes, speaker grille, plate seam, rivets, ear bolts */}
+      {race.robot && (
+        <>
+          <path d={`M${cx} ${top + 1.5}V${eyeY - 3.5}`} stroke="#1c1f24" strokeWidth="0.9" opacity="0.45" />
+          <rect x={cx - rx * 0.8} y={eyeY - 3.2} width={rx * 1.6} height="6.4" rx="3.2" fill="#15181c" />
+          <circle cx={cx - rx * 0.38} cy={eyeY} r="3.4" fill={glow} opacity="0.3" />
+          <circle cx={cx + rx * 0.38} cy={eyeY} r="3.4" fill={glow} opacity="0.3" />
+          <circle cx={cx - rx * 0.38} cy={eyeY} r="1.9" fill={glow} />
+          <circle cx={cx + rx * 0.38} cy={eyeY} r="1.9" fill={glow} />
+          {!race.beard && <path d={`M${cx - 4} ${mouthY - 0.5}h8M${cx - 4} ${mouthY + 1.7}h8M${cx - 3} ${mouthY + 3.9}h6`} stroke="#1c1f24" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />}
+          {[-1, 1].map((d) => (
+            <g key={d} fill="#1c1f24" opacity="0.55">
+              <circle cx={cx + d * (rx - 2.4)} cy={cy - ry * 0.45} r="0.9" />
+              <circle cx={cx + d * (rx - 2.4)} cy={cy + ry * 0.55} r="0.9" />
+            </g>
+          ))}
+        </>
+      )}
+      {race.ears === 'bolt' && [-1, 1].map((d) => (
+        <g key={d}>
+          <circle cx={cx + d * rx} cy={cy + 1} r="3.3" fill="#2a2d33" />
+          <circle cx={cx + d * rx} cy={cy + 1} r="1.4" fill={glow} opacity="0.85" />
+        </g>
+      ))}
+      {race.robot && (cls.head === 'none' || cls.head === 'circlet') && (
+        <>
+          <path d={`M${cx} ${top}V${top - 6}`} stroke="#2a2d33" strokeWidth="1.6" />
+          <circle cx={cx} cy={top - 7} r="1.9" fill={glow} />
+        </>
+      )}
+
+      {/* minotaur muzzle: eyes stay visible above it */}
+      {race.bull && (
+        <>
+          <ellipse cx={cx} cy={mouthY - 0.5} rx={rx * 0.56} ry={ry * 0.3} fill="#c9a888" opacity="0.9" />
+          <ellipse cx={cx - 2.6} cy={mouthY - 0.8} rx="1.2" ry="0.9" fill="#241c14" />
+          <ellipse cx={cx + 2.6} cy={mouthY - 0.8} rx="1.2" ry="0.9" fill="#241c14" />
+        </>
+      )}
+      {race.markings && (
+        <path d={`M${cx - rx * 0.72} ${cy + 3} l3 2.2 M${cx + rx * 0.72} ${cy + 3} l-3 2.2 M${cx - 3} ${browY - 3} h6`} stroke="#4a4f56" strokeWidth="1.2" strokeLinecap="round" opacity="0.75" fill="none" />
+      )}
 
       {/* dragonborn muzzle */}
       {race.snout && (
@@ -538,22 +665,49 @@ function HeroBust({ sheet, seed }) {
       )}
 
       {/* ---- hair: crown only, stops above the brow ---- */}
-      {!fullFace && cls.hair === 'long' && (
+      {showHair && !fullFace && cls.hair === 'long' && (
         <>
           <path d={`M${cx - rx - 1.5} ${cy + 8} q-1 -${ry + 10} ${rx + 1.5} -${ry + 10} q${rx + 1.5} 0 ${rx + 1.5} ${ry + 10} l-4 1 q0 -${ry - 1} -${rx - 2.5} -${ry - 1} q-${rx - 2.5} 0 -${rx - 2.5} ${ry - 1}z`} fill={hair} />
         </>
       )}
-      {!fullFace && (cls.hair === 'short' || cls.hair === 'topknot') && (
+      {showHair && !fullFace && (cls.hair === 'short' || cls.hair === 'topknot') && (
         <path d={`M${cx - rx} ${browY} q0 -${ry + 1} ${rx} -${ry + 1} q${rx} 0 ${rx} ${ry + 1} q-${rx} -5.5 -${rx * 2} 0z`} fill={hair} />
       )}
-      {!fullFace && cls.hair === 'wild' && (
+      {showHair && !fullFace && cls.hair === 'wild' && (
         <>
           <path d={`M${cx - rx} ${browY} q0 -${ry + 3} ${rx} -${ry + 3} q${rx} 0 ${rx} ${ry + 3} q-${rx} -6.5 -${rx * 2} 0z`} fill={hair} />
           <path d={`M${cx - rx + 2} ${top + 1} ${cx - rx - 7} ${top - 8} ${cx - 3} ${top - 3}z`} fill={hair} />
           <path d={`M${cx + rx - 2} ${top + 1} ${cx + rx + 7} ${top - 8} ${cx + 3} ${top - 3}z`} fill={hair} />
         </>
       )}
-      {cls.hair === 'topknot' && !fullFace && <ellipse cx={cx} cy={top - 4} rx="5" ry="4.2" fill={hair} />}
+      {showHair && cls.hair === 'topknot' && !fullFace && <ellipse cx={cx} cy={top - 4} rx="5" ry="4.2" fill={hair} />}
+
+      {/* ---- minotaur horns sweep out from the crown ---- */}
+      {race.bull && [-1, 1].map((d) => (
+        <path
+          key={d}
+          d={`M${cx + d * rx * 0.5} ${top + 3} Q${cx + d * (rx + 9)} ${top + 4} ${cx + d * (rx + 8)} ${top - 8} Q${cx + d * (rx + 3)} ${top} ${cx + d * rx * 0.8} ${top + 7}Z`}
+          fill="#e6dcc2"
+          stroke="#8a7a5a"
+          strokeWidth="0.6"
+        />
+      ))}
+      {/* alseid antlers (a druid's antler headdress already covers this) */}
+      {race.antlers && cls.head !== 'antlers' && (
+        <g stroke="#8a6a44" strokeWidth="2" fill="none" strokeLinecap="round">
+          <path d={`M${cx - 5} ${top + 2} l-4 -7 l-4 -1.5 M${cx - 9} ${top - 5} l1 -5`} />
+          <path d={`M${cx + 5} ${top + 2} l4 -7 l4 -1.5 M${cx + 9} ${top - 5} l-1 -5`} />
+        </g>
+      )}
+      {/* mushroomfolk: the cap is the head's crown, so it replaces hat and hair */}
+      {race.cap && (
+        <>
+          <path d={`M${cx - rx - 7} ${top + 8} Q${cx} ${top - 17} ${cx + rx + 7} ${top + 8} Q${cx} ${top + 4} ${cx - rx - 7} ${top + 8}Z`} fill={race.cap} />
+          {(race.capPits ? [[-6, 0], [0, -4], [6, 0], [-3, 4], [3, 4]] : [[-7, 2], [0, -3], [6, 1]]).map(([dx, dy], i) => (
+            <circle key={i} cx={cx + dx} cy={top + dy} r={race.capPits ? 1.5 : 2.1} fill={race.capPits ? '#4a3420' : '#f2ead6'} opacity="0.85" />
+          ))}
+        </>
+      )}
 
       {/* ---- tiefling horns ---- */}
       {race.horns && (
@@ -564,7 +718,7 @@ function HeroBust({ sheet, seed }) {
       )}
 
       {/* ---- headwear: everything opaque stays above the brow ---- */}
-      {cls.head === 'hood' && (
+      {showHeadwear && cls.head === 'hood' && (
         /* front rim of the hood - a crescent over the crown, never the eyes */
         <path
           d={`M${cx - rx - 3} ${browY + 1}
@@ -577,20 +731,20 @@ function HeroBust({ sheet, seed }) {
           fill={cls.garb}
         />
       )}
-      {cls.head === 'wizhat' && (
+      {showHeadwear && cls.head === 'wizhat' && (
         <>
           <path d={`M${cx} ${top - 20} ${cx + 13} ${top + 3} ${cx - 13} ${top + 3}z`} fill={cls.garb} />
           <rect x={cx - 18} y={top + 1} width="36" height="5" rx="2.5" fill={cls.garb} />
           <rect x={cx - 7} y={top - 5} width="14" height="4" rx="1" fill={cls.trim} />
         </>
       )}
-      {cls.head === 'cap' && (
+      {showHeadwear && cls.head === 'cap' && (
         <>
           <path d={`M${cx - rx - 2} ${browY} q${rx + 2} -10 ${rx * 2 + 4} 0z`} fill={cls.garb} />
           <path d={`M${cx + rx - 1} ${browY - 3} q11 -8 13 -1 -7.5 0 -11 4.5z`} fill={cls.trim} />
         </>
       )}
-      {cls.head === 'helm' && (
+      {showHeadwear && cls.head === 'helm' && (
         <>
           {/* dome over the crown */}
           <path d={`M${cx - rx - 1} ${browY} q0 -${ry + 5} ${rx + 1} -${ry + 5} q${rx + 1} 0 ${rx + 1} ${ry + 5}z`} fill={cls.trim} />
@@ -601,7 +755,7 @@ function HeroBust({ sheet, seed }) {
           <rect x={cx - 1.4} y={browY} width="2.8" height={ry * 0.6} fill={cls.trim} />
         </>
       )}
-      {cls.head === 'greathelm' && (
+      {showHeadwear && cls.head === 'greathelm' && (
         <>
           <path d={`M${cx - rx - 1.5} ${cy + 5} q0 -${ry + 7} ${rx + 1.5} -${ry + 7} q${rx + 1.5} 0 ${rx + 1.5} ${ry + 7}z`} fill={cls.trim} />
           <rect x={cx - 8} y={cy - 2} width="16" height="3.6" rx="1.4" fill="#141414" />
@@ -609,7 +763,7 @@ function HeroBust({ sheet, seed }) {
           <path d={`M${cx - 7} ${top - 2} ${cx} ${top - 10} ${cx + 7} ${top - 2}z`} fill="#e8c476" />
         </>
       )}
-      {cls.head === 'mitre' && (
+      {showHeadwear && cls.head === 'mitre' && (
         <path
           d={`M${cx} ${top - 13} q${rx + 3} 6 ${rx + 3} ${ry * 0.85} l-${rx * 2 + 6} 0 q0 -${ry * 0.85 - 6} ${rx + 3} -${ry * 0.85 + 6}z`}
           fill={cls.garb}
@@ -617,13 +771,13 @@ function HeroBust({ sheet, seed }) {
           strokeWidth="1.6"
         />
       )}
-      {cls.head === 'antlers' && (
+      {showHeadwear && cls.head === 'antlers' && (
         <g stroke={hair} strokeWidth="2.6" fill="none" strokeLinecap="round">
           <path d={`M${cx - 6} ${top + 2} l-6 -9 l-5.5 -2.5 M${cx - 12} ${top - 7} l1.5 -7`} />
           <path d={`M${cx + 6} ${top + 2} l6 -9 l5.5 -2.5 M${cx + 12} ${top - 7} l-1.5 -7`} />
         </g>
       )}
-      {cls.head === 'circlet' && (
+      {showHeadwear && cls.head === 'circlet' && (
         <>
           <path d={`M${cx - rx + 1} ${browY - 1} q${rx - 1} 5 ${rx * 2 - 2} 0`} stroke={cls.trim} strokeWidth="2.6" fill="none" />
           <circle cx={cx} cy={browY + 0.5} r="2.6" fill={cls.trim} />
@@ -631,10 +785,16 @@ function HeroBust({ sheet, seed }) {
       )}
 
       {/* ---- face: drawn last so nothing can hide it ---- */}
-      {!fullFace && !race.snout && (
+      {!fullFace && !race.snout && !race.robot && (
         <>
-          <ellipse cx={cx - rx * 0.4} cy={eyeY} rx="2" ry="2.4" fill="#1c1a18" />
-          <ellipse cx={cx + rx * 0.4} cy={eyeY} rx="2" ry="2.4" fill="#1c1a18" />
+          <ellipse cx={cx - rx * 0.4} cy={eyeY} rx="2" ry="2.4" fill={eyeFill} />
+          <ellipse cx={cx + rx * 0.4} cy={eyeY} rx="2" ry="2.4" fill={eyeFill} />
+        </>
+      )}
+      {race.cat && !fullFace && (
+        <>
+          <path d={`M${cx - 1.6} ${cy + 4} h3.2 l-1.6 2z`} fill="#8a4a44" />
+          <path d={`M${cx - 3} ${cy + 6.2} L${cx - rx - 2} ${cy + 4.6} M${cx - 3} ${cy + 7.2} L${cx - rx - 2} ${cy + 8} M${cx + 3} ${cy + 6.2} L${cx + rx + 2} ${cy + 4.6} M${cx + 3} ${cy + 7.2} L${cx + rx + 2} ${cy + 8}`} stroke="#f0e8d8" strokeWidth="0.6" opacity="0.8" />
         </>
       )}
       {!fullFace && cls.mark === 'warpaint' && (
@@ -645,6 +805,12 @@ function HeroBust({ sheet, seed }) {
         <>
           <path d={`M${cx - 4.5} ${mouthY + 2} l-1.6 -4.6 3.2 0z`} fill="#e8e2cc" />
           <path d={`M${cx + 4.5} ${mouthY + 2} l1.6 -4.6 -3.2 0z`} fill="#e8e2cc" />
+        </>
+      )}
+      {race.fangs && !fullFace && (
+        <>
+          <path d={`M${cx - 3.2} ${mouthY} l1 3 1 -3z`} fill="#ece6d2" />
+          <path d={`M${cx + 1.2} ${mouthY} l1 3 1 -3z`} fill="#ece6d2" />
         </>
       )}
       {/* a rogue's mask covers nose and mouth, not the eyes */}

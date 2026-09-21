@@ -121,7 +121,7 @@ button.vital.clickable:hover { border-color: var(--gold-dim); box-shadow: 0 0 10
 .feature-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .feature-item { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--bg-elev); padding: 8px 13px; }
 .feature-item summary { cursor: pointer; }
-.feature-item p { color: var(--text-mid); font-size: 0.92em; margin: 8px 0 2px; }
+.feature-item p { color: var(--text-mid); font-size: 0.92em; margin: 8px 0 2px; white-space: pre-line; } /* expansion text keeps its paragraphs and table rows */
 
 .sheet-roll-toast {
   position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);

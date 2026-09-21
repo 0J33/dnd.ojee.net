@@ -6,20 +6,12 @@ const router = express.Router();
 const norm = (s) => (s || '').toString().toLowerCase();
 
 // ---- Races ----
-router.get('/races', (req, res) => {
-  res.json(srd.raw.races.map((r) => ({
-    index: r.index,
-    name: r.name,
-    speed: r.speed,
-    ability_bonuses: r.ability_bonuses,
-    size: r.size,
-    subraces: (r.subraces || []).map((s) => s.index),
-  })));
-});
+// SRD 5.1 plus the open-licensed expansions, in one shape (see srd/store.js).
+router.get('/races', (req, res) => res.json(srd.raceSummaries));
 router.get('/races/:index', (req, res) => {
-  const detail = srd.raceDetail(req.params.index);
-  if (!detail) return res.status(404).json({ error: 'Not found' });
-  res.json(detail);
+  const race = srd.raceByIndex.get(req.params.index);
+  if (!race) return res.status(404).json({ error: 'Not found' });
+  res.json(race);
 });
 
 // ---- Classes ----
@@ -41,11 +33,16 @@ router.get('/classes/:index/levels', (req, res) => {
   if (!levels.length) return res.status(404).json({ error: 'Not found' });
   res.json(levels);
 });
+router.get('/subclasses', (req, res) => {
+  if (!req.query.class) return res.status(400).json({ error: 'class is required' });
+  res.json(srd.subclassesFor(norm(req.query.class)));
+});
 router.get('/subclasses/:index/levels', (req, res) => {
   res.json(srd.subclassLevels(req.params.index));
 });
+// Every subclass, SRD or expansion: { ...summary, levels: { "3": [{ name, desc }] } }
 router.get('/subclasses/:index', (req, res) => {
-  const sc = srd.byIndex.subclasses.get(req.params.index);
+  const sc = srd.subclassByIndex.get(req.params.index);
   if (!sc) return res.status(404).json({ error: 'Not found' });
   res.json(sc);
 });
@@ -113,6 +110,10 @@ router.get('/languages', (req, res) => res.json(srd.raw.languages));
 router.get('/alignments', (req, res) => res.json(srd.raw.alignments));
 router.get('/weapon-properties', (req, res) => res.json(srd.raw.weaponProperties));
 router.get('/backgrounds', (req, res) => res.json(srd.raw.backgrounds));
+router.get('/sources', (req, res) => res.json({
+  sources: srd.sources.list,
+  ogl: { text: srd.sources.oglText, section15: srd.sources.oglSection15 },
+}));
 router.get('/rules', (req, res) => res.json(srd.raw.rules.map((r) => ({ index: r.index, name: r.name, subsections: r.subsections }))));
 router.get('/rule-sections/:index', (req, res) => {
   const section = srd.byIndex.ruleSections.get(req.params.index);

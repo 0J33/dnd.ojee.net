@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { campaigns as campaignsApi, characters as charsApi } from '../api';
+import { campaigns as campaignsApi, characters as charsApi, srd } from '../api';
 import { socket } from '../socket';
 import { useDialog, ModalOverlay, timeAgo } from '../utils';
 import { CLASS_META, deriveSheet } from '../rules/engine';
@@ -378,6 +378,12 @@ function CreateCampaignModal({ onClose, onCreate }) {
 }
 
 function CreditsModal({ onClose }) {
+  const [legal, setLegal] = useState(null);
+  useEffect(() => {
+    srd.sources().then((res) => res && Array.isArray(res.sources) && setLegal(res));
+  }, []);
+  const oglSources = legal ? legal.sources.filter((s) => s.license === 'OGL-1.0a') : [];
+
   return (
     <ModalOverlay onClose={onClose}>
       <div className="modal">
@@ -410,7 +416,36 @@ function CreditsModal({ onClose }) {
           </p>
           <hr className="ornament-line" />
           <p>
-            SRD data served from the open <a href="https://github.com/5e-bits/5e-database" target="_blank" rel="noreferrer">5e-bits/5e-database</a> project.
+            Races and subclasses labelled {oglSources.length ? oglSources.map((s) => s.short).join(', ').replace(/, ([^,]*)$/, ' or $1') : 'with another book'} in the
+            character builder are Open Game Content, used under the Open Game License v1.0a and reproduced from:
+          </p>
+          <ul className="credits-list">
+            {oglSources.map((s) => (
+              <li key={s.key}>
+                <a href={s.url} target="_blank" rel="noreferrer"><em>{s.name}</em></a> by {s.publisher}
+              </li>
+            ))}
+          </ul>
+          <p>
+            The game-rules text of those races and subclasses is Open Game Content as designated by its publishers.
+            No Product Identity is used beyond the titles the license requires. The Goliath and Orc come from SRD 5.2.1 (above);
+            their ability increases are adapted to this table's 2014-style backgrounds. dnd.ojee.net's own interface text,
+            artwork and code are not Open Game Content.
+          </p>
+          {legal && (
+            <details className="credits-ogl">
+              <summary>Open Game License v1.0a (full text)</summary>
+              <p className="credits-license">{legal.ogl.text}</p>
+              <p className="credits-license">
+                <strong>15. COPYRIGHT NOTICE</strong>{'\n'}
+                {legal.ogl.section15.join('\n')}
+              </p>
+            </details>
+          )}
+          <hr className="ornament-line" />
+          <p>
+            SRD data served from the open <a href="https://github.com/5e-bits/5e-database" target="_blank" rel="noreferrer">5e-bits/5e-database</a> project;
+            expansion text through the <a href="https://open5e.com" target="_blank" rel="noreferrer">Open5e</a> API.
             Built with React and Socket.IO. All interface art is original.
           </p>
         </div>

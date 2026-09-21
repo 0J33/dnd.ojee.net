@@ -50,6 +50,28 @@
 .choice-card p { font-size: 0.9em; color: var(--text-mid); margin: 0 0 8px; }
 .choice-card.slim { padding: 10px 12px; }
 .choice-playstyle { color: var(--text-dim); font-style: italic; }
+.choice-card .choice-restriction { color: var(--ember-bright); font-size: 0.82em; }
+
+/* Races and subclasses grouped by the book they come from */
+.source-group { margin-bottom: 22px; }
+.source-group-head {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: 2px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-soft);
+  font-family: var(--font-display); color: var(--gold); letter-spacing: 1px; font-size: 0.92em;
+}
+.source-group-head .muted { font-family: var(--font-body); letter-spacing: 0; }
+.chip.source-chip { border-color: #3f5163; color: #9fb4c8; background: rgba(95, 135, 168, 0.1); font-weight: 400; }
+
+/* What's left to decide once a race is picked */
+.race-options {
+  margin-top: 14px; padding: 16px 18px;
+  border: 1px solid var(--gold-dim); border-radius: var(--radius-sm);
+  background: rgba(212, 169, 79, 0.04);
+  scroll-margin: 16px;
+}
+.race-options h3 { color: var(--gold-bright); margin-bottom: 4px; }
+.race-options > p { white-space: pre-line; }
+.subrace-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
 .choice-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .pregen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }

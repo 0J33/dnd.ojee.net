@@ -1,4 +1,6 @@
 // Six ready-to-play level-1 heroes (SRD 5.1 content only, math pre-verified).
+// Classes that pick a subclass later (fighter, rogue...) leave `subclass` unset
+// and choose on level-up.
 // Sheet shape matches rules/engine.js expectations.
 import { STARTING_EQUIPMENT } from '../rules/engine';
 
@@ -108,7 +110,7 @@ export const PREGENS = [
       ...base,
       name: 'Ansel Morrow',
       race: 'human', raceName: 'Human', subrace: null,
-      classIndex: 'cleric', className: 'Cleric', subclassName: 'Life Domain',
+      classIndex: 'cleric', className: 'Cleric', subclass: 'life', subclassName: 'Life Domain',
       background: 'acolyte', alignment: 'Neutral Good',
       abilities: { str: 14, dex: 11, con: 15, int: 9, wis: 16, cha: 13 },
       speed: 30,

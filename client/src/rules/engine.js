@@ -207,6 +207,37 @@ export const CLASS_META = {
   },
 };
 
+// ---- Subclasses ----
+// The class level each class picks its subclass at (2014 rules).
+const SUBCLASS_LEVEL = { cleric: 1, sorcerer: 1, warlock: 1, druid: 2, wizard: 2 };
+export const subclassLevel = (classIndex) => SUBCLASS_LEVEL[classIndex] || 3;
+export const SUBCLASS_LABEL = {
+  barbarian: 'Primal Path', bard: 'Bard College', cleric: 'Divine Domain', druid: 'Druid Circle',
+  fighter: 'Martial Archetype', monk: 'Monastic Tradition', paladin: 'Sacred Oath', ranger: 'Ranger Archetype',
+  rogue: 'Roguish Archetype', sorcerer: 'Sorcerous Origin', warlock: 'Otherworldly Patron', wizard: 'Arcane Tradition',
+};
+
+// Sheets made before subclasses were selectable had the SRD's single option
+// baked in for the three classes that choose at level 1. `null` on a sheet
+// means "not chosen yet"; only a missing key falls back.
+const LEGACY_SUBCLASS = { cleric: 'life', sorcerer: 'draconic', warlock: 'fiend' };
+export function subclassOf(sheet) {
+  if (!sheet) return null;
+  if (sheet.subclass !== undefined) return sheet.subclass;
+  return LEGACY_SUBCLASS[sheet.classIndex] || null;
+}
+
+// Subclass features that change the sheet's numbers rather than just its text.
+const SUBCLASS_RULES = {
+  draconic: { unarmoredAc: 13, hpPerLevel: 1 }, // Draconic Resilience
+};
+
+// Extra max HP per level from race (Dwarven Toughness...) and subclass.
+export function hpPerLevelBonus(sheet) {
+  const racial = sheet.hpPerLevel ?? (sheet.race === 'dwarf' ? 1 : 0); // pre-expansion sheets: only Hill Dwarf had it
+  return racial + (SUBCLASS_RULES[subclassOf(sheet)]?.hpPerLevel || 0);
+}
+
 // Starting equipment: sensible default package per class (SRD options resolved to
 // beginner-recommended picks). stats snapshots let the engine derive attacks/AC offline.
 const W = (name, damage, type, props = [], range = null) => ({ name, qty: 1, equipped: true, kind: 'weapon', stats: { damage, damageType: type, properties: props, range } });
@@ -294,6 +325,8 @@ export function deriveSheet(sheet) {
     if (category === 'heavy') ac = acBase;
     else if (category === 'medium') ac = acBase + Math.min(mods.dex, maxDex ?? 2);
     else ac = acBase + mods.dex;
+  } else if (SUBCLASS_RULES[subclassOf(sheet)]?.unarmoredAc) {
+    ac = SUBCLASS_RULES[subclassOf(sheet)].unarmoredAc + mods.dex;
   } else if (sheet.classIndex === 'barbarian') {
     ac = 10 + mods.dex + mods.con;
   } else if (sheet.classIndex === 'monk') {
@@ -332,6 +365,10 @@ export function deriveSheet(sheet) {
     const ma = Math.max(mods.dex, mods.str);
     attacks.push({ name: 'Unarmed strike', bonus: ma + pb, damage: '1d4', damageMod: ma, damageType: 'bludgeoning', range: null, properties: [], ability: 'dex' });
   }
+  // Claws, horns, bites: unarmed strikes that use STR and are always proficient.
+  for (const n of sheet.naturalAttacks || []) {
+    attacks.push({ name: n.name, bonus: mods.str + pb, damage: n.damage, damageMod: mods.str, damageType: n.damageType, range: null, properties: ['natural'], ability: 'str' });
+  }
   for (const custom of sheet.attacksCustom || []) attacks.push(custom);
 
   // Spellcasting
@@ -354,25 +391,23 @@ export function deriveSheet(sheet) {
     initiative: mods.dex,
     passivePerception: 10 + skills.perception.bonus,
     speed: sheet.speed || 30,
+    size: sheet.size || 'Medium',
+    darkvision: sheet.darkvision || 0,
     attacks, spell, hitDie,
     profSaves,
     maxHp: sheet.maxHp,
   };
 }
 
-// Level-1 max HP
-export function level1Hp(classIndex, abilities, raceIndex) {
+// Level-1 max HP. `perLevel` is hpPerLevelBonus() of the sheet being built.
+export function level1Hp(classIndex, abilities, perLevel = 0) {
   const meta = CLASS_META[classIndex];
-  let hp = (meta ? meta.hitDie : 8) + mod(abilities.con);
-  if (raceIndex === 'dwarf') hp += 1; // Hill Dwarf: +1 HP per level (SRD subrace)
-  return Math.max(1, hp);
+  return Math.max(1, (meta ? meta.hitDie : 8) + mod(abilities.con) + perLevel);
 }
 
-export function levelUpHp(sheet, roll = null) {
+export function levelUpHp(sheet, roll = null, conScore = sheet.abilities.con) {
   const meta = CLASS_META[sheet.classIndex] || { hitDie: 8 };
-  const conMod = mod(sheet.abilities.con);
-  const gain = (roll ?? AVG_HIT_DIE[meta.hitDie]) + conMod + (sheet.race === 'dwarf' ? 1 : 0);
-  return Math.max(1, gain);
+  return Math.max(1, (roll ?? AVG_HIT_DIE[meta.hitDie]) + mod(conScore) + hpPerLevelBonus(sheet));
 }
 
 export const formatCr = (cr) => {

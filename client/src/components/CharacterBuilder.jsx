@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { characters as charsApi, srd } from '../api';
 import { useDialog } from '../utils';
@@ -6,22 +6,15 @@ import {
   ABILITIES, ABILITY_NAMES, ABILITY_BLURBS, SKILLS, SKILL_BY_INDEX,
   CLASS_META, STANDARD_ARRAY, POINT_BUY_TOTAL, POINT_BUY_COST,
   STARTING_EQUIPMENT, RECOMMENDED_SPELLS, mod, fmtMod, level1Hp, preparedCount, deriveSheet,
+  subclassLevel, SUBCLASS_LABEL, hpPerLevelBonus,
 } from '../rules/engine';
+import { resolveRace, needsSubrace, choicePool, racialBonuses as sumRacialBonuses, choicesComplete } from '../rules/race';
 import { PREGENS } from '../data/pregens';
 import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon } from './Icons';
 import { Avatar } from './Portrait';
+import { useSources, SourceChip, SourceHead, SubclassPicker, useSubclass, subclassFeaturesBetween, pressable, groupBySource } from './ContentChoices';
 
-const RACE_BLURBS = {
-  dwarf: 'Stout mountain folk. Tough (+2 CON), poison-resistant, see in the dark. Slow but unshakeable.',
-  elf: 'Graceful and long-lived. Nimble (+2 DEX), keen senses, see in the dark, immune to magical sleep.',
-  halfling: 'Small, cheerful and absurdly lucky (+2 DEX). Reroll natural 1s. Brave beyond their size.',
-  human: 'Adaptable and ambitious: +1 to every ability score. Good at absolutely everything.',
-  dragonborn: 'Dragon-blooded warriors (+2 STR, +1 CHA) with a literal breath weapon.',
-  gnome: 'Small, brilliant tinkerers (+2 INT) with advantage on mental saves vs magic.',
-  'half-elf': 'Charismatic wanderers between worlds: +2 CHA, +1 to two others, two free skills.',
-  'half-orc': 'Fierce and unstoppable (+2 STR, +1 CON): survive lethal blows, crit harder.',
-  tiefling: 'Marked by infernal heritage (+2 CHA, +1 INT): fire-resistant, innate magic.',
-};
+const uniq = (arr) => [...new Set(arr.filter(Boolean))];
 
 const PORTRAIT_COLORS = ['#d4a94f', '#c2542e', '#7fb069', '#5f87a8', '#8f7fd4', '#c94f6d', '#5fb0a5', '#b8b8b8', '#e0c060', '#b06ab0'];
 
@@ -45,7 +38,12 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
   // choices
   const [race, setRace] = useState(null);
+  const [subrace, setSubrace] = useState(null);
+  const [abilityPicks, setAbilityPicks] = useState([]); // one array per race ability-choice group
+  const [raceSkillPicks, setRaceSkillPicks] = useState([]); // one array per race skill-choice group
+  const [swapSkills, setSwapSkills] = useState([]); // replacements when race and background overlap
   const [classIndex, setClassIndex] = useState(null);
+  const [subclass, setSubclass] = useState(null); // summary; only for classes that choose at level 1
   const [method, setMethod] = useState('array');
   const [assign, setAssign] = useState({}); // ability -> base score
   const [rolled, setRolled] = useState(null);
@@ -67,11 +65,48 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   }, []);
 
   useEffect(() => {
-    if (race) srd.race(race).then((d) => d && !d.error && setRaceDetail(d));
-    else setRaceDetail(null);
+    setSubrace(null);
+    if (!race) return setRaceDetail(null);
+    srd.race(race).then((d) => {
+      if (!d || d.error) return;
+      setRaceDetail(d);
+      // a race with exactly one subrace (Hill Dwarf, High Elf...) just has it
+      if (d.subrace_required && d.subraces.length === 1) setSubrace(d.subraces[0].index);
+    });
   }, [race]);
 
+  // picks belong to one race + subrace combination
+  useEffect(() => {
+    setAbilityPicks([]);
+    setRaceSkillPicks([]);
+  }, [race, subrace]);
+
+  const sources = useSources();
+  const resolved = useMemo(
+    () => (raceDetail && raceDetail.index === race ? resolveRace(raceDetail, subrace) : null),
+    [raceDetail, race, subrace],
+  );
+  const racialSkills = useMemo(
+    () => (resolved ? uniq([...resolved.skills, ...raceSkillPicks.flat()]) : []),
+    [resolved, raceSkillPicks],
+  );
+
   const meta = classIndex ? CLASS_META[classIndex] : null;
+  const choosesSubclassNow = !!classIndex && subclassLevel(classIndex) === 1;
+  const subclassDetail = useSubclass(choosesSubclassNow ? subclass?.index : null);
+
+  // Level-1 subclass classes start on the SRD option, which the builder used to
+  // hand out automatically; anything else is one click away.
+  useEffect(() => {
+    setSubclass(null);
+    if (!choosesSubclassNow) return;
+    let live = true;
+    srd.subclasses(classIndex).then((list) => {
+      const srdPick = Array.isArray(list) && list.find((x) => x.source === 'srd51');
+      if (live && srdPick) setSubclass((prev) => prev || srdPick);
+    });
+    return () => { live = false; };
+  }, [classIndex, choosesSubclassNow]);
 
   // load spell options when reaching the spells step
   useEffect(() => {
@@ -103,15 +138,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   }, [classIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- ability score helpers ----
-  const racialBonuses = useMemo(() => {
-    const bonuses = {};
-    if (!raceDetail) return bonuses;
-    for (const b of raceDetail.ability_bonuses || []) bonuses[b.ability_score.index] = (bonuses[b.ability_score.index] || 0) + b.bonus;
-    for (const sub of raceDetail.subraces || []) {
-      for (const b of sub.ability_bonuses || []) bonuses[b.ability_score.index] = (bonuses[b.ability_score.index] || 0) + b.bonus;
-    }
-    return bonuses;
-  }, [raceDetail]);
+  const racialBonuses = useMemo(() => sumRacialBonuses(resolved, abilityPicks), [resolved, abilityPicks]);
 
   const baseScores = useMemo(() => {
     if (method === 'pointbuy') return pb;
@@ -147,7 +174,16 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   // ---- step gating ----
   const bgData = backgrounds.find((b) => b.index === background);
   const bgSkills = bgData ? bgData.skill_proficiencies : [];
-  const skillOptions = meta ? meta.skillChoices.from.filter((s) => !bgSkills.includes(s)) : [];
+  const skillOptions = meta ? meta.skillChoices.from.filter((s) => !bgSkills.includes(s) && !racialSkills.includes(s)) : [];
+  // 5e: a skill granted twice lets you take any other skill instead
+  const overlapSkills = bgSkills.filter((s) => racialSkills.includes(s));
+  const swapOptions = SKILLS.map((s) => s.index).filter((s) => !bgSkills.includes(s) && !racialSkills.includes(s) && !classSkills.includes(s));
+
+  // a racial pick made after the class skills can't leave a duplicate behind
+  useEffect(() => {
+    setClassSkills((prev) => prev.filter((s) => !racialSkills.includes(s)));
+    setSwapSkills([]);
+  }, [racialSkills.join(','), background]); // eslint-disable-line react-hooks/exhaustive-deps
   const spellsNeeded = classIndex ? spellPickCount(classIndex) : 0;
   const cantripsNeeded = meta?.l1?.cantrips ?? 0;
   const isCaster = !!(meta && meta.caster && (cantripsNeeded > 0 || spellsNeeded > 0));
@@ -155,14 +191,17 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   const canNext = () => {
     switch (STEPS[step]) {
       case 'Start': return true;
-      case 'Race': return !!race;
-      case 'Class': return !!classIndex;
+      case 'Race':
+        return !!resolved && !needsSubrace(raceDetail, subrace)
+          && choicesComplete(resolved.ability_choices, abilityPicks)
+          && choicesComplete(resolved.skill_choices, raceSkillPicks);
+      case 'Class': return !!classIndex && (!choosesSubclassNow || !!subclassDetail);
       case 'Abilities': return !!finalScores && (method !== 'pointbuy' || pointsSpent <= POINT_BUY_TOTAL);
       case 'Background': {
         if (!background) return false;
         if (classSkills.length !== (meta?.skillChoices.n || 0)) return false;
         if (meta?.expertiseAtCreate && expertisePicks.length !== meta.expertiseAtCreate) return false;
-        return true;
+        return swapSkills.length === overlapSkills.length;
       }
       case 'Spells': return !isCaster || (cantrips.length === cantripsNeeded && spells.length === spellsNeeded);
       case 'Details': return name.trim().length > 0;
@@ -183,25 +222,28 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
   // ---- assemble the final sheet ----
   const buildSheet = () => {
-    const raceName = raceDetail.subraces && raceDetail.subraces.length ? raceDetail.subraces[0].name : raceDetail.name;
-    const features = [];
-    for (const t of raceDetail.traits || []) features.push({ name: t.name, source: raceDetail.name, desc: (t.desc || []).join(' ') });
-    for (const sub of raceDetail.subraces || []) {
-      for (const t of sub.racial_traits || []) features.push({ name: t.name, source: sub.name, desc: (t.desc || []).join(' ') });
-    }
-    const l1Features = CLASS_L1_FEATURES[classIndex] || [];
-    for (const f of l1Features) features.push(f);
+    const features = resolved.traits.map((t) => ({ name: t.name, source: t.source, desc: t.desc }));
+    for (const f of CLASS_L1_FEATURES[classIndex] || []) features.push(f);
     if (classIndex === 'fighter') {
       const style = FIGHTING_STYLES.find((s) => s.id === fightingStyle);
       features.push({ name: `Fighting Style: ${style.name}`, source: 'Fighter 1', desc: style.desc });
+    }
+    if (choosesSubclassNow && subclassDetail) {
+      features.push({ name: `${SUBCLASS_LABEL[classIndex]}: ${subclassDetail.name}`, source: `${meta.name} 1`, desc: subclassDetail.desc });
+      features.push(...subclassFeaturesBetween(subclassDetail, 1, 1));
     }
     features.push({ name: bgData.feature.name, source: bgData.name, desc: bgData.feature.desc });
 
     const equipment = (STARTING_EQUIPMENT[classIndex] || []).map((e) => ({ ...e }));
     for (const item of bgData.equipment || []) equipment.push({ name: item.name, qty: item.qty, kind: 'gear' });
 
-    const languages = ['Common'];
-    if (raceDetail.languages) for (const l of raceDetail.languages) if (l.name !== 'Common') languages.push(l.name);
+    const languages = resolved.languages.length ? [...resolved.languages] : ['Common'];
+    for (const note of resolved.language_notes) languages.push(`(${note})`);
+    const subclassFields = {
+      subclass: choosesSubclassNow && subclassDetail ? subclassDetail.index : null,
+      subclassName: choosesSubclassNow && subclassDetail ? subclassDetail.name : null,
+    };
+    const perLevel = hpPerLevelBonus({ race, hpPerLevel: resolved.hp_per_level, classIndex, ...subclassFields });
 
     const spellcasting = meta.caster
       ? {
@@ -216,14 +258,20 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     const style = FIGHTING_STYLES.find((s) => s.id === fightingStyle);
     const sheet = {
       name: name.trim(),
-      race, raceName, subrace: raceDetail.subraces?.[0]?.index || null,
+      race, raceName: resolved.name, raceSource: resolved.race.source,
+      subrace: resolved.sub?.index || null, subraceName: resolved.sub?.name || null,
       classIndex, className: meta.name,
+      ...subclassFields,
       background, alignment,
       level: 1, xp: 0, abilityMethod: method,
       abilities: finalScores,
-      speed: raceDetail.speed || 30,
-      maxHp: level1Hp(classIndex, finalScores, race),
-      currentHp: level1Hp(classIndex, finalScores, race),
+      speed: resolved.speed || 30,
+      size: resolved.size || 'Medium',
+      darkvision: resolved.darkvision || 0,
+      hpPerLevel: resolved.hp_per_level,
+      naturalAttacks: resolved.natural_attacks.map((a) => ({ ...a })),
+      maxHp: level1Hp(classIndex, finalScores, perLevel),
+      currentHp: level1Hp(classIndex, finalScores, perLevel),
       tempHp: 0,
       hitDiceRemaining: 1,
       deathSaves: { s: 0, f: 0 },
@@ -231,12 +279,12 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
       conditions: [],
       exhaustion: 0,
       profSaves: meta.saves,
-      profSkills: [...bgSkills, ...classSkills],
+      profSkills: uniq([...bgSkills, ...racialSkills, ...classSkills, ...swapSkills]),
       expertiseSkills: expertisePicks,
       languages,
-      armorProfs: meta.armor.length ? meta.armor.map((a) => a[0].toUpperCase() + a.slice(1)) : [],
-      weaponProfs: [typeof meta.weapons === 'string' ? meta.weapons : 'Simple weapons'],
-      toolProfs: bgData.tool_proficiencies || [],
+      armorProfs: uniq([...meta.armor.map((a) => a[0].toUpperCase() + a.slice(1)), ...resolved.armor_profs]),
+      weaponProfs: uniq([typeof meta.weapons === 'string' ? meta.weapons : 'Simple weapons', ...resolved.weapon_profs]),
+      toolProfs: uniq([...(bgData.tool_proficiencies || []), ...resolved.tool_profs]),
       equipment,
       coins: { cp: 0, sp: 0, ep: 0, gp: bgData.gold || 10, pp: 0 },
       spellcasting,
@@ -316,24 +364,30 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
         {STEPS[step] === 'Race' && (
           <div>
-            <p className="builder-intro">Your race shapes what you are: size, speed, senses, and natural talents. There is no wrong pick.</p>
-            <div className="choice-grid">
-              {races.map((r) => (
-                <div key={r.index} className={`choice-card ${race === r.index ? 'selected' : ''}`} onClick={() => setRace(r.index)}>
-                  <h4>{r.name}</h4>
-                  <p>{RACE_BLURBS[r.index] || ''}</p>
-                  <div className="choice-tags">
-                    <span className="chip">Speed {r.speed} ft</span>
-                    {(r.ability_bonuses || []).slice(0, 3).map((b) => (
-                      <span className="chip gold" key={b.ability_score.index}>+{b.bonus} {b.ability_score.name}</span>
-                    ))}
-                  </div>
+            <p className="builder-intro">
+              Your race shapes what you are: size, speed, senses, and natural talents. There is no wrong pick. The core
+              races come first; the rest are from open-licensed expansion books.
+            </p>
+            {groupBySource(races.map((r) => ({ ...r, source: r.source === 'srd52' ? 'srd51' : r.source, bookSource: r.source })), sources).map(([group, items]) => (
+              <section key={group} className="source-group">
+                {group === 'srd51'
+                  ? <div className="source-group-head"><span>Core races</span><span className="muted small">System Reference Document</span></div>
+                  : <SourceHead source={group} sources={sources} />}
+                <div className="choice-grid">
+                  {items.map((r) => (
+                    <RaceCard key={r.index} r={r} sources={sources} selected={race === r.index} onPick={() => setRace(r.index)} />
+                  ))}
                 </div>
-              ))}
-            </div>
-            {raceDetail && raceDetail.subraces?.length > 0 && (
-              <p className="muted small mt">Includes the {raceDetail.subraces[0].name} heritage (the SRD variant) - its bonuses are applied automatically.</p>
-            )}
+                {resolved && items.some((r) => r.index === race) && (
+                  <RaceOptions
+                    raceDetail={raceDetail} resolved={resolved} sources={sources}
+                    subrace={subrace} setSubrace={setSubrace}
+                    abilityPicks={abilityPicks} setAbilityPicks={setAbilityPicks}
+                    raceSkillPicks={raceSkillPicks} setRaceSkillPicks={setRaceSkillPicks}
+                  />
+                )}
+              </section>
+            ))}
           </div>
         )}
 
@@ -365,6 +419,19 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                   ))}
                 </div>
               </div>
+            )}
+            {choosesSubclassNow && (
+              <div className="mt">
+                <h4>{SUBCLASS_LABEL[classIndex]} - {meta.name}s choose theirs at level 1</h4>
+                <p className="muted small">Your {SUBCLASS_LABEL[classIndex].toLowerCase()} is your speciality within the class. The first option is the classic SRD pick.</p>
+                <SubclassPicker classIndex={classIndex} value={subclass?.index} onChange={setSubclass} />
+                {subclassDetail && <SubclassPreview detail={subclassDetail} level={1} />}
+              </div>
+            )}
+            {classIndex && !choosesSubclassNow && (
+              <p className="muted small mt">
+                You'll choose your {SUBCLASS_LABEL[classIndex].toLowerCase()} when you reach level {subclassLevel(classIndex)}.
+              </p>
             )}
           </div>
         )}
@@ -480,7 +547,10 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             {background && (
               <div className="mt">
                 <h4>Class skills - pick {meta.skillChoices.n} ({classSkills.length}/{meta.skillChoices.n})</h4>
-                <p className="muted small">You're already proficient in {bgSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')} from your background.</p>
+                <p className="muted small">
+                  You're already proficient in {bgSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')} from your background
+                  {racialSkills.length > 0 && <> and {racialSkills.map((s) => SKILL_BY_INDEX[s].name).join(', ')} from your race</>}.
+                </p>
                 <div className="skill-pick-grid">
                   {skillOptions.map((s) => {
                     const on = classSkills.includes(s);
@@ -498,11 +568,33 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                     );
                   })}
                 </div>
+                {overlapSkills.length > 0 && (
+                  <div className="mt">
+                    <h4>Replacement skill{overlapSkills.length > 1 ? 's' : ''} ({swapSkills.length}/{overlapSkills.length})</h4>
+                    <p className="muted small">
+                      Your race and background both give you {overlapSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')}, so you pick
+                      {overlapSkills.length > 1 ? ` ${overlapSkills.length} other skills` : ' another skill'} instead.
+                    </p>
+                    <div className="skill-pick-grid">
+                      {swapOptions.concat(swapSkills.filter((s) => !swapOptions.includes(s))).map((s) => {
+                        const on = swapSkills.includes(s);
+                        return (
+                          <button key={s} className={`skill-pick ${on ? 'on' : ''}`} onClick={() => {
+                            if (on) setSwapSkills(swapSkills.filter((x) => x !== s));
+                            else if (swapSkills.length < overlapSkills.length) setSwapSkills([...swapSkills, s]);
+                          }}>
+                            {SKILL_BY_INDEX[s].name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {meta.expertiseAtCreate && (
                   <div className="mt">
                     <h4>Expertise - double your bonus in {meta.expertiseAtCreate} skills ({expertisePicks.length}/{meta.expertiseAtCreate})</h4>
                     <div className="skill-pick-grid">
-                      {[...bgSkills, ...classSkills].map((s) => {
+                      {uniq([...bgSkills, ...racialSkills, ...classSkills, ...swapSkills]).map((s) => {
                         const on = expertisePicks.includes(s);
                         return (
                           <button key={s} className={`skill-pick ${on ? 'on' : ''}`} onClick={() => {
@@ -554,7 +646,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
           <div>
             <div className="portrait-preview">
               <Avatar
-                sheet={{ name: name || 'Hero', raceIndex: race, classIndex, raceName: raceDetail && raceDetail.name, className: meta && meta.name }}
+                sheet={{ name: name || 'Hero', race, subrace, classIndex, raceName: resolved && resolved.name, className: meta && meta.name }}
                 name={name || 'Hero'}
                 color={color}
                 size={84}
@@ -597,9 +689,9 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
           </div>
         )}
 
-        {STEPS[step] === 'Review' && finalScores && raceDetail && meta && bgData && (
+        {STEPS[step] === 'Review' && finalScores && resolved && meta && bgData && (
           <ReviewPane
-            name={name} raceDetail={raceDetail} meta={meta} bgData={bgData}
+            name={name} meta={meta} bgData={bgData}
             sheet={buildSheet()}
           />
         )}
@@ -627,6 +719,165 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   return createPortal(<div className="builder-overlay">{body}</div>, document.body);
 }
 
+function RaceCard({ r, sources, selected, onPick }) {
+  const speed = r.speeds && r.speeds.length > 1 ? `${r.speeds[0]}-${r.speeds[r.speeds.length - 1]} ft` : `${r.speed} ft`;
+  const size = r.sizes && r.sizes.length > 1 ? 'Small or Medium' : r.size;
+  return (
+    <div className={`choice-card ${selected ? 'selected' : ''}`} aria-pressed={selected} {...pressable(onPick)}>
+      <h4>{r.name} <SourceChip source={r.bookSource} sources={sources} /></h4>
+      <p>{r.blurb}</p>
+      <div className="choice-tags">
+        <span className="chip gold">{r.asi_summary}</span>
+        <span className="chip">Speed {speed}</span>
+        {size !== 'Medium' && <span className="chip">{size}</span>}
+        {r.darkvision > 0 && <span className="chip">Darkvision {r.darkvision} ft</span>}
+      </div>
+    </div>
+  );
+}
+
+// Everything left to decide once a race is picked: subrace, floating ability
+// increases, skill picks - plus the full trait list, so nothing is a surprise.
+function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, setAbilityPicks, raceSkillPicks, setRaceSkillPicks }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [raceDetail.index]);
+
+  const subs = raceDetail.subraces || [];
+  const pickSub = subs.length > 1 || (raceDetail.subrace_optional && subs.length > 0);
+  const label = (raceDetail.subrace_label || 'Subrace').toLowerCase();
+
+  // functional so two quick clicks can't overwrite each other's pick
+  const toggleIn = (setter, i, value, limit) => setter((prev) => {
+    const cur = prev[i] || [];
+    const next = [...prev];
+    if (cur.includes(value)) next[i] = cur.filter((x) => x !== value);
+    else if (cur.length < limit) next[i] = [...cur, value];
+    else return prev;
+    return next;
+  });
+
+  return (
+    <div className="race-options" ref={ref}>
+      <h3>{resolved.name}</h3>
+      {raceDetail.desc && <p className="muted small">{raceDetail.desc}</p>}
+
+      {!pickSub && subs.length === 1 && (
+        <p className="muted small">Includes the {subs[0].name} {label} - its bonuses are applied automatically.</p>
+      )}
+      {pickSub && (
+        <>
+          <h4 className="mt">Choose your {label}</h4>
+          <div className="choice-grid subrace-grid">
+            {raceDetail.subrace_optional && (
+              <div className={`choice-card slim ${!subrace ? 'selected' : ''}`} aria-pressed={!subrace} {...pressable(() => setSubrace(null))}>
+                <h4>{raceDetail.subrace_none || `No ${label}`}</h4>
+                <p>The {raceDetail.name.toLowerCase()} as described above.</p>
+                <div className="choice-tags"><span className="chip gold">{raceDetail.asi_summary}</span></div>
+              </div>
+            )}
+            {subs.map((sr) => (
+              <div key={sr.index} className={`choice-card slim ${subrace === sr.index ? 'selected' : ''}`} aria-pressed={subrace === sr.index} {...pressable(() => setSubrace(sr.index))}>
+                <h4>{sr.name}</h4>
+                <p>{sr.blurb}</p>
+                <div className="choice-tags">
+                  {sr.asi_summary && <span className="chip gold">{sr.replaces_ability ? `${sr.asi_summary} instead` : sr.asi_summary}</span>}
+                  {sr.size && sr.size !== raceDetail.size && <span className="chip">{sr.size}</span>}
+                  {sr.speed && sr.speed !== raceDetail.speed && <span className="chip">Speed {sr.speed} ft</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {resolved.ability_choices.map((c, i) => {
+        const mine = abilityPicks[i] || [];
+        const taken = abilityPicks.filter((_, j) => j !== i).flat();
+        const pool = choicePool(c);
+        return (
+          <div key={`a${i}`} className="mt">
+            <h4>+{c.bonus} to {c.choose === 1 ? 'one score' : `${['', 'one', 'two', 'three'][c.choose] || c.choose} different scores`} ({mine.length}/{c.choose})</h4>
+            <div className="skill-pick-grid">
+              {ABILITIES.map((a) => {
+                const on = mine.includes(a);
+                const blocked = !pool.includes(a) || taken.includes(a) || (!on && mine.length >= c.choose);
+                return (
+                  <button key={a} className={`skill-pick ${on ? 'on' : ''}`} disabled={blocked && !on}
+                    onClick={() => toggleIn(setAbilityPicks, i, a, c.choose)}>
+                    {ABILITY_NAMES[a]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {resolved.skill_choices.map((c, i) => {
+        const mine = raceSkillPicks[i] || [];
+        const taken = [...resolved.skills, ...raceSkillPicks.filter((_, j) => j !== i).flat()];
+        const pool = (c.from || SKILLS.map((x) => x.index)).filter((x) => !taken.includes(x));
+        return (
+          <div key={`s${i}`} className="mt">
+            <h4>Pick {c.choose} skill{c.choose > 1 ? 's' : ''} ({mine.length}/{c.choose})</h4>
+            <div className="skill-pick-grid">
+              {pool.map((sk) => {
+                const on = mine.includes(sk);
+                return (
+                  <button key={sk} className={`skill-pick ${on ? 'on' : ''}`} disabled={!on && mine.length >= c.choose}
+                    onClick={() => toggleIn(setRaceSkillPicks, i, sk, c.choose)}>
+                    {SKILL_BY_INDEX[sk].name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      <h4 className="mt">What you get</h4>
+      <div className="choice-tags mb">
+        <span className="chip">{resolved.size}</span>
+        <span className="chip">Speed {resolved.speed} ft</span>
+        {resolved.darkvision > 0 && <span className="chip">Darkvision {resolved.darkvision} ft</span>}
+        {resolved.skills.map((sk) => <span key={sk} className="chip gold">{SKILL_BY_INDEX[sk].name}</span>)}
+        {resolved.natural_attacks.map((n) => <span key={n.name} className="chip ember">{n.name} {n.damage} {n.damageType}</span>)}
+        {resolved.languages.length > 0 && <span className="chip">{resolved.languages.join(', ')}{resolved.language_notes.length ? ' +' : ''}</span>}
+      </div>
+      <div className="feature-list">
+        {resolved.traits.map((t) => (
+          <details key={`${t.source}-${t.name}`} className="feature-item">
+            <summary><strong>{t.name}</strong> <span className="muted small">· {t.source}</span></summary>
+            <p>{t.desc}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SubclassPreview({ detail, level }) {
+  const feats = (detail.levels || {})[level] || [];
+  const later = Object.keys(detail.levels || {}).map(Number).filter((l) => l > level);
+  return (
+    <div className="race-options">
+      <h3>{detail.name}</h3>
+      <p className="muted small">{detail.desc}</p>
+      <div className="feature-list mt">
+        {feats.map((f) => (
+          <details key={f.name} className="feature-item">
+            <summary><strong>{f.name}</strong> <span className="muted small">· level {level}</span></summary>
+            <p>{f.desc}</p>
+          </details>
+        ))}
+      </div>
+      {later.length > 0 && <p className="muted small mt">More features at levels {later.join(', ')}.</p>}
+    </div>
+  );
+}
+
 function SpellPickRow({ spell, on, toggle }) {
   return (
     <button className={`spell-pick ${on ? 'on' : ''}`} onClick={toggle} title={spell.casting_time}>
@@ -636,7 +887,7 @@ function SpellPickRow({ spell, on, toggle }) {
   );
 }
 
-function ReviewPane({ name, raceDetail, meta, bgData, sheet }) {
+function ReviewPane({ name, meta, bgData, sheet }) {
   const derived = deriveSheet(sheet);
   return (
     <div>
@@ -644,7 +895,7 @@ function ReviewPane({ name, raceDetail, meta, bgData, sheet }) {
         <Avatar sheet={sheet} name={name || 'Hero'} color={sheet.portrait?.color || 'var(--gold)'} size={72} />
         <div>
           <h3 style={{ color: 'var(--gold-bright)' }}>{name || 'Unnamed hero'}</h3>
-          <p className="muted">Level 1 {sheet.raceName} {meta.name} · {bgData.name}</p>
+          <p className="muted">Level 1 {sheet.raceName} {meta.name}{sheet.subclassName ? ` (${sheet.subclassName})` : ''} · {bgData.name}</p>
         </div>
       </div>
       <div className="review-stats">
@@ -683,7 +934,9 @@ function spellPickCount(classIndex) {
   return 4;
 }
 
-// Level-1 class features (hand-condensed from the SRD for readable sheets)
+// Level-1 class features (hand-condensed from the SRD for readable sheets).
+// Subclass features (Divine Domain, Sorcerous Origin, Otherworldly Patron) come
+// from the chosen subclass instead.
 const CLASS_L1_FEATURES = {
   barbarian: [
     { name: 'Rage (2/long rest)', source: 'Barbarian 1', desc: 'Bonus action: advantage on STR checks/saves, +2 melee damage, resistance to bludgeoning/piercing/slashing damage. Lasts 1 minute.' },
@@ -694,7 +947,6 @@ const CLASS_L1_FEATURES = {
     { name: 'Ritual Casting', source: 'Bard 1', desc: 'Cast known ritual spells without a slot (+10 minutes).' },
   ],
   cleric: [
-    { name: 'Divine Domain', source: 'Cleric 1', desc: 'Your calling within your faith (SRD: Life Domain) - grants bonus spells and features.' },
     { name: 'Ritual Casting', source: 'Cleric 1', desc: 'Cast prepared ritual spells without a slot (+10 minutes).' },
   ],
   druid: [
@@ -720,11 +972,8 @@ const CLASS_L1_FEATURES = {
     { name: 'Sneak Attack (1d6)', source: 'Rogue 1', desc: 'Once per turn: +1d6 damage with a finesse/ranged weapon if you have advantage or an ally is within 5 ft of the target.' },
     { name: "Thieves' Cant", source: 'Rogue 1', desc: 'Secret dialect of the criminal underworld.' },
   ],
-  sorcerer: [
-    { name: 'Draconic Resilience', source: 'Sorcerer 1', desc: '+1 HP per level; AC 13 + DEX when unarmored (SRD: Draconic Bloodline).' },
-  ],
+  sorcerer: [],
   warlock: [
-    { name: 'Otherworldly Patron', source: 'Warlock 1', desc: 'Your pact (SRD: The Fiend) grants bonus spells and Dark One\'s Blessing: temp HP when you drop a foe.' },
     { name: 'Pact Magic', source: 'Warlock 1', desc: 'Your slots are few but recharge on a SHORT rest.' },
   ],
   wizard: [

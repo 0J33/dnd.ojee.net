@@ -1,0 +1,1641 @@
+{
+ "races": [
+  {
+   "index": "goliath",
+   "name": "Goliath",
+   "source": "srd52",
+   "size": "Medium",
+   "speed": 35,
+   "darkvision": 0,
+   "ability_choices": [
+    {
+     "choose": 1,
+     "bonus": 2
+    },
+    {
+     "choose": 1,
+     "bonus": 1
+    }
+   ],
+   "languages": [
+    "Common"
+   ],
+   "language_note": "plus one language of your choice",
+   "blurb": "Towering giant-kin (+2/+1 where you like). Pick a giant ancestry boon; grow to Large size from level 5.",
+   "subrace_label": "Giant Ancestry",
+   "subrace_required": true,
+   "desc": "",
+   "traits": [
+    {
+     "name": "Ability Score Increase",
+     "desc": "Increase one ability score by 2 and a different one by 1. (SRD 5.2 grants these through your background; this table uses the classic backgrounds, so your species carries them instead.)"
+    },
+    {
+     "name": "Large Form",
+     "desc": "Starting at character level 5, you can change your size to Large as a Bonus Action if you're in a big enough space. This transformation lasts for 10 minutes or until you end it (no action required). For that duration, you have Advantage on Strength checks, and your Speed increases by 10 feet. Once you use this trait, you can't use it again until you finish a Long Rest."
+    },
+    {
+     "name": "Powerful Build",
+     "desc": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity."
+    }
+   ],
+   "subraces": [
+    {
+     "index": "goliath-cloud-giant",
+     "name": "Cloud Giant",
+     "display": "Goliath (Cloud Giant)",
+     "blurb": "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Cloud's Jaunt",
+       "desc": "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    },
+    {
+     "index": "goliath-fire-giant",
+     "name": "Fire Giant",
+     "display": "Goliath (Fire Giant)",
+     "blurb": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Fire's Burn",
+       "desc": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    },
+    {
+     "index": "goliath-frost-giant",
+     "name": "Frost Giant",
+     "display": "Goliath (Frost Giant)",
+     "blurb": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Frost's Chill",
+       "desc": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    },
+    {
+     "index": "goliath-hill-giant",
+     "name": "Hill Giant",
+     "display": "Goliath (Hill Giant)",
+     "blurb": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Hill's Tumble",
+       "desc": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    },
+    {
+     "index": "goliath-stone-giant",
+     "name": "Stone Giant",
+     "display": "Goliath (Stone Giant)",
+     "blurb": "When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Stone's Endurance",
+       "desc": "When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    },
+    {
+     "index": "goliath-storm-giant",
+     "name": "Storm Giant",
+     "display": "Goliath (Storm Giant)",
+     "blurb": "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature.",
+     "traits": [
+      {
+       "name": "Giant Ancestry: Storm's Thunder",
+       "desc": "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
+      }
+     ],
+     "asi_summary": ""
+    }
+   ],
+   "asi_summary": "+2 and +1 to scores you choose"
+  },
+  {
+   "index": "orc",
+   "name": "Orc",
+   "source": "srd52",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 120,
+   "ability_choices": [
+    {
+     "choose": 1,
+     "bonus": 2
+    },
+    {
+     "choose": 1,
+     "bonus": 1
+    }
+   ],
+   "languages": [
+    "Common",
+    "Orc"
+   ],
+   "blurb": "Relentless and quick (+2/+1 where you like): dash as a bonus action for temp HP, refuse to drop at 0 HP.",
+   "desc": "",
+   "traits": [
+    {
+     "name": "Ability Score Increase",
+     "desc": "Increase one ability score by 2 and a different one by 1. (SRD 5.2 grants these through your background; this table uses the classic backgrounds, so your species carries them instead.)"
+    },
+    {
+     "name": "Adrenaline Rush",
+     "desc": "You can take the Dash action as a Bonus Action. When you do so, you gain a number of Temporary Hit Points equal to your Proficiency Bonus.\n\nYou can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Short or Long Rest."
+    },
+    {
+     "name": "Darkvision",
+     "desc": "You have Darkvision with a range of 120 feet."
+    },
+    {
+     "name": "Relentless Endurance",
+     "desc": "When you are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead. Once you use this trait, you can't do so again until you finish a Long Rest."
+    }
+   ],
+   "subraces": [],
+   "asi_summary": "+2 and +1 to scores you choose"
+  },
+  {
+   "index": "alseid",
+   "name": "Alseid",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 40,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "dex": 2,
+    "wis": 1
+   },
+   "skills": [
+    "stealth"
+   ],
+   "weapon_profs": [
+    "Spears",
+    "Shortbows"
+   ],
+   "languages": [
+    "Common",
+    "Elvish"
+   ],
+   "blurb": "Swift deer-bodied forest folk (+2 DEX, +1 WIS). 40 ft speed, stealthy, trained with spear and shortbow.",
+   "desc": "Your alseid character has certain characteristics in common with all other alseid.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "Accustomed to the limited light beneath the forest canopy, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Alseid Weapon Training",
+     "desc": "You have proficiency with spears and shortbows."
+    },
+    {
+     "name": "Light Hooves",
+     "desc": "You have proficiency in the Stealth skill."
+    },
+    {
+     "name": "Quadruped",
+     "desc": "The mundane details of the structures of humanoids can present considerable obstacles for you. You have to squeeze when moving through trapdoors, manholes, and similar structures even when a Medium humanoid wouldn't have to squeeze. In addition, ladders, stairs, and similar structures are difficult terrain for you."
+    },
+    {
+     "name": "Woodfriend",
+     "desc": "When in a forest, you leave no tracks and can automatically discern true north."
+    }
+   ],
+   "subraces": [],
+   "asi_summary": "+2 DEX, +1 WIS"
+  },
+  {
+   "index": "catfolk",
+   "name": "Catfolk",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "dex": 2
+   },
+   "skills": [
+    "perception",
+    "stealth"
+   ],
+   "languages": [
+    "Common"
+   ],
+   "natural_attacks": [
+    {
+     "name": "Claws",
+     "damage": "1d4",
+     "damageType": "slashing"
+    }
+   ],
+   "blurb": "Lithe hunters (+2 DEX) with keen senses and claws. Proficient in Perception and Stealth.",
+   "subrace_label": "Catfolk type",
+   "subrace_required": true,
+   "desc": "Your catfolk character has the following traits.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "You have a cat's keen senses, especially in the dark. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Cat's Claws",
+     "desc": "Your sharp claws can cut with ease. Your claws are natural melee weapons, which you can use to make unarmed strikes. When you hit with a claw, your claw deals slashing damage equal to 1d4 + your Strength modifier, instead of the bludgeoning damage normal for an unarmed strike."
+    },
+    {
+     "name": "Hunter's Senses",
+     "desc": "You have proficiency in the Perception and Stealth skills."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Malkin Catfolk",
+     "index": "malkin",
+     "name": "Malkin",
+     "size": "Small",
+     "ability_bonuses": {
+      "int": 1
+     },
+     "skills": [
+      "investigation"
+     ],
+     "blurb": "It's often said curiosity killed the cat, and this applies with equal frequency to catfolk.",
+     "traits": [
+      {
+       "name": "Curiously Clever",
+       "desc": "You have proficiency in the Investigation skill."
+      },
+      {
+       "name": "Charmed Curiosity",
+       "desc": "When you roll a 1 on the d20 for a Dexterity check or saving throw, you can reroll the die and must use the new roll."
+      }
+     ],
+     "asi_summary": "+1 INT"
+    },
+    {
+     "display": "Pantheran Catfolk",
+     "index": "pantheran",
+     "name": "Pantheran",
+     "ability_bonuses": {
+      "wis": 1
+     },
+     "skill_choices": [
+      {
+       "choose": 1,
+       "from": [
+        "insight",
+        "medicine",
+        "nature",
+        "survival"
+       ]
+      }
+     ],
+     "blurb": "Pantheran catfolk are a wise, observant, and patient people who pride themselves on being resourceful and self-sufficient.",
+     "traits": [
+      {
+       "name": "Hunter's Charge",
+       "desc": "Once per turn, if you move at least 10 feet toward a target and hit it with a melee weapon attack in the same turn, you can use a bonus action to attack that creature with your Cat's Claws. You can use this trait a number of times per day equal to your proficiency bonus, and you regain all expended uses when you finish a long rest."
+      },
+      {
+       "name": "One With the Wilds",
+       "desc": "You have proficiency in one of the following skills of your choice: Insight, Medicine, Nature, or Survival."
+      }
+     ],
+     "asi_summary": "+1 WIS"
+    }
+   ],
+   "asi_summary": "+2 DEX"
+  },
+  {
+   "index": "darakhul",
+   "name": "Darakhul",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "con": 1
+   },
+   "languages": [
+    "Common",
+    "Darakhul"
+   ],
+   "language_note": "plus a language of your heritage",
+   "natural_attacks": [
+    {
+     "name": "Bite",
+     "damage": "1d4",
+     "damageType": "piercing"
+    }
+   ],
+   "blurb": "Intelligent ghouls who kept a spark of their old lives (+1 CON, plus your heritage). Tough, hungry, undead-ish.",
+   "subrace_label": "Heritage",
+   "subrace_required": true,
+   "desc": "Your darakhul character has certain characteristics in common with all other darakhul.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "You can see in dim light within 60 feet as though it were bright light and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Hunger for Flesh",
+     "desc": "You must consume 1 pound of raw meat each day or suffer the effects of starvation. If you go 24 hours without such a meal, you gain one level of exhaustion. While you have any levels of exhaustion from this trait, you can't regain hit points or remove levels of exhaustion until you spend at least 1 hour consuming 10 pounds of raw meat."
+    },
+    {
+     "name": "Imperfect Undeath",
+     "desc": "You transitioned into undeath, but your transition was imperfect. Though you are a humanoid, you are susceptible to effects that target undead. You can regain hit points from spells like cure wounds, but you can also be affected by game effects that specifically target undead, such as a cleric's Turn Undead feature. Game effects that raise a creature from the dead work on you as normal, but they return you to life as a darakhul. A true resurrection or wish spell can restore you to life as a fully living member of your original race."
+    },
+    {
+     "name": "Powerful Jaw",
+     "desc": "Your heavy jaw is powerful enough to crush bones to powder. Your bite is a natural melee weapon, which you can use to make unarmed strikes. When you hit with it, your bite deals piercing damage equal to 1d4 + your Strength modifier, instead of the bludgeoning damage normal for an unarmed strike."
+    },
+    {
+     "name": "Sunlight Sensitivity",
+     "desc": "You have disadvantage on attack rolls and on Wisdom (Perception) checks that rely on sight when you, the target of your attack, or whatever you are trying to perceive is in direct sunlight."
+    },
+    {
+     "name": "Undead Resilience",
+     "desc": "You are infused with the dark energy of undeath, which frees you from some frailties that plague most creatures. You have resistance to necrotic damage and poison damage, you are immune to disease, and you have advantage on saving throws against being charmed or poisoned. When you finish a short rest, you can reduce your exhaustion level by 1, provided you have ingested at least 1 pound of raw meat in the last 24 hours (see Hunger for Flesh)."
+    },
+    {
+     "name": "Undead Vitality",
+     "desc": "You don't need to breathe, and you don't sleep the way most creatures do. Instead, you enter a dormant state that resembles death, remaining semiconscious, for 6 hours a day. While dormant, you have disadvantage on Wisdom (Perception) checks. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Darakhul (Derro Heritage)",
+     "index": "darakhul-derro",
+     "name": "Derro Heritage",
+     "size": "Small",
+     "speed": 30,
+     "ability_bonuses": {
+      "cha": 2
+     },
+     "blurb": "Your darakhul character was a derro before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Calculating Insanity",
+       "desc": "The insanity of your race was compressed into a cold, hard brilliance when you took on your darakhul form. These flashes of brilliance come to you at unexpected moments. You know the true strike cantrip. Charisma is your spellcasting ability for it. You can cast true strike as a bonus action a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest."
+      }
+     ],
+     "asi_summary": "+2 CHA"
+    },
+    {
+     "display": "Darakhul (Dragonborn Heritage)",
+     "index": "darakhul-dragonborn",
+     "name": "Dragonborn Heritage",
+     "speed": 25,
+     "ability_bonuses": {
+      "str": 2
+     },
+     "blurb": "Your darakhul character was a dragonborn before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Corrupted Bite",
+       "desc": "The inherent breath weapon of your draconic heritage is corrupted by the necrotic energy of your new darakhul form. Instead of forming a line or cone, your breath weapon now oozes out of your ghoulish maw. As a bonus action, you breathe necrotic energy onto your fangs and make one bite attack. If the attack hits, it deals extra necrotic damage equal to your level. You can't use this trait again until you finish a long rest."
+      }
+     ],
+     "asi_summary": "+2 STR"
+    },
+    {
+     "display": "Darakhul (Drow Heritage)",
+     "index": "darakhul-drow",
+     "name": "Drow Heritage",
+     "ability_bonuses": {
+      "int": 2
+     },
+     "blurb": "Your darakhul character was a drow before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Poison Bite",
+       "desc": "When you hit with your bite attack, you can release venom into your foe. If you do, your bite deals an extra 1d6 poison damage. The damage increases to 3d6 at 11th level. After you release this venom into a creature, you can't do so again until you finish a short or long rest."
+      }
+     ],
+     "asi_summary": "+2 INT"
+    },
+    {
+     "display": "Darakhul (Dwarf Heritage)",
+     "index": "darakhul-dwarf",
+     "name": "Dwarf Heritage",
+     "speed": 25,
+     "ability_bonuses": {
+      "wis": 2
+     },
+     "hp_per_level": 1,
+     "blurb": "Your darakhul character was a dwarf before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Dwarven Stoutness",
+       "desc": "Your hit point maximum increases by 1, and it increases by 1 every time you gain a level."
+      }
+     ],
+     "asi_summary": "+2 WIS"
+    },
+    {
+     "display": "Darakhul (Elf/Shadow Fey Heritage)",
+     "index": "darakhul-elf",
+     "name": "Elf/Shadow Fey Heritage",
+     "ability_bonuses": {
+      "dex": 2
+     },
+     "skills": [
+      "perception"
+     ],
+     "blurb": "Your darakhul character was an elf or shadow fey before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Supernatural Senses",
+       "desc": "Your keen elven senses are honed even more by the power of undeath and the hunger within you. You can now smell when blood is in the air. You have proficiency in the Perception skill, and you have advantage on Wisdom (Perception) checks to notice or find a creature within 30 feet of you that doesn't have all of its hit points."
+      }
+     ],
+     "asi_summary": "+2 DEX"
+    },
+    {
+     "display": "Darakhul (Gnome Heritage)",
+     "index": "darakhul-gnome",
+     "name": "Gnome Heritage",
+     "size": "Small",
+     "speed": 25,
+     "ability_bonuses": {
+      "int": 2
+     },
+     "blurb": "Your darakhul character was a gnome before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Magical Hunger",
+       "desc": "When a creature you can see within 30 feet of you casts a spell, you can use your reaction to consume the spell's residual magic. Your consumption doesn't counter or otherwise affect the spell or the spellcaster. When you consume this residual magic, you gain temporary hit points (minimum of 1) equal to your Constitution modifier, and you can't use this trait again until you finish a short or long rest."
+      }
+     ],
+     "asi_summary": "+2 INT"
+    },
+    {
+     "display": "Darakhul (Halfling Heritage)",
+     "index": "darakhul-halfling",
+     "name": "Halfling Heritage",
+     "size": "Small",
+     "speed": 25,
+     "ability_bonuses": {
+      "dex": 2
+     },
+     "blurb": "Your darakhul character was a halfling before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Ill Fortune",
+       "desc": "Your uncanny halfling luck has taken a dark turn since your conversion to an undead creature. When a creature rolls a 20 on the d20 for an attack roll against you, the creature must reroll the attack and use the new roll. If the second attack roll misses you, the attacking creature takes necrotic damage equal to twice your Constitution modifier (minimum of 2)."
+      }
+     ],
+     "asi_summary": "+2 DEX"
+    },
+    {
+     "display": "Darakhul (Human/Half-Elf Heritage)",
+     "index": "darakhul-human",
+     "name": "Human/Half-Elf Heritage",
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 2,
+       "exclude": [
+        "con"
+       ]
+      }
+     ],
+     "skill_choices": [
+      {
+       "choose": 2
+      }
+     ],
+     "blurb": "Your darakhul character was a human or half-elf before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Versatility",
+       "desc": "The training and experience of your early years was not lost when you became a darakhul. You have proficiency in two skills and one tool of your choice."
+      }
+     ],
+     "asi_summary": "+2 to any score but CON"
+    },
+    {
+     "display": "Darakhul (Kobold Heritage)",
+     "index": "darakhul-kobold",
+     "name": "Kobold Heritage",
+     "size": "Small",
+     "speed": 30,
+     "ability_bonuses": {
+      "int": 2
+     },
+     "blurb": "Your darakhul character was a kobold before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Devious Bite",
+       "desc": "When you hit a creature with your bite attack and you have advantage on the attack roll, your bite deals an extra 1d4 piercing damage."
+      }
+     ],
+     "asi_summary": "+2 INT"
+    },
+    {
+     "display": "Darakhul (Ravenfolk Heritage)",
+     "index": "darakhul-ravenfolk",
+     "name": "Ravenfolk Heritage",
+     "ability_bonuses": {
+      "dex": 2
+     },
+     "blurb": "Your darakhul character was a ravenfolk before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Sudden Bite and Flight",
+       "desc": "If you surprise a creature during the first round of combat, you can make a bite attack as a bonus action. If it hits, you can immediately take the Dodge action as a reaction."
+      }
+     ],
+     "asi_summary": "+2 DEX"
+    },
+    {
+     "display": "Darakhul (Tiefling Heritage)",
+     "index": "darakhul-tiefling",
+     "name": "Tiefling Heritage",
+     "ability_bonuses": {
+      "cha": 2
+     },
+     "blurb": "Your darakhul character was a tiefling before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Necrotic Rebuke",
+       "desc": "When you are hit by a weapon attack, you can use a reaction to envelop the attacker in shadowy flames. The attacker takes necrotic damage equal to your Charisma modifier (minimum of 1), and it has disadvantage on attack rolls until the end of its next turn. You must finish a long rest before you can use this feature again."
+      }
+     ],
+     "asi_summary": "+2 CHA"
+    },
+    {
+     "display": "Darakhul (Trollkin Heritage)",
+     "index": "darakhul-trollkin",
+     "name": "Trollkin Heritage",
+     "ability_bonuses": {
+      "str": 2
+     },
+     "blurb": "Your darakhul character was a trollkin before transforming into a darakhul.",
+     "traits": [
+      {
+       "name": "Regenerative Bite",
+       "desc": "The regenerative powers of your trollkin heritage are less potent than they were in life and need a little help. As an action, you can make a bite attack against a creature that isn't undead or a construct. On a hit, you regain hit points (minimum of 1) equal to half the amount of damage dealt. Once you use this trait, you can't use it again until you finish a long rest."
+      }
+     ],
+     "asi_summary": "+2 STR"
+    }
+   ],
+   "asi_summary": "+1 CON"
+  },
+  {
+   "index": "derro",
+   "name": "Derro",
+   "source": "toh",
+   "size": "Small",
+   "speed": 30,
+   "darkvision": 120,
+   "ability_bonuses": {
+    "dex": 2
+   },
+   "languages": [
+    "Common",
+    "Dwarvish"
+   ],
+   "language_note": "Undercommon may replace Common",
+   "blurb": "Small, quick, and touched by madness (+2 DEX). See 120 ft in the dark; resist spells that target your body.",
+   "subrace_label": "Derro type",
+   "subrace_required": true,
+   "desc": "Your derro character has certain characteristics in common with all other derro.",
+   "traits": [
+    {
+     "name": "Superior Darkvision",
+     "desc": "Accustomed to life underground, you can see in dim light within 120 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Eldritch Resilience",
+     "desc": "You have advantage on Constitution saving throws against spells."
+    },
+    {
+     "name": "Sunlight Sensitivity",
+     "desc": "You have disadvantage on attack rolls and on Wisdom (Perception) checks that rely on sight when you, the target of your attack, or whatever you are trying to perceive is in direct sunlight."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Far-Touched Derro",
+     "index": "far-touched",
+     "name": "Far-Touched",
+     "ability_bonuses": {
+      "cha": 1
+     },
+     "blurb": "You grew up firmly ensconced in the mad traditions of the derro, your mind touched by the raw majesty and power of your society's otherworldly deities.",
+     "traits": [
+      {
+       "name": "Insanity",
+       "desc": "You have advantage on saving throws against being charmed or frightened. In addition, you can read and understand Void Speech, but you can speak only a few words of the dangerous and maddening language—the words necessary for using the spells in your Mad Fervor trait."
+      },
+      {
+       "name": "Mad Fervor",
+       "desc": "The driving force behind your insanity has blessed you with a measure of its power. You know the vicious mockery cantrip. When you reach 3rd level, you can cast the enthrall spell with this trait, and starting at 5th level, you can cast the fear spell with it. Once you cast a non-cantrip spell with this trait, you can't do so again until you finish a long rest. Charisma is your spellcasting ability for these spells. If you are using Deep Magic for 5th Edition, these spells are instead crushing curse, maddening whispers, and alone, respectively."
+      }
+     ],
+     "asi_summary": "+1 CHA"
+    },
+    {
+     "display": "Mutated Derro",
+     "index": "mutated",
+     "name": "Mutated",
+     "ability_bonuses": {
+      "str": 1
+     },
+     "skills": [
+      "athletics"
+     ],
+     "blurb": "Most derro go through the process of indoctrination into their society and come out of it with visions and delusion, paranoia and mania.",
+     "traits": [
+      {
+       "name": "Athletic Training",
+       "desc": "You have proficiency in the Athletics skill, and you are proficient with two martial weapons of your choice."
+      },
+      {
+       "name": "Otherworldly Influence",
+       "desc": "Your close connection to the strange powers that your people worship has mutated your form. Choose one of the following:\n\nAlien Appendage. You have a tentacle-like growth on your body. This tentacle is a natural melee weapon, which you can use to make unarmed strikes. When you hit with it, your tentacle deals bludgeoning damage equal to 1d4 + your Strength modifier, instead of the bludgeoning damage normal for an unarmed strike. This tentacle has a reach of 5 feet and can lift a number of pounds equal to double your Strength score. The tentacle can't wield weapons or shields or perform tasks that require manual precision, such as performing the somatic components of a spell, but it can perform simple tasks, such as opening an unlocked door or container, stowing or retrieving an object, or pouring the contents out of a vial.\nTainted Blood. Your blood is tainted by your connection with otherworldly entities. When you take piercing or slashing damage, you can use your reaction to force your blood to spray out of the wound. You and each creature within 5 feet of you take necrotic damage equal to your level. Once you use this trait, you can't use it again until you finish a short or long rest.\nTenebrous Flesh. Your skin is rubbery and tenebrous, granting you a +1 bonus to your Armor Class."
+      }
+     ],
+     "asi_summary": "+1 STR"
+    },
+    {
+     "display": "Uncorrupted Derro",
+     "index": "uncorrupted",
+     "name": "Uncorrupted",
+     "ability_bonuses": {
+      "wis": 1
+     },
+     "skills": [
+      "insight"
+     ],
+     "blurb": "Someone in your past failed to do their job of driving you to the brink of insanity.",
+     "traits": [
+      {
+       "name": "Psychic Barrier",
+       "desc": "Your time among your less sane brethren has inured you to their madness. You have resistance to psychic damage, and you have advantage on ability checks and saving throws made against effects that inflict insanity, such as spells like contact other plane and symbol, and effects that cause short-term, long-term, or indefinite madness."
+      },
+      {
+       "name": "Studied Insight",
+       "desc": "You are skilled at discerning other creature's motives and intentions. You have proficiency in the Insight skill, and, if you study a creature for at least 1 minute, you have advantage on any initiative checks in combat against that creature for the next hour."
+      }
+     ],
+     "asi_summary": "+1 WIS"
+    }
+   ],
+   "asi_summary": "+2 DEX"
+  },
+  {
+   "index": "drow",
+   "name": "Drow",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 120,
+   "ability_bonuses": {
+    "int": 2
+   },
+   "languages": [
+    "Common",
+    "Elvish"
+   ],
+   "language_note": "Undercommon may replace Common",
+   "blurb": "Underground elves with minds of steel (+2 INT). Superior darkvision, charm-resistant, sleep-immune.",
+   "subrace_label": "Caste",
+   "subrace_required": true,
+   "desc": "Your drow character has certain characteristics in common with all other drow.",
+   "traits": [
+    {
+     "name": "Superior Darkvision",
+     "desc": "Accustomed to life in the darkest depths of the world, you can see in dim light within 120 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Fey Ancestry",
+     "desc": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."
+    },
+    {
+     "name": "Mind of Steel",
+     "desc": "You understand the complexities of minds, as well as the magic that can affect them. You have advantage on Wisdom, Intelligence, and Charisma saving throws against spells."
+    },
+    {
+     "name": "Sunlight Sensitivity",
+     "desc": "You have disadvantage on attack rolls and on Wisdom (Perception) checks that rely on sight when you, the target of your attack, or whatever you are trying to perceive is in direct sunlight."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Delver Drow",
+     "index": "delver",
+     "name": "Delver",
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "str",
+        "dex"
+       ]
+      }
+     ],
+     "skill_choices": [
+      {
+       "choose": 1
+      }
+     ],
+     "armor_profs": [
+      "Light armor"
+     ],
+     "blurb": "You are one of the workers whose labors prop up most of drow society.",
+     "traits": [
+      {
+       "name": "Rapport with Insects",
+       "desc": "Your caste's years of working alongside the giant spiders and beetles that your people utilized in building and defending cities has left your caste with an innate affinity with the creatures. You can communicate simple ideas with insect-like beasts with an Intelligence of 3 or lower, such as spiders, beetles, wasps, scorpions, and centipedes. You can understand them in return, though this understanding is often limited to knowing the creature's current or most recent state, such as “hungry,” “content,” or “in danger.” Delver drow often keep such creatures as pets, mounts, or beasts of burden."
+      },
+      {
+       "name": "Specialized Training",
+       "desc": "You are proficient in one skill and one tool of your choice."
+      },
+      {
+       "name": "Martial Excellence",
+       "desc": "You are proficient with one martial weapon of your choice and with light armor."
+      }
+     ],
+     "asi_summary": "+1 STR or DEX"
+    },
+    {
+     "display": "Fever-Bit Drow",
+     "index": "fever-bit",
+     "name": "Fever-Bit",
+     "ability_bonuses": {
+      "con": 1
+     },
+     "blurb": "You were once a typical drow, then you fell victim to the ravaging claws and teeth of a darakhul.",
+     "traits": [
+      {
+       "name": "Deathly Resilience",
+       "desc": "Your long exposure to the life-sapping energies of darakhul fever has made you more resilient. You have resistance to necrotic damage, and advantage on death saving throws."
+      },
+      {
+       "name": "Iron Constitution",
+       "desc": "You are immune to disease."
+      },
+      {
+       "name": "Near-Death Experience",
+       "desc": "Your brush with death has made you more stalwart in the face of danger. You have advantage on saving throws against being frightened."
+      }
+     ],
+     "asi_summary": "+1 CON"
+    },
+    {
+     "display": "Purified Drow",
+     "index": "purified",
+     "name": "Purified",
+     "ability_bonuses": {
+      "cha": 1
+     },
+     "skill_choices": [
+      {
+       "choose": 2,
+       "from": [
+        "history",
+        "insight",
+        "performance",
+        "persuasion"
+       ]
+      }
+     ],
+     "blurb": "You were born into the caste that produces the leaders and planners, the priests and wizards, the generals and officers of drow society.",
+     "traits": [
+      {
+       "name": "Innate Spellcasting",
+       "desc": "You know the poison spray cantrip. When you reach 3rd level, you can cast suggestion once with this trait and regain the ability to do so when you finish a long rest. When you reach 5th level, you can cast the tongues spell once and regain the ability to do so when you finish a long rest. Intelligence is your spellcasting ability for these spells."
+      },
+      {
+       "name": "Born Leader",
+       "desc": "You gain proficiency with two of the following skills of your choice: History, Insight, Performance, and Persuasion."
+      }
+     ],
+     "asi_summary": "+1 CHA"
+    }
+   ],
+   "asi_summary": "+2 INT"
+  },
+  {
+   "index": "erina",
+   "name": "Erina",
+   "source": "toh",
+   "size": "Small",
+   "speed": 25,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "dex": 2
+   },
+   "ability_choices": [
+    {
+     "choose": 1,
+     "bonus": 1,
+     "from": [
+      "wis",
+      "cha"
+     ]
+    }
+   ],
+   "skills": [
+    "perception"
+   ],
+   "languages": [
+    "Erina",
+    "Common"
+   ],
+   "language_note": "Sylvan may replace Common",
+   "blurb": "Hedgehog folk (+2 DEX, +1 WIS or CHA). Spiny, poison-hardy, and able to burrow through earth.",
+   "desc": "Your erina character has traits which complement its curiosity, sociability, and fierce nature.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "Accustomed to life in the dark burrows of your people, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Hardy",
+     "desc": "The erina diet of snakes and venomous insects has made them hardy. You have advantage on saving throws against poison, and you have resistance against poison damage."
+    },
+    {
+     "name": "Spines",
+     "desc": "Erina grow needle-sharp spines in small clusters atop their heads and along their backs. While you are grappling a creature or while a creature is grappling you, the creature takes 1d4 piercing damage at the start of your turn."
+    },
+    {
+     "name": "Keen Senses",
+     "desc": "You have proficiency in the Perception skill."
+    },
+    {
+     "name": "Digger",
+     "desc": "You have a burrowing speed of 20 feet, but you can use it to move through only earth and sand, not mud, ice, or rock."
+    }
+   ],
+   "subraces": [],
+   "asi_summary": "+2 DEX, +1 WIS or CHA"
+  },
+  {
+   "index": "gearforged",
+   "name": "Gearforged",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 0,
+   "ability_choices": [
+    {
+     "choose": 2,
+     "bonus": 1
+    }
+   ],
+   "languages": [
+    "Common",
+    "Machine Speech"
+   ],
+   "blurb": "A soul bound into a clockwork machine body (+1 to two scores). Needs no food, air or sleep; shrugs off poison and disease.",
+   "subrace_label": "Race Chassis",
+   "subrace_required": true,
+   "desc": "The range of gearforged anatomy in all its variants is remarkable, but all gearforged share some common parts.",
+   "traits": [
+    {
+     "name": "Construct Resilience",
+     "desc": "Your body is constructed, which frees you from some of the limits of fleshand- blood creatures. You have resistance to poison damage, you are immune to disease, and you have advantage on saving throws against being poisoned."
+    },
+    {
+     "name": "Construct Vitality",
+     "desc": "You don't need to eat, drink, or breathe, and you don't sleep the way most creatures do. Instead, you enter a dormant state where you resemble a statue and remain semiconscious for 6 hours a day. During this time, the magic in your soul gem and everwound springs slowly repairs the day's damage to your mechanical body. While in this dormant state, you have disadvantage on Wisdom (Perception) checks. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep."
+    },
+    {
+     "name": "Living Construct",
+     "desc": "Your consciousness and soul reside within a soul gem to animate your mechanical body. As such, you are a living creature with some of the benefits and drawbacks of a construct. Though you can regain hit points from spells like cure wounds, you can also be affected by game effects that specifically target constructs, such as the shatter spell. As long as your soul gem remains intact, game effects that raise a creature from the dead work on you as normal, repairing the damaged pieces of your mechanical body (restoring lost sections only if the spell normally restores lost limbs) and returning you to life as a gearforged. Alternatively, if your body is destroyed but your soul gem and memory gears are intact, they can be installed into a new body with a ritual that takes one day and 10,000 gp worth of materials. If your soul gem is destroyed, only a wish spell can restore you to life, and you return as a fully living member of your original race."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Gearforged (Dwarf Chassis)",
+     "index": "dwarf-chassis",
+     "name": "Dwarf Chassis",
+     "speed": 25,
+     "ability_bonuses": {
+      "con": 1
+     },
+     "languages": [
+      "Dwarvish"
+     ],
+     "armor_profs": [
+      "Light armor",
+      "Medium armor"
+     ],
+     "blurb": "The original dwarven gearforged engineers valued function over form, eschewing aesthetics in favor of instilling their chassis with toughness and strength.",
+     "traits": [
+      {
+       "name": "Always Armed",
+       "desc": "Every dwarf knows that it's better to leave home without pants than without your weapon. Choose a weapon with which you are proficient and that doesn't have the two-handed property. You can integrate this weapon into one of your arms. While the weapon is integrated, you can't be disarmed of it by any means, though you can use an action to remove the weapon. You can draw or sheathe the weapon as normal, the weapon folding into or springing from your arm instead of a sheath. While the integrated weapon is drawn in this way, it is considered held in that arm's hand, which can't be used for other actions such as casting spells. You can integrate a new weapon or replace an integrated weapon as part of a short or long rest. You can have up to two weapons integrated at a time, one per arm. You have advantage on Dexterity (Sleight of Hand) checks to conceal an integrated weapon."
+      },
+      {
+       "name": "Remembered Training",
+       "desc": "You remember some of your combat training from your previous life. You have proficiency with two martial weapons of your choice and with light and medium armor."
+      }
+     ],
+     "asi_summary": "+1 CON"
+    },
+    {
+     "display": "Gearforged (Gnome Chassis)",
+     "index": "gnome-chassis",
+     "name": "Gnome Chassis",
+     "size": "Small",
+     "speed": 25,
+     "ability_bonuses": {
+      "int": 1
+     },
+     "languages": [
+      "Gnomish"
+     ],
+     "blurb": "Crafted for both exceptional functionality and aesthetic beauty, a gnome chassis' skin is clearly metallic but is meticulously colored to closely match gnomish skin tones, except at the joints, where gears and darker st…",
+     "traits": [
+      {
+       "name": "Mental Fortitude",
+       "desc": "When creating their first gearforged, gnome engineers put their efforts toward ensuring that the gnomish mind remained a mental fortress, though they were unable to fully replicate the gnomish mind's resilience once transferred to a soul gem. Choose Intelligence, Wisdom, or Charisma. You have advantage on saving throws made with that ability score against magic."
+      },
+      {
+       "name": "Quick Fix",
+       "desc": "When you are below half your hit point maximum, you can use a bonus action to apply a quick patch up to your damaged body. You gain temporary hit points equal to your proficiency bonus. You can't use this trait again until you finish a short or long rest."
+      }
+     ],
+     "asi_summary": "+1 INT"
+    },
+    {
+     "display": "Gearforged (Human Chassis)",
+     "index": "human-chassis",
+     "name": "Human Chassis",
+     "speed": 30,
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1
+      }
+     ],
+     "skill_choices": [
+      {
+       "choose": 2
+      }
+     ],
+     "language_note": "plus one language of your choice",
+     "blurb": "As humans invented the first gearforged, it should be no surprise that the human chassis remains the one that is most frequently encountered.",
+     "traits": [
+      {
+       "name": "Adaptable Acumen",
+       "desc": "You gain proficiency in two skills or tools of your choice. Choose one of those skills or tools or another skill or tool proficiency you have. Your proficiency bonus is doubled for any ability check you make that uses the chosen skill or tool."
+      },
+      {
+       "name": "Inspired Ingenuity",
+       "desc": "When you roll a 9 or lower on the d20 for an ability check, you can use a reaction to change the roll to a 10. You can't use this trait again until you finish a short or long rest."
+      }
+     ],
+     "asi_summary": "+1 to any score"
+    },
+    {
+     "display": "Gearforged (Kobold Chassis)",
+     "index": "kobold-chassis",
+     "name": "Kobold Chassis",
+     "size": "Small",
+     "speed": 30,
+     "ability_bonuses": {
+      "dex": 1
+     },
+     "languages": [
+      "Draconic"
+     ],
+     "blurb": "Kobolds are naturally curious tinkerers, constantly modifying their devices and tools.",
+     "traits": [
+      {
+       "name": "Clutch Aide",
+       "desc": "Kobolds spend their lives alongside their clutchmates, both those hatched around the same time as them and those they choose later in life, and you retain much of this group-oriented intuition. You can take the Help action as a bonus action."
+      },
+      {
+       "name": "Resourceful",
+       "desc": "If you have at least one set of tools, you can cobble together one set of makeshift tools of a different type with 1 minute of work. For example, if you have cook's utensils, you can use them to create a temporary set of thieves' tools. The makeshift tools last for 10 minutes then collapse into their component parts, returning your tools to their normal forms. While the makeshift tools exist, you can't use the set of tools you used to create the makeshift tools. At the GM's discretion, you might not be able to replicate some tools, such as an alchemist's alembic or a disguise kit's cosmetics. A creature other than you that uses the makeshift tools has disadvantage on the check."
+      }
+     ],
+     "asi_summary": "+1 DEX"
+    }
+   ],
+   "asi_summary": "+1 to any two scores"
+  },
+  {
+   "index": "minotaur",
+   "name": "Minotaur",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "str": 2,
+    "con": 1
+   },
+   "languages": [
+    "Common",
+    "Minotaur"
+   ],
+   "natural_attacks": [
+    {
+     "name": "Horns",
+     "damage": "1d6",
+     "damageType": "piercing"
+    }
+   ],
+   "blurb": "Horned powerhouses (+2 STR, +1 CON). Gore with your horns and charge foes off their feet.",
+   "subrace_label": "Variant",
+   "subrace_optional": true,
+   "subrace_none": "Standard minotaur",
+   "desc": "Your minotaur character has certain characteristics in common with all other minotaurs.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Natural Attacks",
+     "desc": "Your horns are sturdy and sharp. Your horns are a natural melee weapon, which you can use to make unarmed strikes. When you hit with your horns, they deal piercing damage equal to 1d6 + your Strength modifier, instead of the bludgeoning damage normal for an unarmed strike."
+    },
+    {
+     "name": "Charge",
+     "desc": "Once per turn, if you move at least 10 feet toward a target and hit it with a horn attack in the same turn, you deal an extra 1d6 piercing damage and you can shove the target up to 5 feet as a bonus action. At 11th level, when you shove a creature with Charge, you can push it up to 10 feet instead. You can use this trait a number of times per day equal to your Constitution modifier (minimum of once), and you regain all expended uses when you finish a long rest."
+    },
+    {
+     "name": "Labyrinth Sense",
+     "desc": "You can retrace without error any path you have previously taken, with no ability check."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Bhain Kwai Minotaur",
+     "index": "bhain-kwai",
+     "name": "Bhain Kwai",
+     "ability_bonuses": {
+      "con": 2,
+      "str": 1
+     },
+     "replaces_ability": true,
+     "replaces_traits": [
+      "Charge"
+     ],
+     "blurb": "You are a minotaur adapted to life in the bogs and wetlands of the world.",
+     "traits": [
+      {
+       "name": "Strong Back",
+       "desc": "Your carrying capacity is your Strength score multiplied by 20, instead of by 15."
+      },
+      {
+       "name": "Wetland Dweller",
+       "desc": "You are adapted to your home terrain. Difficult terrain composed of mud or from wading through water up to waist deep doesn't cost you extra movement. You have a swimming speed of 25 feet."
+      }
+     ],
+     "asi_summary": "+2 CON, +1 STR"
+    },
+    {
+     "display": "Boghaid Minotaur",
+     "index": "boghaid",
+     "name": "Boghaid",
+     "ability_bonuses": {
+      "wis": 2,
+      "con": 1
+     },
+     "replaces_ability": true,
+     "replaces_traits": [
+      "Charge"
+     ],
+     "skills": [
+      "performance"
+     ],
+     "blurb": "You are a minotaur adapted to life in cold climates and high altitudes.",
+     "traits": [
+      {
+       "name": "Highlander",
+       "desc": "You are adapted to life at high altitudes, and you suffer no ill effects or penalties from elevations above 8,000 feet."
+      },
+      {
+       "name": "Storied Culture",
+       "desc": "You have proficiency in the Performance skill, and you gain proficiency with one of the following musical instruments: bagpipes, drum, horn, or shawm."
+      },
+      {
+       "name": "Wooly",
+       "desc": "Your thick, wooly coat of hair keeps you warm, allowing you to function in cold weather without special clothing or gear. You have advantage on saving throws against spells and other effects that deal cold damage."
+      }
+     ],
+     "asi_summary": "+2 WIS, +1 CON"
+    }
+   ],
+   "asi_summary": "+2 STR, +1 CON"
+  },
+  {
+   "index": "mushroomfolk",
+   "name": "Mushroomfolk",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "wis": 2
+   },
+   "skills": [
+    "survival"
+   ],
+   "languages": [
+    "Common",
+    "Mushroomfolk"
+   ],
+   "language_note": "Undercommon may replace Common",
+   "blurb": "Fungal folk of the deep (+2 WIS). Poison- and disease-proof survivors with spore-born gifts.",
+   "subrace_label": "Clan role",
+   "subrace_required": true,
+   "desc": "Your mushroomfolk character has characteristics in common with all other mushroomfolk.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "Accustomed to life underground, you can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Fungoid Form",
+     "desc": "You are a humanoid, though the fungal nature of your body and your unique diet of decayed vegetable and animal matter marks you with some plant-like characteristics. You have advantage on saving throws against poison, and you have resistance to poison damage. In addition, you are immune to disease."
+    },
+    {
+     "name": "Hardy Survivor",
+     "desc": "Your upbringing in mushroomfolk society has taught you how to defend yourself and find food. You have proficiency in the Survival skill."
+    }
+   ],
+   "subraces": [
+    {
+     "display": "Acid Cap Mushroomfolk",
+     "index": "acid-cap",
+     "name": "Acid Cap",
+     "ability_bonuses": {
+      "str": 1
+     },
+     "skills": [
+      "athletics"
+     ],
+     "blurb": "You were one of the warriors and guardians of your clan, using your strength and acid spores to protect your clanmates and your territory.",
+     "traits": [
+      {
+       "name": "Acid Cap Resistance",
+       "desc": "You have resistance to acid damage."
+      },
+      {
+       "name": "Acid Spores",
+       "desc": "When you are hit by a melee weapon attack within 5 feet of you, you can use your reaction to emit acidic spores. If you do, the attacker takes acid damage equal to half your level (rounded up). You can use your acid spores a number of times equal to your Constitution modifier (a minimum of once). You regain any expended uses when you finish a long rest."
+      },
+      {
+       "name": "Clan Athlete",
+       "desc": "You have proficiency in the Athletics skill."
+      }
+     ],
+     "asi_summary": "+1 STR"
+    },
+    {
+     "display": "Favored Mushroomfolk",
+     "index": "favored",
+     "name": "Favored",
+     "ability_bonuses": {
+      "cha": 1
+     },
+     "skills": [
+      "persuasion"
+     ],
+     "blurb": "A few special mushroomfolk grow to become shamans, generals, and other types of leaders.",
+     "traits": [
+      {
+       "name": "Blessed Help",
+       "desc": "Your intuition and connection to your allies allows you to assist and protect them. You know the spare the dying cantrip. When you reach 3rd level, you can cast the bless spell once with this trait and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells."
+      },
+      {
+       "name": "Clan Leader",
+       "desc": "You have proficiency in the Persuasion skill."
+      },
+      {
+       "name": "Restful Spores",
+       "desc": "If you or any friendly creatures within 30 feet of you regain hit points at the end of a short rest by spending one or more Hit Dice, each of those creatures regains additional hit points equal to your proficiency bonus. Once a creature benefits from your restful spores, it can't do so again until it finishes a long rest."
+      }
+     ],
+     "asi_summary": "+1 CHA"
+    },
+    {
+     "display": "Morel Mushroomfolk",
+     "index": "morel",
+     "name": "Morel",
+     "size": "Small",
+     "speed": 35,
+     "ability_bonuses": {
+      "dex": 1
+     },
+     "skills": [
+      "stealth"
+     ],
+     "blurb": "Your specialty for your clan was acting as a scout and a wayfinder.",
+     "traits": [
+      {
+       "name": "Adaptable Camouflage",
+       "desc": "If you spend at least 1 minute in an environment with ample naturally occurring plants or fungi, such as a grassland, a forest, or an underground fungal cavern, you can adjust your natural coloration to blend in with the local plant life. If you do so, you have advantage on Dexterity (Stealth) checks for the next 24 hours while in that environment."
+      },
+      {
+       "name": "Clan Scout",
+       "desc": "You have proficiency in the Stealth skill."
+      }
+     ],
+     "asi_summary": "+1 DEX"
+    }
+   ],
+   "asi_summary": "+2 WIS"
+  },
+  {
+   "index": "satarre",
+   "name": "Satarre",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "con": 2,
+    "int": 1
+   },
+   "skills": [
+    "arcana"
+   ],
+   "skill_choices": [
+    {
+     "choose": 1,
+     "from": [
+      "history",
+      "insight",
+      "religion"
+     ]
+    }
+   ],
+   "languages": [
+    "Common"
+   ],
+   "language_note": "plus Abyssal, Infernal or Void Speech",
+   "blurb": "Tall, eerie scholars of the void (+2 CON, +1 INT). Necrotic-resistant; spread a rotting curse.",
+   "desc": "Your satarre heritage is apparent in a variety of traits you share with other satarre.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "Thanks to your dark planar parentage, you have superior vision in darkness. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "A Friend to Death",
+     "desc": "You have resistance to necrotic damage."
+    },
+    {
+     "name": "Keeper of Secrets",
+     "desc": "You have proficiency in the Arcana skill, and you have advantage on Intelligence (Arcana) checks related to the planes and planar travel. In addition, you have proficiency in one of the following skills of your choice: History, Insight, and Religion."
+    },
+    {
+     "name": "Carrier of Rot",
+     "desc": "You can use your action to inflict rot on a creature you can see within 10 feet of you. The creature must make a Constitution saving throw. The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus. A creature takes 1d4 necrotic damage on a failed save, and half as much damage on a successful one. A creature that fails the saving throw also rots for 1 minute. A rotting creature takes 1d4 necrotic damage at the end of each of its turns. The target or a creature within 5 feet of it can use an action to excise the rot with a successful Wisdom (Medicine) check. The DC for the check equals the rot's Constitution saving throw DC. The rot also disappears if the target receives magical healing. The damage for the initial action and the rotting increases to 2d4 at 6th level, 3d4 at 11th level, and 4d4 at 16th level. After you use your Carrier of Rot trait, you can't use it again until you complete a short or long rest."
+    }
+   ],
+   "subraces": [],
+   "asi_summary": "+2 CON, +1 INT"
+  },
+  {
+   "index": "shade",
+   "name": "Shade",
+   "source": "toh",
+   "size": "Medium",
+   "speed": 30,
+   "darkvision": 60,
+   "ability_bonuses": {
+    "cha": 1
+   },
+   "languages": [
+    "Common"
+   ],
+   "blurb": "A soul that refused to move on (+1 CHA, +1 from your old life). Drain life, and later turn ghostly.",
+   "subrace_label": "Living Origin",
+   "subrace_required": true,
+   "desc": "Your shade character has a number of traits that arise from being a shade as well as a few drawn from life.",
+   "traits": [
+    {
+     "name": "Darkvision",
+     "desc": "Your existence beyond death makes you at home in the dark. You can see in dim light within 60 feet of you as if it were bright light and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+    },
+    {
+     "name": "Ghostly Flesh",
+     "desc": "Starting at 3rd level, you can use your action to dissolve your physical body into the ephemeral stuff of spirits. You become translucent and devoid of color, and the air around you grows cold. Your transformation lasts for 1 minute or until you end it as a bonus action. During it, you have a flying speed of 30 feet with the ability to hover, and you have resistance to bludgeoning, piercing, and slashing damage from nonmagical attacks that aren't made with silvered weapons. In addition, you have advantage on ability checks and saving throws made to escape a grapple or against being restrained, and you can move through creatures and solid objects as if they were difficult terrain. If you end your turn inside an object, you take 1d10 force damage. Once you use this trait, you can't use it again until you finish a long rest."
+    },
+    {
+     "name": "Imperfect Undeath",
+     "desc": "You are a humanoid, but your partial transition into undeath makes you susceptible to effects that target undead. Though you can regain hit points from spells like cure wounds, you can also be affected by game effects that specifically target undead, such as a cleric's Turn Undead feature. Game effects that raise a creature from the dead work on you as normal, but they return you to life as a shade. A true resurrection or wish spell can restore you to life as a fully living member of your original race."
+    },
+    {
+     "name": "Life Drain",
+     "desc": "When you damage a creature with an attack or a spell, you can choose to deal extra necrotic damage to the target equal to your level. If the creature's race matches your Living Origin, you gain temporary hit points equal to the necrotic damage dealt. Once you use this trait, you can't use it again until you finish a short or long rest."
+    },
+    {
+     "name": "Spectral Resilience",
+     "desc": "You have advantage on saving throws against poison and disease, and you have resistance to necrotic damage."
+    }
+   ],
+   "subraces": [
+    {
+     "index": "shade-dwarf",
+     "name": "Dwarf origin",
+     "display": "Shade (Dwarf)",
+     "size": "Medium",
+     "speed": 25,
+     "languages": [
+      "Dwarvish"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "con",
+        "wis"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a dwarf: you keep that size (Medium) and speed (25 ft).",
+     "traits": [],
+     "asi_summary": "+1 CON or WIS"
+    },
+    {
+     "index": "shade-elf",
+     "name": "Elf origin",
+     "display": "Shade (Elf)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Elvish"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "dex",
+        "int"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were an elf: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 DEX or INT"
+    },
+    {
+     "index": "shade-halfling",
+     "name": "Halfling origin",
+     "display": "Shade (Halfling)",
+     "size": "Small",
+     "speed": 25,
+     "languages": [
+      "Halfling"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "dex",
+        "con"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a halfling: you keep that size (Small) and speed (25 ft).",
+     "traits": [],
+     "asi_summary": "+1 DEX or CON"
+    },
+    {
+     "index": "shade-human",
+     "name": "Human origin",
+     "display": "Shade (Human)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [],
+     "language_note": "plus one language of your choice",
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a human: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 to any score but CHA"
+    },
+    {
+     "index": "shade-dragonborn",
+     "name": "Dragonborn origin",
+     "display": "Shade (Dragonborn)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Draconic"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "str"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a dragonborn: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 STR"
+    },
+    {
+     "index": "shade-gnome",
+     "name": "Gnome origin",
+     "display": "Shade (Gnome)",
+     "size": "Small",
+     "speed": 25,
+     "languages": [
+      "Gnomish"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "int",
+        "con"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a gnome: you keep that size (Small) and speed (25 ft).",
+     "traits": [],
+     "asi_summary": "+1 INT or CON"
+    },
+    {
+     "index": "shade-half-elf",
+     "name": "Half-Elf origin",
+     "display": "Shade (Half-Elf)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Elvish"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a half-elf: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 to any score but CHA"
+    },
+    {
+     "index": "shade-half-orc",
+     "name": "Half-Orc origin",
+     "display": "Shade (Half-Orc)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Orc"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "str",
+        "con"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a half-orc: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 STR or CON"
+    },
+    {
+     "index": "shade-tiefling",
+     "name": "Tiefling origin",
+     "display": "Shade (Tiefling)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Infernal"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "from": [
+        "int"
+       ],
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a tiefling: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 INT"
+    },
+    {
+     "index": "shade-goliath",
+     "name": "Goliath origin",
+     "display": "Shade (Goliath)",
+     "size": "Medium",
+     "speed": 35,
+     "languages": [
+      "Giant"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were a goliath: you keep that size (Medium) and speed (35 ft).",
+     "traits": [],
+     "asi_summary": "+1 to any score but CHA"
+    },
+    {
+     "index": "shade-orc",
+     "name": "Orc origin",
+     "display": "Shade (Orc)",
+     "size": "Medium",
+     "speed": 30,
+     "languages": [
+      "Orc"
+     ],
+     "ability_choices": [
+      {
+       "choose": 1,
+       "bonus": 1,
+       "exclude": [
+        "cha"
+       ]
+      }
+     ],
+     "blurb": "In life you were an orc: you keep that size (Medium) and speed (30 ft).",
+     "traits": [],
+     "asi_summary": "+1 to any score but CHA"
+    }
+   ],
+   "asi_summary": "+1 CHA"
+  }
+ ],
+ "srd_subraces": [
+  {
+   "parent": "halfling",
+   "index": "stoor-halfling",
+   "name": "Stoor Halfling",
+   "source": "open5e",
+   "ability_bonuses": {
+    "con": 1
+   },
+   "blurb": "Stoor halflings earn their moniker from an archaic word for \"strong\" or \"large,\" and indeed the average stoor towers some six inches taller than their lightfoot cousins.",
+   "traits": [
+    {
+     "name": "Stoor Hardiness",
+     "desc": "You gain resistance to poison damage, and you make saving throws against poison with advantage."
+    }
+   ],
+   "asi_summary": "+1 CON"
+  }
+ ]
+}

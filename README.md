@@ -9,9 +9,14 @@ with Wizards of the Coast. See the in-app "licenses & credits" for the required 
 
 ## What it does
 
-- **Character builder** — guided step-by-step creation: all 12 SRD classes, 9 races, 4 backgrounds,
-  ability-score methods (standard array / point buy / roll), spell selection, plus 6 ready-made
-  pregens for instant play.
+- **Character builder** — guided step-by-step creation: all 12 SRD classes, 22 races (the 9 SRD 5.1
+  races, Goliath and Orc from SRD 5.2, and eleven from Kobold Press's *Tome of Heroes*, including the
+  clockwork Gearforged), 4 backgrounds, ability-score methods (standard array / point buy / roll),
+  spell selection, plus 6 ready-made pregens for instant play. Subraces, floating ability increases
+  and racial skill picks are real choices.
+- **Subclasses** — 108 across the 12 classes: the SRD's own, plus *Tome of Heroes*, the *Tal'Dorei
+  Campaign Setting* and Open5e Originals. Picked at the class's subclass level (1, 2 or 3) and granted
+  feature by feature on level-up.
 - **Interactive character sheets** — click any stat/skill/save/attack to roll it; spell slots,
   rests, death saves, conditions, level-up, all math derived automatically (`client/src/rules/engine.js`).
 - **Portraits** — every hero gets a drawn likeness derived from their race, class and name
@@ -94,5 +99,20 @@ Infrastructure on the box (already provisioned):
 
 ## Licensing
 
-Ships SRD 5.1 (and some SRD 5.2) content under CC-BY-4.0. Attribution paragraphs are rendered on the
-in-app credits screen and must remain. Interface art is original. Code: MIT.
+Ships SRD 5.1 (and some SRD 5.2) content under CC-BY-4.0, and expansion races and subclasses that are
+Open Game Content under the OGL 1.0a (*Tome of Heroes*, *Tal'Dorei Campaign Setting*, Open5e Originals).
+`server/srd/sources.js` is the list of every source with its licence and notice; the in-app credits
+screen renders it along with the full OGL text and its Section 15, and must remain. Only open-licensed
+content goes in — nothing from non-SRD Wizards of the Coast books. Interface art is original. Code: MIT.
+
+### Refreshing the expansion data
+
+`server/data/Open-Races.json`, `Open-Subclasses.json` and `OGL-1.0a.txt` are generated:
+
+```bash
+cd server && node scripts/import-open-content.js
+```
+
+The script pulls rules text from the Open5e API and layers the structured mechanics (ability
+increases, skills, speed, size, natural weapons…) authored in the script itself. To add a source, add
+it to `sources.js` and to the script's `DOCS` map.
