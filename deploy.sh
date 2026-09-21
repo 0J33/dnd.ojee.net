@@ -53,7 +53,11 @@ grep -q 'dnd-api\|localhost:5005' client/dist/assets/index-*.js \
 echo "  API origin in bundle: $(grep -ohE 'https?://[a-z0-9.:-]*(dnd-api[a-z0-9.-]*|localhost:5005)' client/dist/assets/index-*.js | sort -u | head -1)"
 
 echo "[2/5] rsync client -> $REMOTE:/home/$REMOTE_USER/dnd-client/"
-"${RSYNC[@]}" client/dist/ "$REMOTE:/home/${REMOTE_USER}/dnd-client/"
+# Previous builds' hashed assets are protected from --delete: a browser still
+# holding the old index.html asks for the old script, and nginx's try_files
+# would answer a missing one with index.html, which the browser then tries to
+# run as JavaScript. They're pruned after two weeks in step 4.
+"${RSYNC[@]}" --filter='P assets/*' client/dist/ "$REMOTE:/home/${REMOTE_USER}/dnd-client/"
 
 echo "[3/5] rsync server -> $REMOTE:/home/$REMOTE_USER/dnd-server/"
 # No --delete of .env: the live MONGODB_URI lives only on the box. node_modules
@@ -66,6 +70,7 @@ echo "[3/5] rsync server -> $REMOTE:/home/$REMOTE_USER/dnd-server/"
 echo "[4/5] install deps + restart dnd-server.service"
 "${SSH[@]}" bash -s <<'REMOTE_SH'
 set -u
+find "$HOME/dnd-client/assets" -type f -mtime +14 -delete 2>/dev/null
 cd "$HOME/dnd-server"
 PATH=/opt/node22/bin:$PATH
 npm install --omit=dev --silent 2>&1 | tail -3
@@ -124,6 +129,15 @@ if out=$(probe https://dnd.ojee.net/); then
   echo "  dnd.ojee.net -> ${out%% *}"
 else
   echo "  dnd.ojee.net -> ${out%% *}"; echo "  frontend is not serving" >&2; exit 1
+fi
+
+# The build id the bundle compares itself against (client/src/freshness.jsx).
+want=$(sed -n 's/.*"build":"\([0-9]*\)".*/\1/p' client/dist/version.json)
+live=$(curl -s -m 20 "https://dnd.ojee.net/version.json?t=$(date +%s)" | sed -n 's/.*"build":"\([0-9]*\)".*/\1/p')
+if [[ -n "$want" && "$want" == "$live" ]]; then
+  echo "  dnd.ojee.net/version.json -> $live"
+else
+  echo "  dnd.ojee.net/version.json -> '${live}', expected '${want}'" >&2; exit 1
 fi
 
 echo

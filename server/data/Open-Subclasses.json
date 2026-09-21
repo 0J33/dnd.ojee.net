@@ -1357,6 +1357,12 @@
      "desc": "Starting at 2nd level, when you use your Wild Shape to magically assume the shape of a beast, it can have a flying speed (you ignore “no flying speed” in the Limitations column of the Beast Shapes table but must abide by the other limitations there)."
     }
    ],
+   "3": [
+    {
+     "name": "Circle Spells",
+     "desc": "The magic of the wind flows through you, granting access to certain spells. At 3rd, 5th, 7th, and 9th level, you gain access to the spells listed for that level in the Circle of Wind Spells table.\nOnce you gain access to one of these spells, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.\n\nCircle of Wind Spells\nDruid Level · Spells\n3rd · blur, gust of wind\n5th · fly, lightning bolt\n7th · conjure minor elementals, freedom of movement\n9th · cloudkill, conjure elemental (air elemental only)"
+    }
+   ],
    "6": [
     {
      "name": "Comforting Breezes",
@@ -1365,12 +1371,6 @@
     {
      "name": "Updraft",
      "desc": "Also at 6th level, you can expend one use of Wild Shape as a bonus action to summon a powerful wind. You and each creature of your choice within 10 feet of you end the grappled or restrained conditions. You can fly up to 30 feet as part of this bonus action, and each creature that you affect with this wind can use a reaction to fly up to 30 feet. This movement doesn't provoke opportunity attacks."
-    }
-   ],
-   "9": [
-    {
-     "name": "Circle Spells",
-     "desc": "The magic of the wind flows through you, granting access to certain spells. At 3rd, 5th, 7th, and 9th level, you gain access to the spells listed for that level in the Circle of Wind Spells table.\nOnce you gain access to one of these spells, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.\n\nCircle of Wind Spells\nDruid Level · Spells\n3rd · blur, gust of wind\n5th · fly, lightning bolt\n7th · conjure minor elementals, freedom of movement\n9th · cloudkill, conjure elemental (air elemental only)"
     }
    ],
    "10": [
@@ -1398,12 +1398,12 @@
   "levels": {
    "3": [
     {
-     "name": "Bonded Weapon",
-     "desc": "Starting at 3rd level, you can create a magical bond between you and a particular weapon of your choice. This weapon becomes almost like a part of you, and unless you are incapacitated, no one can disarm it from you. If you are not holding the weapon, you can use a bonus action to summon it instantly into your hand via teleportation unless it is on another plane of existence.\n\nTo create the magical bond with your weapon, you must perform a ritual that takes 1 hour. During the ritual, the weapon you are attempting to bond with must always be at your side, but you can otherwise complete the ritual over the course of a short rest. You can perform the ritual multiple times, but you can only remain bonded to two particular weapons at any given time. Bonding with a third weapon will break the bond with one of your other weapons that you choose. Furthermore, you can only use your bonus action to summon one bonded weapon per turn."
-    },
-    {
      "name": "Spellcasting",
      "desc": "Beginning at 3rd level, you can cast spells from the wizard spell list.\n\nCantrips. Choose two cantrips from the wizard spell list to learn. At 10th level, you learn one additional cantrip from the same list.\n\nSpell Slots. You use spell slots to cast 1st level and higher spells, expending a spell slot equal to or higher than the level of the spell you wish to cast. When you complete a long rest, you regain any spell slots you have used. The number of spell slots of different levels available are shown on the Arcane Warrior Spells table.\nFor example, if you are a 7th-level Arcane Warrior who knows the 1st-level spell magic missile, you could use any of your unused 1st or 2nd-level spell slots to cast the spell. However, if you wanted to cast 2nd-level spell shatter, you would need to expend a 2nd-level spell slot in order to cast it.\n\n1st-Level and Higher Spells Known. Upon choosing this archetype at 3rd level, you learn three 1st-level spells from the wizard spell list. At least two of these spells must be from the abjuration or evocation schools.\n\nYou automatically learn additional spells from the wizard spell list as you gain levels, as shown on the Arcane Warrior Spells table. When you learn a new spell, it must be of a level that you can cast with your existing spell slots. Initially, you must choose your new spells from the evocation and abjuration schools, but starting at 8th level, you can choose from any type of spell on the wizard spell list.\n\nFor instance, upon reaching 7th level in this class, an Arcane Warrior could learn a new spell of either 1st or 2nd-level, but it must be from either the abjuration or evocation schools. At 8th level, the Arcane Warrior learns another spell of 1st or 2nd-level, which can be chosen from any spell school.\n\nEvery time you gain a new level of Arcane Warrior, you have the choice to replace one of your known wizard spells with a different spell from the same list of a level for which you have spell slots. However, if your Arcane Warrior level is 7th or lower, you can only know one spell of 1st level or higher from a school other than abjuration or evocation. At 8th level or higher in this class, you can learn additional spells from other schools, but at least 4 of your known spells of 1st level or higher must be from these two schools.\n\nSpellcasting Ability. You use rote memorization and diligent study to master your wizard spells, so your spellcasting ability for these is Intelligence. You use your Intelligence modifier when making a spell attack roll with a wizard spell, as well as to calculate the DC of a saving throw against one of your wizard spells. If the text of a spell refers to your spellcasting ability, use your Intelligence.\n\nSpell save DC = 8 + your proficiency bonus + your Intelligence modifier\n\nSpell attack modifier = your proficiency bonus + your Intelligence modifier\nArcane Warrior Spells\nFighter Level · Cantrips Known · Spells Known · 1st · 2nd · 3rd · 4th\n3rd · 2 · 3 · 2 · - · - · -\n4th · 2 · 4 · 3 · - · - · -\n5th · 2 · 4 · 3 · - · - · -\n6th · 2 · 4 · 3 · - · - · -\n7th · 2 · 5 · 4 · 2 · - · -\n8th · 2 · 6 · 4 · 2 · - · -\n9th · 2 · 6 · 4 · 2 · - · -\n10th · 3 · 7 · 4 · 3 · - · -\n11th · 3 · 8 · 4 · 3 · - · -\n12th · 3 · 8 · 4 · 3 · - · -\n13th · 3 · 9 · 4 · 3 · 2 · -\n14th · 3 · 10 · 4 · 3 · 2 · -\n15th · 3 · 10 · 4 · 3 · 2 · -\n16th · 3 · 11 · 4 · 3 · 3 · -\n17th · 3 · 11 · 4 · 3 · 3 · -\n18th · 3 · 11 · 4 · 3 · 3 · -\n19th · 3 · 12 · 4 · 3 · 3 · 1\n20th · 3 · 13 · 4 · 3 · 3 · 1"
+    },
+    {
+     "name": "Bonded Weapon",
+     "desc": "Starting at 3rd level, you can create a magical bond between you and a particular weapon of your choice. This weapon becomes almost like a part of you, and unless you are incapacitated, no one can disarm it from you. If you are not holding the weapon, you can use a bonus action to summon it instantly into your hand via teleportation unless it is on another plane of existence.\n\nTo create the magical bond with your weapon, you must perform a ritual that takes 1 hour. During the ritual, the weapon you are attempting to bond with must always be at your side, but you can otherwise complete the ritual over the course of a short rest. You can perform the ritual multiple times, but you can only remain bonded to two particular weapons at any given time. Bonding with a third weapon will break the bond with one of your other weapons that you choose. Furthermore, you can only use your bonus action to summon one bonded weapon per turn."
     }
    ],
    "7": [
@@ -2709,12 +2709,12 @@
   "levels": {
    "3": [
     {
-     "name": "Sleight of Mage Hand",
-     "desc": "If you cast the cantrip mage hand, you may cause the spectral, floating hand created by the spell to be invisible to observers. In addition to the functions described in the spell’s description, you may carry out the following tasks:\n\nYou can disarm traps and pick locks using thieves’ tools at the range of the spell.\nYou can pick a creature’s pocket, retrieving an object in a container that is being carried or worn by that creature.\nYou can also plant an object being held by the hand into a container that is being carried or worn by another creature.\n\nIn order to complete any of these tasks without being noticed, you must contest the target creature’s Wisdom (Perception) with a successful Dexterity (Sleight of Hand) check. Rather than controlling the spectral hand with an action, you may use the bonus action from your Cunning Action feature."
-    },
-    {
      "name": "Spellcasting",
      "desc": "Beginning at 3rd level, you can cast spells from the wizard spell list.\n\nCantrips. You learn the cantrip mage hand and two additional cantrips of your choice, picking from the wizard spell list. At 10th level, you learn one additional cantrip from the same list.\n\nSpell Slots. You use spell slots to cast 1st level and higher spells, expending a spell slot equal to or higher than the level of the spell you wish to cast. When you complete a long rest, you regain any spell slots you have used. The number of spell slots of different levels available are shown on the Eldritch Prankster Spells table.\nFor example, if you are a 7th-level Eldritch Prankster who knows the 1st-level spell disguise self, you could use any of your unused 1st or 2nd-level spell slots to cast the spell. However, if you wanted to cast 2nd-level spell invisibility, you would need to expend a 2nd-level spell slot in order to cast it.\n\n1st-Level and Higher Spells Known. Upon choosing this archetype at 3rd level, you learn three 1st-level spells from the wizard spell list. At least two of these spells must be from the enchantment or illusion schools.\n\nYou automatically learn additional spells from the wizard spell list as you gain levels, as shown on the Eldritch Prankster Spells table. When you learn a new spell, it must be of a level that you can cast with your existing spell slots. Initially, you must choose your new spells from the illusion and enchantment schools, but starting at 8th level, you can choose from any type of spell on the wizard spell list.\n\nFor instance, upon reaching 7th level in this class, an Eldritch Prankster could learn a new spell of either 1st or 2nd-level, but it must be from either the enchantment or illusion schools. At 8th level, the Eldritch Prankster learns another spell of 1st or 2nd-level, which can be chosen from any spell school.\n\nEvery time you gain a new level of Eldritch Prankster, you have the choice to replace one of your known wizard spells with a different spell from the same list of a level for which you have spell slots. However, if your Eldritch Prankster level is 7th or lower, you can only know one spell of 1st level or higher from a school other than enchantment or illusion. At 8th level or higher in this class, you can learn additional spells from other schools, but at least 4 of your known spells of 1st level or higher must be from these two schools.\n\nSpellcasting Ability. You use rote memorization and diligent study to master your wizard spells, so your spellcasting ability for these is Intelligence. You use your Intelligence modifier when making a spell attack roll with a wizard spell, as well as to calculate the DC of a saving throw against one of your wizard spells. If the text of a spell refers to your spellcasting ability, use your Intelligence.\n\nSpell save DC = 8 + your proficiency bonus + your Intelligence modifier\n\nSpell attack modifier = your proficiency bonus + your Intelligence modifier\nEldritch Prankster Spells\nRogue Level · Cantrips Known · Spells Known · 1st · 2nd · 3rd · 4th\n3rd · 3 · 3 · 2 · - · - · -\n4th · 3 · 4 · 3 · - · - · -\n5th · 3 · 4 · 3 · - · - · -\n6th · 3 · 4 · 3 · - · - · -\n7th · 3 · 5 · 4 · 2 · - · -\n8th · 3 · 6 · 4 · 2 · - · -\n9th · 3 · 6 · 4 · 2 · - · -\n10th · 4 · 7 · 4 · 3 · - · -\n11th · 4 · 8 · 4 · 3 · - · -\n12th · 4 · 8 · 4 · 3 · - · -\n13th · 4 · 9 · 4 · 3 · 2 · -\n14th · 4 · 10 · 4 · 3 · 2 · -\n15th · 4 · 10 · 4 · 3 · 2 · -\n16th · 4 · 11 · 4 · 3 · 3 · -\n17th · 4 · 11 · 4 · 3 · 3 · -\n18th · 4 · 11 · 4 · 3 · 3 · -\n19th · 4 · 12 · 4 · 3 · 3 · 1\n20th · 4 · 13 · 4 · 3 · 3 · 1"
+    },
+    {
+     "name": "Sleight of Mage Hand",
+     "desc": "If you cast the cantrip mage hand, you may cause the spectral, floating hand created by the spell to be invisible to observers. In addition to the functions described in the spell’s description, you may carry out the following tasks:\n\nYou can disarm traps and pick locks using thieves’ tools at the range of the spell.\nYou can pick a creature’s pocket, retrieving an object in a container that is being carried or worn by that creature.\nYou can also plant an object being held by the hand into a container that is being carried or worn by another creature.\n\nIn order to complete any of these tasks without being noticed, you must contest the target creature’s Wisdom (Perception) with a successful Dexterity (Sleight of Hand) check. Rather than controlling the spectral hand with an action, you may use the bonus action from your Cunning Action feature."
     }
    ],
    "9": [
@@ -2826,16 +2826,16 @@
   "levels": {
    "3": [
     {
+     "name": "Spellcasting",
+     "desc": "When you reach 3rd level, you gain the ability to cast spells drawn from the magic of a divine entity.\n\nCantrips\nYou learn three cantrips of your choice from the cleric spell list. You learn another cleric cantrip of your choice at 10th level.\n\nSoulspy Spellcasting\n\nRouge Level · Cantrips Known · Spells Known · 1st · 2nd · 3rd · 4th\n3rd · 3 · 3 · 2 · - · - · -\n4th · 3 · 4 · 3 · - · - · -\n5th · 3 · 4 · 3 · - · - · -\n6th · 3 · 4 · 3 · - · - · -\n7th · 3 · 5 · 4 · 2 · - · -\n8th · 3 · 6 · 4 · 2 · - · -\n9th · 3 · 6 · 4 · 2 · - · -\n10th · 4 · 7 · 4 · 3 · - · -\n11th · 4 · 8 · 4 · 3 · - · -\n12th · 4 · 8 · 4 · 3 · - · -\n13th · 4 · 9 · 4 · 3 · 2 · -\n14th · 4 · 10 · 4 · 3 · 2 · -\n15th · 4 · 10 · 4 · 3 · 2 · -\n16th · 4 · 11 · 4 · 3 · 3 · -\n17th · 4 · 11 · 4 · 3 · 3 · -\n18th · 4 · 11 · 4 · 3 · 3 · -\n19th · 4 · 12 · 4 · 3 · 3 · 1\n20th · 4 · 13 · 4 · 3 · 3 · 1\n\nSpell Slots\nThe Soulspy Spellcasting table shows how many spell slots you have to cast your cleric spells of 1st level and higher. To cast one of these spells, you must expend one of these slots at the spell-s level or higher. You regain all expended spell slots when you finish a long rest.\n\nFor example, if you know the 1st-level spell inflict wounds and have a 1st-level and a 2nd-level spell slot available, you can cast inflict wounds using either slot.\n\nSpells Known of 1st-Level and Higher\nYou know three 1st-level cleric spells of your choice, two of which you must choose from the abjuration and necromancy spells on the cleric spell list. The Spells Known column of the Soulspy Spellcasting table shows when you learn more cleric spells of 1st level or higher. Each of these spells must be an abjuration or necromancy spell and must be of a level for which you have spell slots. The spells you learn at 8th, 14th, and 20th level can be from any school of magic.\nWhen you gain a level in this class, you can choose one of the cleric spells you know and replace it with another spell from the cleric spell list. The new spell must be of a level for which you have spell slots, and it must be an abjuration or necromancy spell, unless you-re replacing the spell you gained at 3rd, 8th, 14th, or 20th level.\n\nSpellcasting Ability\nWisdom is your spellcasting ability for your cleric spells. You learn your spells through meditation and prayer to the powerful forces that guide your actions. You use your Wisdom whenever a spell refers to your spellcasting ability. In addition, you use your Wisdom modifier when setting the saving throw DC for a cleric spell you cast and when making an attack roll with one.\n\nSpell save DC = 8 + your proficiency bonus + your Wisdom modifier\n\nSpell attack modifier = your proficiency bonus + your Wisdom modifier"
+    },
+    {
      "name": "Bonus Proficiency",
      "desc": "When you choose this archetype at 3rd level, you gain proficiency in the Religion skill, if you don't already have it."
     },
     {
      "name": "Divine Symbol",
      "desc": "Starting at 3rd level, you can use an action to create a symbol of your deity that hovers within 5 feet of you. The symbol is a Tiny object that is visible but invulnerable and intangible, and it lasts for 1 minute, until you die, or until you dismiss it (no action required). While this symbol is active, you gain the following benefits:\nYour Divine Symbol functions as a spellcasting focus for your cleric spells.\nAs a bonus action, you can turn the symbol into thieves- tools, which you can use to pick locks, disarm traps, or any other activities that would normally require such tools. While your Divine Symbol is functioning in this way, it loses all other properties listed here. You can change it from thieves- tools back to its symbol form as a bonus action.\nThe symbol sheds bright light in a 10-foot radius and dim light for an additional 10 feet. You can extinguish or restore the light as a bonus action. When you extinguish the symbol-s light, you can also snuff out one candle, torch, or other nonmagical light source within 10 feet of you.\nWhen you create this symbol, and as an action on each of your turns while the symbol is active, you can force the symbol to shoot divine energy at a creature you can see within 30 feet of you. Make a ranged spell attack. On a hit, the target takes 1d8 radiant or necrotic damage (your choice). When you reach certain levels in this class, the symbol-s damage increases: at 5th level (2d8), 11th level (3d8), and 17th level (4d8)."
-    },
-    {
-     "name": "Spellcasting",
-     "desc": "When you reach 3rd level, you gain the ability to cast spells drawn from the magic of a divine entity.\n\nCantrips\nYou learn three cantrips of your choice from the cleric spell list. You learn another cleric cantrip of your choice at 10th level.\n\nSoulspy Spellcasting\n\nRouge Level · Cantrips Known · Spells Known · 1st · 2nd · 3rd · 4th\n3rd · 3 · 3 · 2 · - · - · -\n4th · 3 · 4 · 3 · - · - · -\n5th · 3 · 4 · 3 · - · - · -\n6th · 3 · 4 · 3 · - · - · -\n7th · 3 · 5 · 4 · 2 · - · -\n8th · 3 · 6 · 4 · 2 · - · -\n9th · 3 · 6 · 4 · 2 · - · -\n10th · 4 · 7 · 4 · 3 · - · -\n11th · 4 · 8 · 4 · 3 · - · -\n12th · 4 · 8 · 4 · 3 · - · -\n13th · 4 · 9 · 4 · 3 · 2 · -\n14th · 4 · 10 · 4 · 3 · 2 · -\n15th · 4 · 10 · 4 · 3 · 2 · -\n16th · 4 · 11 · 4 · 3 · 3 · -\n17th · 4 · 11 · 4 · 3 · 3 · -\n18th · 4 · 11 · 4 · 3 · 3 · -\n19th · 4 · 12 · 4 · 3 · 3 · 1\n20th · 4 · 13 · 4 · 3 · 3 · 1\n\nSpell Slots\nThe Soulspy Spellcasting table shows how many spell slots you have to cast your cleric spells of 1st level and higher. To cast one of these spells, you must expend one of these slots at the spell-s level or higher. You regain all expended spell slots when you finish a long rest.\n\nFor example, if you know the 1st-level spell inflict wounds and have a 1st-level and a 2nd-level spell slot available, you can cast inflict wounds using either slot.\n\nSpells Known of 1st-Level and Higher\nYou know three 1st-level cleric spells of your choice, two of which you must choose from the abjuration and necromancy spells on the cleric spell list. The Spells Known column of the Soulspy Spellcasting table shows when you learn more cleric spells of 1st level or higher. Each of these spells must be an abjuration or necromancy spell and must be of a level for which you have spell slots. The spells you learn at 8th, 14th, and 20th level can be from any school of magic.\nWhen you gain a level in this class, you can choose one of the cleric spells you know and replace it with another spell from the cleric spell list. The new spell must be of a level for which you have spell slots, and it must be an abjuration or necromancy spell, unless you-re replacing the spell you gained at 3rd, 8th, 14th, or 20th level.\n\nSpellcasting Ability\nWisdom is your spellcasting ability for your cleric spells. You learn your spells through meditation and prayer to the powerful forces that guide your actions. You use your Wisdom whenever a spell refers to your spellcasting ability. In addition, you use your Wisdom modifier when setting the saving throw DC for a cleric spell you cast and when making an attack roll with one.\n\nSpell save DC = 8 + your proficiency bonus + your Wisdom modifier\n\nSpell attack modifier = your proficiency bonus + your Wisdom modifier"
     }
    ],
    "9": [
@@ -2869,16 +2869,16 @@
   "levels": {
    "3": [
     {
-     "name": "Restriction: Erina",
-     "desc": "You can choose this roguish archetype only if you are an erina."
+     "name": "Spellcasting",
+     "desc": "When you reach 3rd level, you gain the ability to cast spells drawn from the magic of the wilds."
+    },
+    {
+     "name": "Cantrips",
+     "desc": "You learn three cantrips: shillelagh and two other cantrips of your choice from the druid spell list. You learn another druid cantrip of your choice at 10th level."
     },
     {
      "name": "Spell Slots",
      "desc": "The Underfoot Spellcasting table shows how many spell slots you have to cast your spells of 1st level and higher. To cast one of these spells, you must expend one of these slots at the spell-s level or higher. You regain all expended spell slots when you finish a long rest.\nFor example, if you know the 1st-level spell longstrider and have a 1st-level and a 2nd-level spell slot available, you can cast longstrider using either slot."
-    },
-    {
-     "name": "Spellcasting",
-     "desc": "When you reach 3rd level, you gain the ability to cast spells drawn from the magic of the wilds."
     },
     {
      "name": "Spellcasting Ability",
@@ -2889,6 +2889,10 @@
      "desc": "You know three 1st-level druid spells of your choice, two of which you must choose from the divination and transmutation spells on the druid spell list. The Spells Known column of the Underfoot Spellcasting table shows when you learn more druid spells of 1st level or higher. Each of these spells must be a divination or transmutation spell of your choice and must be of a level for which you have spell slots. The spells you learn at 8th, 14th, and 20th level can be from any school of magic.\nWhen you gain a level in this class, you can choose one of the druid spells you know and replace it with another spell from the druid spell list. The new spell must be of a level for which you have spell slots, and it must be a divination or transmutation spell, unless you-re replacing the spell you gained at 3rd, 8th, 14th, or 20th level."
     },
     {
+     "name": "Restriction: Erina",
+     "desc": "You can choose this roguish archetype only if you are an erina."
+    },
+    {
      "name": "Versatile Shillelagh",
      "desc": "Beginning at 3rd level, when you cast shillelagh, the spell is modified in the following ways:\nIts duration increases to 1 hour.\nThe spell ends early only if another creature holds the weapon or if the weapon is more than 5 feet away from you for 1 minute or more.\nYour Sneak Attack feature can be applied to attack rolls made with your shillelagh weapon."
     }
@@ -2897,12 +2901,6 @@
     {
      "name": "Undermine",
      "desc": "Beginning at 9th level, you can use your action to dig a hole under a Large or smaller creature within 5 feet of you. That creature must succeed on a Dexterity saving throw (DC = 8 + your proficiency bonus + your Dexterity modifier) or fall prone. If the target fails its saving throw, you can make one weapon attack against that target as a bonus action."
-    }
-   ],
-   "10": [
-    {
-     "name": "Cantrips",
-     "desc": "You learn three cantrips: shillelagh and two other cantrips of your choice from the druid spell list. You learn another druid cantrip of your choice at 10th level."
     }
    ],
    "13": [

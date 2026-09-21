@@ -87,6 +87,18 @@ function levelFromText(text) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+// A feature whose opening says "At 3rd, 5th, 7th, and 9th level, you gain..."
+// arrives at the first of those, whatever level Open5e filed it under.
+function firstStatedLevel(text) {
+  const m = String(text).slice(0, 200).match(/\bat (\d{1,2})(?:st|nd|rd|th), (?:\d{1,2}(?:st|nd|rd|th),? )+(?:and )?\d{1,2}(?:st|nd|rd|th) level/i);
+  return levelFromText(text) || (m ? parseInt(m[1], 10) : null);
+}
+
+// Parts of a subclass's Spellcasting feature that Open5e lists separately,
+// sometimes at the wrong level ("Cantrips" at 10 because the text mentions
+// learning another cantrip at 10th level).
+const SPELLCASTING_PARTS = /^(Cantrips|Spell Slots|Spells Known.*|Spellcasting Ability|Ritual Casting|Spellcasting Focus)$/i;
+
 // ---------------------------------------------------------------- races
 //
 // Field glossary (the builder reads these):
@@ -437,17 +449,24 @@ function buildSubclasses(classes, v1classes) {
       if (!arch) { console.warn(`skip ${c.key}: no features`); continue; }
       ({ flavor, features } = v1Features(arch.desc, baseLevel));
     } else {
+      const casting = c.features.find((f) => f.name === 'Spellcasting');
+      const castingLevel = casting && casting.gained_at?.length ? casting.gained_at[0].level : null;
       for (const f of c.features) {
+        const listed = (f.gained_at && f.gained_at.length) ? Math.min(...f.gained_at.map((g) => g.level)) : baseLevel;
+        const stated = firstStatedLevel(f.desc);
+        let lvl = stated && stated < listed ? stated : listed;
+        if (castingLevel && SPELLCASTING_PARTS.test(f.name)) lvl = castingLevel;
         // nothing arrives before the class picks its subclass (Open5e lists a
         // few rogue features at level 1)
-        const listed = (f.gained_at && f.gained_at.length) ? Math.min(...f.gained_at.map((g) => g.level)) : baseLevel;
-        features.push(...splitFeature(f, Math.max(baseLevel, listed)));
+        features.push(...splitFeature(f, Math.max(baseLevel, lvl)));
       }
     }
 
     // restriction notes ("Restriction: Alseid") surface on the picker card
     const restriction = features.find((f) => /^Restriction/i.test(f.name));
-    features.sort((a, b) => a.level - b.level);
+    // by level; within a level Spellcasting leads its own parts
+    const rank = (f) => (f.name === 'Spellcasting' ? 0 : SPELLCASTING_PARTS.test(f.name) ? 1 : 2);
+    features.sort((a, b) => a.level - b.level || rank(a) - rank(b));
     const levels = {};
     for (const f of features) (levels[f.level] = levels[f.level] || []).push({ name: f.name, desc: f.desc });
 
