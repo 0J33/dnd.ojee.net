@@ -53,10 +53,10 @@ grep -q 'dnd-api\|localhost:5005' client/dist/assets/index-*.js \
 echo "  API origin in bundle: $(grep -ohE 'https?://[a-z0-9.:-]*(dnd-api[a-z0-9.-]*|localhost:5005)' client/dist/assets/index-*.js | sort -u | head -1)"
 
 echo "[2/5] rsync client -> $REMOTE:/home/$REMOTE_USER/dnd-client/"
-# Previous builds' hashed assets are protected from --delete: a browser still
-# holding the old index.html asks for the old script, and nginx's try_files
-# would answer a missing one with index.html, which the browser then tries to
-# run as JavaScript. They're pruned after two weeks in step 4.
+# Previous builds' hashed assets are protected from --delete: a tab opened
+# before this deploy still asks for its old scripts (lazily, or on a reconnect),
+# and a missing one would break it. They're pruned after two weeks in step 4.
+# Cache headers for the page and assets live in nginx-dnd.conf.
 "${RSYNC[@]}" --filter='P assets/*' client/dist/ "$REMOTE:/home/${REMOTE_USER}/dnd-client/"
 
 echo "[3/5] rsync server -> $REMOTE:/home/$REMOTE_USER/dnd-server/"

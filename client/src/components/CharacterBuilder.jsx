@@ -794,11 +794,13 @@ function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, 
 
       {resolved.ability_choices.map((c, i) => {
         const mine = abilityPicks[i] || [];
-        const taken = abilityPicks.filter((_, j) => j !== i).flat();
+        // picks are distinct across groups, except a stackable group (a shade's
+        // living-origin +1), which may land on an already-raised score
+        const taken = c.stackable ? [] : abilityPicks.filter((_, j) => j !== i && !resolved.ability_choices[j]?.stackable).flat();
         const pool = choicePool(c);
         return (
           <div key={`a${i}`} className="mt">
-            <h4>+{c.bonus} to {c.choose === 1 ? 'one score' : `${['', 'one', 'two', 'three'][c.choose] || c.choose} different scores`} ({mine.length}/{c.choose})</h4>
+            <h4>+{c.bonus} to {c.choose === 1 ? 'one score' : `${['', 'one', 'two', 'three'][c.choose] || c.choose} different scores`}{c.label ? ` ${c.label}` : ''} ({mine.length}/{c.choose})</h4>
             <div className="skill-pick-grid">
               {ABILITIES.map((a) => {
                 const on = mine.includes(a);

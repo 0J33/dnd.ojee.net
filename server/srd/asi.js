@@ -12,7 +12,7 @@ function asiSummary(bonuses, choices) {
     : fixed.sort((x, y) => y[1] - x[1]).map(([a, b]) => `+${b} ${up(a)}`);
   for (const c of choices || []) {
     const pool = (c.from || ABILITIES).filter((a) => !(c.exclude || []).includes(a));
-    const any = c.choose === 1 ? 'any score' : `any ${NUM[c.choose]} scores`;
+    const any = c.choose === 1 ? (c.stackable ? 'one score' : 'any score') : `any ${NUM[c.choose]} scores`;
     if (pool.length <= 3) bits.push(`+${c.bonus} ${pool.map(up).join(' or ')}`);
     else if (pool.length === 6) bits.push(`+${c.bonus} to ${any}`);
     else bits.push(`+${c.bonus} to ${any} but ${ABILITIES.filter((a) => !pool.includes(a)).map(up).join('/')}`);

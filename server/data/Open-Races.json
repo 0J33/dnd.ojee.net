@@ -1318,10 +1318,19 @@
    "ability_bonuses": {
     "cha": 1
    },
+   "ability_choices": [
+    {
+     "choose": 1,
+     "bonus": 1,
+     "exclude": [
+      "cha"
+     ]
+    }
+   ],
    "languages": [
     "Common"
    ],
-   "blurb": "A soul that refused to move on (+1 CHA, +1 from your old life). Drain life, and later turn ghostly.",
+   "blurb": "A soul that refused to move on (+1 CHA, +1 anywhere, +1 from your old life). Drain life, and later turn ghostly.",
    "subrace_label": "Living Origin",
    "subrace_required": true,
    "desc": "Your shade character has a number of traits that arise from being a shade as well as a few drawn from life.",
@@ -1365,9 +1374,8 @@
         "con",
         "wis"
        ],
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a dwarf: you keep that size (Medium) and speed (25 ft).",
@@ -1391,9 +1399,8 @@
         "dex",
         "int"
        ],
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were an elf: you keep that size (Medium) and speed (30 ft).",
@@ -1415,16 +1422,16 @@
        "bonus": 1,
        "from": [
         "dex",
+        "cha",
         "con"
        ],
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a halfling: you keep that size (Small) and speed (25 ft).",
      "traits": [],
-     "asi_summary": "+1 DEX or CON"
+     "asi_summary": "+1 DEX or CHA or CON"
     },
     {
      "index": "shade-human",
@@ -1438,14 +1445,13 @@
       {
        "choose": 1,
        "bonus": 1,
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a human: you keep that size (Medium) and speed (30 ft).",
      "traits": [],
-     "asi_summary": "+1 to any score but CHA"
+     "asi_summary": "+1 to one score"
     },
     {
      "index": "shade-dragonborn",
@@ -1461,16 +1467,16 @@
        "choose": 1,
        "bonus": 1,
        "from": [
-        "str"
-       ],
-       "exclude": [
+        "str",
         "cha"
-       ]
+       ],
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a dragonborn: you keep that size (Medium) and speed (30 ft).",
      "traits": [],
-     "asi_summary": "+1 STR"
+     "asi_summary": "+1 STR or CHA"
     },
     {
      "index": "shade-gnome",
@@ -1489,9 +1495,8 @@
         "int",
         "con"
        ],
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a gnome: you keep that size (Small) and speed (25 ft).",
@@ -1511,14 +1516,13 @@
       {
        "choose": 1,
        "bonus": 1,
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a half-elf: you keep that size (Medium) and speed (30 ft).",
      "traits": [],
-     "asi_summary": "+1 to any score but CHA"
+     "asi_summary": "+1 to one score"
     },
     {
      "index": "shade-half-orc",
@@ -1537,9 +1541,8 @@
         "str",
         "con"
        ],
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a half-orc: you keep that size (Medium) and speed (30 ft).",
@@ -1560,16 +1563,16 @@
        "choose": 1,
        "bonus": 1,
        "from": [
-        "int"
-       ],
-       "exclude": [
+        "int",
         "cha"
-       ]
+       ],
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a tiefling: you keep that size (Medium) and speed (30 ft).",
      "traits": [],
-     "asi_summary": "+1 INT"
+     "asi_summary": "+1 INT or CHA"
     },
     {
      "index": "shade-goliath",
@@ -1584,14 +1587,13 @@
       {
        "choose": 1,
        "bonus": 1,
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were a goliath: you keep that size (Medium) and speed (35 ft).",
      "traits": [],
-     "asi_summary": "+1 to any score but CHA"
+     "asi_summary": "+1 to one score"
     },
     {
      "index": "shade-orc",
@@ -1606,17 +1608,16 @@
       {
        "choose": 1,
        "bonus": 1,
-       "exclude": [
-        "cha"
-       ]
+       "stackable": true,
+       "label": "from your living origin"
       }
      ],
      "blurb": "In life you were an orc: you keep that size (Medium) and speed (30 ft).",
      "traits": [],
-     "asi_summary": "+1 to any score but CHA"
+     "asi_summary": "+1 to one score"
     }
    ],
-   "asi_summary": "+1 CHA"
+   "asi_summary": "+1 CHA, +1 to another score, +1 from your origin"
   }
  ],
  "srd_subraces": [

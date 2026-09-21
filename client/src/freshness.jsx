@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
-// After a deploy a browser can still hold the previous index.html: nginx sends
-// no cache header for it and Cloudflare keeps scripts for four hours. That page
-// runs the old bundle against the new API, which is how a deploy that changes
-// an API shape looks "broken" until a hard refresh. So the bundle compares its
-// own build id with the live one: at startup it reloads once, and later in a
-// session it offers a reload rather than yanking someone out of a game.
+// A tab left open across a deploy keeps running the old bundle against the new
+// API, which is how a deploy that changes an API shape looks "broken" until a
+// reload. (Cached copies of index.html did the same until nginx started sending
+// no-cache for it - see nginx-dnd.conf.) So the bundle compares its own build
+// id with the live one: at startup it reloads once, and later in a session it
+// offers a reload rather than yanking someone out of a game.
 
 const RELOADED_FOR = 'dnd_reloadedFor';
 

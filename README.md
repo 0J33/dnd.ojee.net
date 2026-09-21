@@ -94,7 +94,8 @@ Infrastructure on the box (already provisioned):
 - `dnd-server.service` — systemd unit, `/opt/node22/bin/node index.js`, port 5005, `~/dnd-server/.env`
   holds prod values (`MONGODB_URI=…/dnd`, `CLIENT_URL=https://dnd.ojee.net`).
 - nginx site `dnd` — `dnd.ojee.net` serves static `~/dnd-client`; `dnd-api.ojee.net` proxies :5005
-  with websocket upgrade headers.
+  with websocket upgrade headers. The installed file is recorded in `nginx-dnd.conf` (index.html
+  and version.json are never cached; `/assets/` is immutable and 404s when missing).
 - Cloudflare tunnel `minecraft` (`/etc/cloudflared/config.yml`) — ingress rules for `dnd.ojee.net`
   and `dnd-api.ojee.net` → `http://localhost:80`; DNS CNAMEs created via `cloudflared tunnel route dns`.
 

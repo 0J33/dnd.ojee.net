@@ -273,9 +273,13 @@ const RACES = [
   {
     key: 'toh_shade', index: 'shade', name: 'Shade', source: 'toh',
     size: 'Medium', speed: 30, darkvision: 60,
+    // "+1 CHA, +1 to one other score of your choice, and +1 to a score your
+    // Living Origin raises" - the common reading, and the usual +3 total.
     ability_bonuses: { cha: 1 },
+    ability_choices: [{ choose: 1, bonus: 1, exclude: ['cha'] }],
     languages: ['Common'],
-    blurb: 'A soul that refused to move on (+1 CHA, +1 from your old life). Drain life, and later turn ghostly.',
+    blurb: 'A soul that refused to move on (+1 CHA, +1 anywhere, +1 from your old life). Drain life, and later turn ghostly.',
+    asiSummary: '+1 CHA, +1 to another score, +1 from your origin',
     subrace_label: 'Living Origin', subrace_required: true,
     v1Slug: 'shade', // v2 has no traits for shade; v1 does
     livingOrigins: true,
@@ -284,16 +288,18 @@ const RACES = [
 
 // Shade: "your size and speed are those of your Living Origin, and you know one
 // language spoken by it"; +1 to one score that origin (or its subrace) raises.
+// That pick may land on a score already raised (stackable), or a Dragonborn
+// origin, whose only option is STR, could be left with nothing to choose.
 const LIVING_ORIGINS = [
   { index: 'dwarf', name: 'Dwarf', size: 'Medium', speed: 25, lang: 'Dwarvish', from: ['con', 'wis'] },
   { index: 'elf', name: 'Elf', size: 'Medium', speed: 30, lang: 'Elvish', from: ['dex', 'int'] },
-  { index: 'halfling', name: 'Halfling', size: 'Small', speed: 25, lang: 'Halfling', from: ['dex', 'con'] },
+  { index: 'halfling', name: 'Halfling', size: 'Small', speed: 25, lang: 'Halfling', from: ['dex', 'cha', 'con'] },
   { index: 'human', name: 'Human', size: 'Medium', speed: 30, lang: null, from: null },
-  { index: 'dragonborn', name: 'Dragonborn', size: 'Medium', speed: 30, lang: 'Draconic', from: ['str'] },
+  { index: 'dragonborn', name: 'Dragonborn', size: 'Medium', speed: 30, lang: 'Draconic', from: ['str', 'cha'] },
   { index: 'gnome', name: 'Gnome', size: 'Small', speed: 25, lang: 'Gnomish', from: ['int', 'con'] },
   { index: 'half-elf', name: 'Half-Elf', size: 'Medium', speed: 30, lang: 'Elvish', from: null },
   { index: 'half-orc', name: 'Half-Orc', size: 'Medium', speed: 30, lang: 'Orc', from: ['str', 'con'] },
-  { index: 'tiefling', name: 'Tiefling', size: 'Medium', speed: 30, lang: 'Infernal', from: ['int'] },
+  { index: 'tiefling', name: 'Tiefling', size: 'Medium', speed: 30, lang: 'Infernal', from: ['int', 'cha'] },
   { index: 'goliath', name: 'Goliath', size: 'Medium', speed: 35, lang: 'Giant', from: null },
   { index: 'orc', name: 'Orc', size: 'Medium', speed: 30, lang: 'Orc', from: null },
 ];
@@ -378,17 +384,17 @@ function buildRaces(species, v1races) {
         size: o.size, speed: o.speed,
         languages: o.lang ? [o.lang] : [],
         language_note: o.lang ? undefined : 'plus one language of your choice',
-        ability_choices: [{ choose: 1, bonus: 1, ...(o.from ? { from: o.from } : {}), exclude: ['cha'] }],
+        ability_choices: [{ choose: 1, bonus: 1, ...(o.from ? { from: o.from } : {}), stackable: true, label: 'from your living origin' }],
         blurb: `In life you were ${/^[aeiou]/i.test(o.name) ? 'an' : 'a'} ${o.name.toLowerCase()}: you keep that size (${o.size}) and speed (${o.speed} ft).`,
         traits: [],
       }));
     }
 
     const {
-      key, adaptedAsi, ancestryFrom, v1Slug, livingOrigins, subraces: _s, ...fields
+      key, adaptedAsi, ancestryFrom, v1Slug, livingOrigins, subraces: _s, asiSummary: asiOverride, ...fields
     } = def;
     const race = { ...fields, desc: sp ? firstSentence(sp.desc, 400) : '', traits, subraces };
-    race.asi_summary = adaptedAsi ? '+2 and +1 to scores you choose' : asiSummary(race.ability_bonuses, race.ability_choices);
+    race.asi_summary = asiOverride || (adaptedAsi ? '+2 and +1 to scores you choose' : asiSummary(race.ability_bonuses, race.ability_choices));
     for (const s of race.subraces) s.asi_summary = asiSummary(s.ability_bonuses, s.ability_choices);
     races.push(race);
   }

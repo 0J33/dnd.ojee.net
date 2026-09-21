@@ -10,6 +10,7 @@ export const CHANGELOG = [
       'Level-up starts on the classic subclass, as the builder does; Circle of Wind and Underfoot features arrive at the right levels',
       'After an update the page reloads itself instead of running old code; subclass shown on hero cards',
       'Fixes: short-rest healing message, phone dice tray covering the map tools, cramped sheet name on phones',
+      'Shade: +1 CHA, +1 to another score and +1 from your living origin (the usual +3)',
     ],
   },
   {
