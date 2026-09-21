@@ -1,0 +1,13 @@
+node_modules/
+
+# Builds — deployed from a local build, not committed, same as the sibling sites.
+client/dist/
+client/build/
+
+# Secrets. MONGODB_URI is a live connection string; it never goes in the repo.
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store

@@ -1,0 +1,165 @@
+/* ================================================================
+   Mobile / small-screen overrides. Imported last so it wins.
+   Phone breakpoint: <= 640px. A few tweaks at <= 820px for the board.
+   ================================================================ */
+
+@media (max-width: 820px) {
+  /* Board: stack the monster browser vertically */
+  .monster-modal { width: 96%; height: 90vh; }
+  .monster-body { flex-direction: column; }
+  .monster-list-col { width: 100%; border-right: none; border-bottom: 1px solid var(--border-soft); max-height: 42%; }
+  .monster-detail-col { max-height: 58%; }
+}
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+
+  /* ---------------- Topbars ---------------- */
+  .topbar {
+    gap: 8px; padding: 8px 10px; min-height: 48px;
+    flex-wrap: wrap;
+  }
+  .topbar-sub { display: none; }
+  .topbar-user { display: none; }
+  .topbar-title { font-size: 0.95em; letter-spacing: 1px; }
+  .topbar .small-btn { padding: 5px 9px; font-size: 0.62em; }
+
+  /* Board topbar: let it wrap to multiple compact rows, everything reachable */
+  .board-topbar { flex-wrap: wrap; gap: 5px; padding: 6px 8px; overflow-x: visible; }
+  .board-topbar .topbar-title-sm { max-width: 130px; font-size: 0.9em; }
+  .board-topbar .small-btn { padding: 5px 8px; font-size: 0.6em; }
+  .board-topbar .icon-btn { width: 30px; height: 30px; }
+  .tool-group { gap: 3px; padding: 2px 5px; }
+
+  /* ---------------- Lobby ---------------- */
+  .lobby-main { padding: 14px 12px 40px; gap: 16px; }
+  .hero-banner { flex-direction: column; padding: 16px 16px; gap: 12px; }
+  .hero-actions { min-width: 0; width: 100%; }
+  .hero-copy { min-width: 0; }
+  .hero-copy h2 { font-size: 1.1em; letter-spacing: 2px; }
+  .lobby-columns { gap: 16px; }
+  .panel-header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .panel-header h3 { letter-spacing: 2px; font-size: 0.8em; }
+  .lobby-section-body { padding: 0 12px; }
+  .campaign-card, .character-card { flex-wrap: wrap; padding: 11px 12px; }
+  .card-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .lobby-footer { padding: 16px 12px 22px; }
+
+  /* ---------------- Builder ---------------- */
+  .builder-overlay { padding: 0; }
+  .builder { width: 100%; height: 100%; max-width: none; border: none; border-radius: 0; }
+  .builder-head { gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+  .builder-head h2 { font-size: 0.95em; }
+  .builder-steps { display: none; } /* the header title + Back/Next convey progress */
+  .builder-body { padding: 14px 14px; }
+  .builder-foot { padding: 10px 12px; }
+  .choice-grid { grid-template-columns: 1fr; }
+  .ability-assign { grid-template-columns: 1fr; }
+  .pregen-grid { grid-template-columns: 1fr; }
+  .spell-pick-list { grid-template-columns: 1fr; }
+  .builder .tab-row { flex-wrap: wrap; }
+  .builder .tab-row button { padding: 8px 10px; font-size: 0.72em; }
+
+  /* ---------------- Character sheet ---------------- */
+  .sheet { width: 100%; height: 100%; max-width: none; border-radius: 0; }
+  .sheet-overlay { padding: 0; }
+  .sheet-head { padding: 12px 12px 8px; gap: 10px; flex-wrap: wrap; }
+  .sheet-name { font-size: 1.1em; max-width: 200px; }
+  .sheet-vitals { padding: 4px 12px 10px; gap: 6px; }
+  .vital { min-width: 72px; padding: 6px 10px; }
+  .hp-vital { min-width: 100%; }
+  .sheet-tabs { padding: 0 12px; overflow-x: auto; }
+  .sheet-body { padding: 12px 12px 20px; }
+  .ability-grid { gap: 6px; }
+  .attack-name { min-width: 0; }
+
+  /* ---------------- Game board ---------------- */
+  .board-main { position: relative; }
+  .chat-panel { width: min(340px, 90vw); box-shadow: -8px 0 30px rgba(0,0,0,0.6); }
+  .roll-toasts { right: 10px; left: 10px; bottom: 78px; max-width: none; align-items: flex-end; }
+  .initiative-bar { top: 6px; max-width: 96%; padding: 6px 10px; gap: 6px; }
+  .init-order { max-height: 96px; overflow-y: auto; }
+  .dice-tray { bottom: 8px; max-width: 96%; padding: 6px 8px; }
+  .dice-row { gap: 5px; justify-content: center; }
+  .die-btn { padding: 3px 4px; }
+  .dice-formula { width: 110px; }
+  .tut-panel { left: 8px; right: 8px; width: auto; max-height: 56vh; bottom: 78px; }
+  .tut-collapsed { left: 8px; bottom: 78px; }
+  .map-zoom-controls { bottom: 150px; right: 10px; }
+
+  /* ---------------- Modals ---------------- */
+  .modal { width: 94%; max-height: 90vh; }
+  .modal-header { padding: 12px 14px; }
+  .modal-body { padding: 14px; }
+  .modal-actions { padding: 10px 14px; flex-wrap: wrap; }
+  .guide-modal { width: 94%; height: 88vh; }
+  .cheat-grid { grid-template-columns: 1fr; }
+  .mode-pick { grid-template-columns: 1fr; }
+  .review-stats { gap: 6px; }
+  .statblock-abilities { gap: 6px; }
+}
+
+/* Very narrow phones */
+@media (max-width: 380px) {
+  .board-topbar .small-btn { font-size: 0.55em; padding: 4px 6px; }
+  .vital { min-width: 64px; }
+  .die-btn svg { width: 28px; height: 28px; }
+}
+
+/* ================================================================
+   Touch targets. Everything you can tap on a phone gets a 44px hit
+   area, even where the drawn control stays small (HIG minimum).
+   Loaded last so it wins over the compact styles above.
+   ================================================================ */
+
+/* Extend a control's hit area without changing how it looks. */
+@media (pointer: coarse), (max-width: 820px) {
+  .board-topbar .small-btn,
+  .board-topbar .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 6px 10px;
+    justify-content: center;
+  }
+  .board-topbar .code-chip { min-height: 44px; padding: 4px 12px; }
+  .scene-strip-toggle { min-height: 44px; min-width: 44px; }
+  .map-zoom-controls .icon-btn { width: 44px; height: 44px; }
+
+  /* dice tray */
+  .die-btn { min-width: 48px; min-height: 48px; }
+  .die-add {
+    width: 22px; height: 22px; top: -9px; right: -9px; font-size: 13px;
+  }
+  .die-add::after {
+    content: ''; position: absolute; inset: -11px; /* 44px effective */
+  }
+  .adv-toggle .small-btn { min-height: 40px; padding: 6px 12px; font-size: 0.66em; }
+  .dice-tray .small-btn { min-height: 40px; }
+  .dice-mod { min-width: 44px; }
+  .close-btn { min-width: 44px; min-height: 44px; }
+
+  /* checkboxes: the box stays small, the label carries the hit area */
+  label.row { min-height: 44px; }
+  input[type='checkbox'] { width: 22px; height: 22px; }
+  input[type='checkbox']::before {
+    content: ''; position: absolute; inset: -11px;
+  }
+
+  /* card actions, prep tools and context menus */
+  .card-actions .small-btn,
+  .scene-card-actions .icon-btn,
+  .beat-actions .icon-btn,
+  .encounter-row .icon-btn { min-width: 44px; min-height: 44px; }
+  .ctx-item { min-height: 46px; }
+  .tab-row button { min-height: 44px; }
+  .monster-row { min-height: 46px; }
+  .tile-swatch { min-height: 62px; }
+  .art-option { min-width: 52px; min-height: 52px; }
+  .color-dot { width: 30px; height: 30px; }
+  .link-btn { display: inline-block; padding: 6px 0; }
+}
+
+/* Desktop pointers: keep the small badge clickable at the HIG desktop floor. */
+@media (pointer: fine) {
+  .die-add::after { content: ''; position: absolute; inset: -6px; }
+}

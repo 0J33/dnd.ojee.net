@@ -1,0 +1,119 @@
+[
+  {
+    "index": "acolyte",
+    "name": "Acolyte",
+    "blurb": "You spent your life in service to a temple, learning rites, lore, and the ways of the faithful. Priests and worshippers of your faith will shelter and aid you.",
+    "skill_proficiencies": ["insight", "religion"],
+    "tool_proficiencies": [],
+    "languages": 2,
+    "equipment": [
+      { "name": "Holy symbol", "qty": 1 },
+      { "name": "Prayer book", "qty": 1 },
+      { "name": "Incense (5 sticks)", "qty": 1 },
+      { "name": "Vestments", "qty": 1 },
+      { "name": "Common clothes", "qty": 1 }
+    ],
+    "gold": 15,
+    "feature": {
+      "name": "Shelter of the Faithful",
+      "desc": "As an acolyte, you command the respect of those who share your faith. You and your companions can expect free healing and care at temples and shrines of your faith, and those who share your religion will support you (but only you) at a modest lifestyle. You may also have ties to a specific temple where you have a residence."
+    },
+    "suggested_personality": {
+      "traits": [
+        "I quote sacred texts in almost every situation.",
+        "I see omens in everything; the gods are always speaking.",
+        "Nothing shakes my calm, even when everything is on fire."
+      ],
+      "ideals": ["Tradition: the old ways must be preserved.", "Charity: I help those in need, whatever the cost."],
+      "bonds": ["I would die to protect my temple.", "I owe everything to the priest who raised me."],
+      "flaws": ["I judge others harshly, and myself even more so.", "I trust members of my faith blindly."]
+    }
+  },
+  {
+    "index": "criminal",
+    "name": "Criminal",
+    "blurb": "You made your living outside the law - a burglar, smuggler, or con artist. You are quick with your hands, quiet on your feet, and you still know people in low places.",
+    "skill_proficiencies": ["sleight-of-hand", "stealth"],
+    "tool_proficiencies": ["Thieves' Tools"],
+    "languages": 0,
+    "equipment": [
+      { "name": "Thieves' tools", "qty": 1 },
+      { "name": "Crowbar", "qty": 1 },
+      { "name": "Dark hooded clothes", "qty": 1 },
+      { "name": "Pouch", "qty": 2 }
+    ],
+    "gold": 16,
+    "feature": {
+      "name": "Underworld Ties",
+      "desc": "You know how to find the criminal underbelly of any town: who fences stolen goods, which guards can be bribed, and where to lie low. You can usually make contact with a local criminal network to trade information or find illicit services - for a price."
+    },
+    "suggested_personality": {
+      "traits": [
+        "I always have a plan for when things go wrong.",
+        "The first thing I do anywhere new is note the exits.",
+        "I can't resist taking something that isn't nailed down."
+      ],
+      "ideals": ["Freedom: chains and cells are meant to be broken.", "Honor (of a sort): I don't steal from the people I work with."],
+      "bonds": ["I'm trying to pay off an old debt to a dangerous person.", "My crew was family; I'd do anything for the ones still alive."],
+      "flaws": ["When I see something valuable, I can't think about anything else.", "I run when things look truly dangerous."]
+    }
+  },
+  {
+    "index": "sage",
+    "name": "Sage",
+    "blurb": "You spent years studying in libraries and universities - or as an apprentice to a learned master. Ancient lore, forgotten histories, and arcane theory are your bread and butter.",
+    "skill_proficiencies": ["arcana", "history"],
+    "tool_proficiencies": [],
+    "languages": 2,
+    "equipment": [
+      { "name": "Quill and ink", "qty": 1 },
+      { "name": "Small knife", "qty": 1 },
+      { "name": "Book of lore", "qty": 1 },
+      { "name": "Parchment (10 sheets)", "qty": 1 }
+    ],
+    "gold": 10,
+    "feature": {
+      "name": "Library Memory",
+      "desc": "When you fail to recall or find a piece of lore, you almost always know where and from whom it can be learned - a library, an archive, a university, or a sage or scholar somewhere in the world. Knowledge is never truly lost to you, only misplaced."
+    },
+    "suggested_personality": {
+      "traits": [
+        "I use big words to sound smarter than I probably am.",
+        "There is nothing I love more than a good mystery.",
+        "I'm convinced people are always trying to get my research wrong."
+      ],
+      "ideals": ["Knowledge: the path to power runs through understanding.", "Truth: what is real matters more than what is comfortable."],
+      "bonds": ["I've been searching my whole life for the answer to one question.", "My life's work is a series of tomes on a forgotten field."],
+      "flaws": ["I'm easily distracted by the promise of information.", "I speak without thinking, and it gets me into trouble."]
+    }
+  },
+  {
+    "index": "soldier",
+    "name": "Soldier",
+    "blurb": "War was your profession. You trained, marched, fought, and survived. You know battle tactics, how to lead, and how to follow - and other soldiers recognize one of their own.",
+    "skill_proficiencies": ["athletics", "intimidation"],
+    "tool_proficiencies": ["Gaming Set (dice)"],
+    "languages": 0,
+    "equipment": [
+      { "name": "Insignia of rank", "qty": 1 },
+      { "name": "Trophy from a fallen enemy", "qty": 1 },
+      { "name": "Deck of cards / dice set", "qty": 1 },
+      { "name": "Common clothes", "qty": 1 }
+    ],
+    "gold": 10,
+    "feature": {
+      "name": "Old Comrades",
+      "desc": "Soldiers, guards, and veterans treat you as one of their own. You can usually call on old military contacts for simple favors: access to a camp or fortress, an introduction to an officer, or news of troop movements and trouble on the roads."
+    },
+    "suggested_personality": {
+      "traits": [
+        "I'm always polite and respectful - discipline dies hard.",
+        "I face problems head-on; a simple direct solution is best.",
+        "I enjoy being strong and like breaking things."
+      ],
+      "ideals": ["Responsibility: I do what I must and obey just authority.", "Might: the strongest are meant to lead."],
+      "bonds": ["I would still lay down my life for the people I served with.", "Someone saved my life on the battlefield; I never leave a friend behind."],
+      "flaws": ["I obey the law even when it causes misery.", "The monstrous thing I saw in the war still haunts my nights."]
+    }
+  }
+]

@@ -1,0 +1,86 @@
+/* ================= Guide (paged) ================= */
+.guide-modal { max-width: 600px; height: min(600px, 90vh); }
+.guide-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+.guide-body p { color: var(--text-mid); margin: 0 0 12px; }
+.guide-body ul { color: var(--text-mid); padding-left: 20px; margin: 0 0 12px; }
+.guide-body li { margin: 5px 0; }
+.guide-body strong { color: var(--text); }
+.guide-body .muted { color: var(--text-dim); }
+.rule-box {
+  border: 1px solid var(--gold-dim); border-radius: var(--radius-sm);
+  background: rgba(212, 169, 79, 0.07); padding: 10px 14px; color: var(--gold-bright) !important;
+  text-align: center;
+}
+.guide-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 22px; border-top: 1px solid var(--border-soft); flex-shrink: 0;
+}
+.guide-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.guide-dot { width: 9px; height: 9px; border-radius: 50%; padding: 0; border: 1px solid var(--border-strong); background: transparent; }
+.guide-dot.on { background: var(--gold); border-color: var(--gold); }
+
+/* ================= Tutorial overlay ================= */
+.tut-launch {
+  position: absolute; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 5, 3, 0.6); backdrop-filter: blur(2px);
+  border: none; border-radius: 0;
+}
+.tut-launch-inner {
+  max-width: 480px; text-align: center; padding: 34px;
+  background: linear-gradient(180deg, #1a150d, var(--bg-panel));
+  border: 1px solid var(--gold-dim); border-radius: var(--radius);
+  box-shadow: var(--shadow-modal);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.tut-launch-inner h2 { color: var(--gold-bright); letter-spacing: 4px; }
+.tut-launch-roster { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+.tut-panel {
+  position: absolute; left: 14px; bottom: 84px; z-index: 55;
+  width: min(410px, 90vw); max-height: 66vh;
+  display: flex; flex-direction: column;
+  border-color: var(--gold-dim);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 169, 79, 0.12);
+  animation: riseIn 0.2s ease;
+}
+.tut-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 15px; border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(212, 169, 79, 0.08), transparent);
+  flex-shrink: 0;
+}
+.tut-head h3 { flex: 1; color: var(--gold-bright); font-size: 0.98em; }
+.tut-step-num { font-family: var(--font-display); font-size: 0.6em; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.tut-body { overflow-y: auto; padding: 14px 16px; }
+.tut-narration p { margin: 0 0 10px; line-height: 1.5; }
+.tut-narration p:first-child::first-letter {
+  font-family: var(--font-display); font-size: 2.6em; float: left; line-height: 0.8;
+  margin: 4px 8px 0 0; color: var(--gold); font-weight: 900;
+}
+.tut-rule {
+  border: 1px solid var(--border); border-left: 3px solid var(--info);
+  border-radius: var(--radius-sm); background: rgba(95, 135, 168, 0.08);
+  padding: 10px 14px; margin: 12px 0;
+}
+.tut-rule h4 { color: #9db4c4; margin-bottom: 6px; letter-spacing: 1px; text-transform: none; font-size: 0.85em; }
+.tut-rule ul { margin: 0; padding-left: 18px; font-size: 0.88em; color: var(--text-mid); }
+.tut-rule li { margin: 3px 0; }
+.tut-instruction {
+  border-radius: var(--radius-sm); background: rgba(212, 169, 79, 0.1);
+  border: 1px solid var(--gold-dim); padding: 10px 14px; margin-top: 12px;
+  color: var(--text); font-size: 0.92em;
+}
+.tut-instruction strong { color: var(--gold-bright); }
+.tut-foot {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 15px; border-top: 1px solid var(--border-soft); flex-shrink: 0;
+}
+.tut-choices { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.tut-choices button { text-transform: none; letter-spacing: 0; font-family: var(--font-body); text-align: left; }
+.tut-collapsed {
+  position: absolute; left: 14px; bottom: 84px; z-index: 55;
+  display: flex; align-items: center; gap: 8px;
+  border-color: var(--gold-dim); color: var(--gold-bright);
+  box-shadow: var(--shadow-pop);
+}
