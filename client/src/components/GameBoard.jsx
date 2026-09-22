@@ -1160,7 +1160,7 @@ function SettingsModal({ state, user, isDM, dialog, onClose }) {
                     <button
                       className="small-btn danger-btn"
                       onClick={async () => {
-                        const ok = await dialog.confirm(`Remove ${m.username} from the campaign?`, 'Remove player');
+                        const ok = await dialog.confirm(`Remove ${m.username} from the campaign?`, 'Remove player', 'Remove');
                         if (ok) socket.emit('kickPlayer', { userId: m.userId });
                       }}
                     >

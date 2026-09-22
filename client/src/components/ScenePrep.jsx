@@ -142,7 +142,7 @@ function ScenesTab({ state, dialog, onClose }) {
                   aria-label={`Delete ${s.name}`}
                   disabled={state.scenes.length <= 1}
                   onClick={async () => {
-                    const ok = await dialog.confirm(`Delete "${s.name}" and everything on it?`, 'Delete scene');
+                    const ok = await dialog.confirm(`Delete "${s.name}" and everything on it?`, 'Delete scene', 'Delete');
                     if (ok) socket.emit('deleteScene', { sceneId: s.id });
                   }}
                 >
@@ -478,7 +478,7 @@ function StoryTab({ state, dialog }) {
                     title="Delete beat"
                     aria-label={`Delete ${b.title}`}
                     onClick={async () => {
-                      const ok = await dialog.confirm(`Delete the beat "${b.title}"?`, 'Delete beat');
+                      const ok = await dialog.confirm(`Delete the beat "${b.title}"?`, 'Delete beat', 'Delete');
                       if (ok) socket.emit('deleteBeat', { beatId: b.id });
                     }}
                   >

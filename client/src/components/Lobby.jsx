@@ -12,6 +12,46 @@ import Guide from './Guide';
 import { DragonLogo, D20Icon, MapIcon, UsersIcon, BookIcon, PlusIcon, SparkleIcon, SwordIcon, CrownIcon, ShieldIcon, HeartIcon, XIcon, TrashIcon, ScrollIcon, EyeIcon, PlayIcon, LogoutIcon } from './Icons';
 import { VERSION } from '../version';
 
+// The first quest's seal: poured wax with an uneven rim and a d20 pressed
+// into it. Drawn, not a gradient disc, so it reads as wax and not a button.
+const SEAL_RIM = 'M59.9 27.1 Q60.8 32.0 59.1 36.6 Q57.4 41.2 55.5 45.7 Q53.6 50.1 49.4 52.5 Q45.2 54.8 41.1 57.5 Q37.0 60.2 32.1 59.6 Q27.2 59.1 22.9 57.1 Q18.7 55.1 14.2 52.9 Q9.8 50.6 7.8 46.1 Q5.9 41.5 5.8 36.8 Q5.8 32.0 5.5 27.1 Q5.3 22.3 8.2 18.4 Q11.2 14.5 14.6 11.1 Q18.0 7.8 22.7 6.8 Q27.4 5.9 32.2 5.0 Q36.9 4.1 41.4 6.1 Q45.8 8.0 49.2 11.4 Q52.6 14.7 55.8 18.4 Q59.0 22.2 59.9 27.1Z';
+function WaxSeal() {
+  return (
+    <svg className="lg-seal" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="lg-wax" cx="0.38" cy="0.32" r="0.8">
+          <stop offset="0" stopColor="#e27a48" />
+          <stop offset="0.55" stopColor="#b8491f" />
+          <stop offset="1" stopColor="#7a2a10" />
+        </radialGradient>
+        <radialGradient id="lg-wax-well" cx="0.5" cy="0.45" r="0.6">
+          <stop offset="0" stopColor="#b24620" />
+          <stop offset="1" stopColor="#8e3516" />
+        </radialGradient>
+      </defs>
+      <path d={SEAL_RIM} fill="url(#lg-wax)" />
+      {/* the pressed well: shadow on the upper-left edge, light on the lower-right */}
+      <circle cx="32" cy="32" r="18.5" fill="url(#lg-wax-well)" />
+      <path d="M18.6 26.4 A18.5 18.5 0 0 1 37.8 14.4" stroke="#5c1e0a" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.8" />
+      <path d="M45.4 37.6 A18.5 18.5 0 0 1 26.2 49.6" stroke="#f1a07a" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.55" />
+      {/* the d20, pressed in: dark lines with a thin lit edge below them */}
+      <g fill="none" strokeLinejoin="round" strokeLinecap="round">
+        <g stroke="#f09a6c" strokeWidth="1" opacity="0.45" transform="translate(0.6 0.7)">
+          <polygon points="32 20 42 25.8 42 38.2 32 44 22 38.2 22 25.8" />
+          <polygon points="32 25.5 38.2 36 25.8 36" />
+        </g>
+        <g stroke="#511a08" strokeWidth="1.5">
+          <polygon points="32 20 42 25.8 42 38.2 32 44 22 38.2 22 25.8" />
+          <polygon points="32 25.5 38.2 36 25.8 36" />
+          <path d="M32 20v5.5M42 25.8l-3.8 10.2M22 25.8l3.8 10.2M32 44l6.2-8M32 44l-6.2-8" />
+        </g>
+      </g>
+      {/* one soft highlight where the candle catches it */}
+      <ellipse cx="22" cy="16.5" rx="7" ry="3.4" transform="rotate(-28 22 16.5)" fill="#ffe2cc" opacity="0.22" />
+    </svg>
+  );
+}
+
 export default function Lobby({ user, connected, onEnterGame, onLogout }) {
   const dialog = useDialog();
   const [campaignList, setCampaignList] = useState(null);
@@ -79,22 +119,33 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
   };
 
   const deleteCampaign = async (c) => {
-    const ok = await dialog.confirm(`Delete "${c.name}" forever? Everyone loses access.`, 'Delete campaign');
+    const ok = await dialog.confirm(`Delete "${c.name}" forever? Everyone loses access.`, 'Delete campaign', 'Delete');
     if (!ok) return;
     await campaignsApi.remove(c.code);
     refreshCampaigns();
   };
 
   const deleteChar = async (c) => {
-    const ok = await dialog.confirm(`Retire ${c.name} forever?`, 'Delete character');
+    const ok = await dialog.confirm(`Retire ${c.name} forever?`, 'Retire hero', 'Retire');
     if (!ok) return;
     await charsApi.remove(c.id);
     refreshChars();
   };
 
   const startLearning = () => createCampaign('The Cellar of the Gilded Flagon', 'guided', 'blank');
-  const guided = (campaignList || []).find((c) => c.mode === 'guided');
+  // Continue always means your latest run; older runs stay in the list below.
+  const guided = (campaignList || [])
+    .filter((c) => c.mode === 'guided')
+    .sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0))[0];
   const others = (campaignList || []).filter((c) => c !== guided);
+  const startFresh = async () => {
+    const ok = await dialog.confirm(
+      'Start The Cellar of the Gilded Flagon again from the first scene? Your current run stays in Your campaigns, so you can go back to it.',
+      'Start the quest fresh',
+      'Start fresh'
+    );
+    if (ok) startLearning();
+  };
 
   return (
     <div className="lg-screen lg-home">
@@ -168,7 +219,7 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
           </div>
 
           <article className={`lg-first ${guided ? 'is-done' : ''}`} aria-labelledby="lg-first-title">
-            <span className="lg-seal" aria-hidden="true"><D20Icon size={26} /></span>
+            <WaxSeal />
             <h3 id="lg-first-title">Your first quest: The Cellar of the Gilded Flagon</h3>
             <p>Nobody needs to know the rules. The app narrates and runs the monsters, and teaches one thing per scene: checks, combat, saves, healing, a boss, and levelling up.</p>
             <p className="lg-first-meta">About an hour. Everyone joins with the code; ready-made heroes are waiting.</p>
@@ -176,7 +227,7 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
               {guided ? (
                 <>
                   <button className="lg-primary" onClick={() => joinCampaign(guided.code)} disabled={!connected || busy}><PlayIcon size={15} /> Continue the quest</button>
-                  <button className="lg-link" onClick={startLearning} disabled={!connected || busy}>Start it fresh</button>
+                  <button className="lg-link" onClick={startFresh} disabled={!connected || busy}>Start it fresh</button>
                 </>
               ) : (
                 <button className="lg-primary" onClick={startLearning} disabled={!connected || busy}><D20Icon size={15} /> Begin the first quest</button>

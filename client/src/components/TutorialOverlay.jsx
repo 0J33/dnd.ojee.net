@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { socket } from '../socket';
 import { buildTutorialScenes, TUTORIAL_STEPS } from '../data/tutorialScript';
-import { ScrollIcon, ChevronRight, D20Icon, SparkleIcon, BookIcon, TrophyIcon } from './Icons';
+import { ScrollIcon, ChevronRight, D20Icon, SparkleIcon, BookIcon, TrophyIcon, MinusIcon } from './Icons';
 
 // Drives the guided "Learn to Play" adventure. Reads room.tutorial from server
 // state; the client that presses Continue/Choice applies that step's effects and
@@ -116,7 +116,7 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
       <div className="tut-head">
         <span className="tut-step-num">Scene {tut.step + 1} / {TUTORIAL_STEPS.length}</span>
         <h3>{step.title}</h3>
-        <button className="close-btn" onClick={() => setCollapsed(true)} title="Minimize" aria-label="Minimize the adventure guide">—</button>
+        <button className="close-btn" onClick={() => setCollapsed(true)} title="Minimize" aria-label="Minimize the adventure guide"><MinusIcon size={16} /></button>
       </div>
 
       <div className="tut-body">

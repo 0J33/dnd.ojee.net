@@ -811,6 +811,7 @@
 .pe-link:hover:not(:disabled) { color: var(--gold-bright); background: none; }
 .pe-error { color: var(--danger-bright); font-size: 0.92rem; text-align: center; margin: 0; }
 .pe-note { color: var(--text-mid); font-style: italic; margin: 4px 0 0; max-width: 52ch; }
+.pe-row-note { flex-basis: 100%; margin: 2px 0 0; color: var(--text-dim); font-style: italic; font-size: 0.92rem; }
 
 .pe-traits { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .pe-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: start; }

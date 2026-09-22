@@ -10,7 +10,7 @@ import {
 } from '../rules/engine';
 import { resolveRace, needsSubrace, choicePool, racialBonuses as sumRacialBonuses, choicesComplete } from '../rules/race';
 import { PREGENS } from '../data/pregens';
-import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon } from './Icons';
+import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon, XIcon } from './Icons';
 import { Avatar } from './Portrait';
 import PortraitEditor, { PORTRAIT_COLORS } from './PortraitEditor';
 import { useSources, SourceChip, SourceHead, SubclassPicker, useSubclass, subclassFeaturesBetween, pressable, groupBySource } from './ContentChoices';
@@ -348,7 +348,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             </span>
           ))}
         </div>
-        {!embedded && <button className="close-btn" onClick={onClose} aria-label="Close the hero builder">×</button>}
+        {!embedded && <button className="close-btn" onClick={onClose} aria-label="Close the hero builder"><XIcon size={16} /></button>}
       </div>
 
       <div className="builder-body" ref={bodyRef}>

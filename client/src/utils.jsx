@@ -141,7 +141,8 @@ export function DialogProvider({ children }) {
 
   const api = {
     alert: (message, title = 'Notice') => open({ kind: 'alert', message, title }),
-    confirm: (message, title = 'Are you sure?') => open({ kind: 'confirm', message, title }),
+    // okLabel names what the button does ("Delete", "Start fresh"); OK is the fallback.
+    confirm: (message, title = 'Are you sure?', okLabel = 'OK') => open({ kind: 'confirm', message, title, okLabel }),
     prompt: (message, defaultValue = '', title = 'Input') => open({ kind: 'prompt', message, defaultValue, title }),
   };
 
@@ -176,7 +177,7 @@ export function DialogProvider({ children }) {
                 autoFocus={dialog.kind !== 'prompt'}
                 onClick={() => close(dialog.kind === 'prompt' ? (inputRef.current ? inputRef.current.value : '') : true)}
               >
-                OK
+                {dialog.okLabel || 'OK'}
               </button>
             </div>
           </div>

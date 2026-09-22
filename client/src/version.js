@@ -1,6 +1,17 @@
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 
 export const CHANGELOG = [
+  {
+    version: '1.2.1',
+    date: '2026-09-22',
+    notes: [
+      'The first quest\'s seal is real poured wax now, with the d20 pressed into it',
+      'Portrait editor: picking a hairstyle takes off a hood or hat the hero was only wearing by default, hair colour sits right under hair, and a rogue\'s mask no longer hides the beard choices. The mask itself is drawn as cloth, folds and knot included',
+      '"Start it fresh" on the first quest asks before starting over, and Continue always opens your latest run. Confirm buttons say what they do (Delete, Retire, Start fresh)',
+      'Keyboard: Tab stays inside an open window, and the map\'s right-click menu works with the arrow keys',
+      'On phones the join-by-code line keeps the code box and Join side by side',
+    ],
+  },
   {
     version: '1.2.0',
     date: '2026-09-22',

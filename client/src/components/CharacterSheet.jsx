@@ -128,7 +128,7 @@ export default function CharacterSheet({
               <ChevronUp size={12} /> Level {sheet.level + 1}
             </button>
           )}
-          {onClose && <button className="close-btn" onClick={onClose} aria-label="Close the character sheet">×</button>}
+          {onClose && <button className="close-btn" onClick={onClose} aria-label="Close the character sheet"><XIcon size={16} /></button>}
         </div>
       </div>
 
@@ -356,7 +356,7 @@ function PortraitModal({ sheet, onClose, change }) {
       <div className="modal portrait-modal">
         <div className="modal-header">
           <h3>{sheet.name ? `${sheet.name}'s portrait` : 'Portrait'}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
           <PortraitEditor sheet={sheet} portrait={draft} onChange={setDraft} />
@@ -575,7 +575,7 @@ function SpellDetailModal({ index, onClose, sheet, derived, roll, change, readOn
       <div className="modal">
         <div className="modal-header">
           <h3>{spell ? spell.name : '...'}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         {spell && (
           <>
@@ -739,7 +739,7 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
       <div className="modal" style={needsPick ? { maxWidth: 820 } : undefined}>
         <div className="modal-header">
           <h3>Level up! {sheet.level} to {newLevel}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
           <h4>Hit points</h4>
@@ -848,7 +848,7 @@ function SubclassModal({ sheet, meta, onClose, change, onAnnounce }) {
       <div className="modal" style={{ maxWidth: 820 }}>
         <div className="modal-header">
           <h3>Choose your {SUBCLASS_LABEL[sheet.classIndex].toLowerCase()}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
           <p className="muted small">{meta.name}s pick this at level {from}. You'll get every feature it grants up to level {sheet.level}.</p>
@@ -942,7 +942,7 @@ function LearnSpellsModal({ sheet, derived, onClose, change }) {
       <div className="modal" style={{ maxWidth: 680 }}>
         <div className="modal-header">
           <h3>{kind === 'spellbook' ? 'Your spellbook' : 'Learn spells'}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
           {!ready ? (
@@ -996,7 +996,7 @@ function PrepareModal({ sheet, derived, meta, onClose, change }) {
       <div className="modal" style={{ maxWidth: 640 }}>
         <div className="modal-header">
           <h3>Prepare spells ({picked.length}/{maxPrepared})</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
           <p className="muted small">After a long rest you can change which spells you have ready. Pick up to {maxPrepared}.</p>
@@ -1045,7 +1045,7 @@ async function shortRest({ sheet, derived, change, dialog, onAnnounce }) {
 }
 
 async function longRest({ sheet, change, dialog, onAnnounce }) {
-  const ok = await dialog.confirm('Take a long rest? (8 hours: full HP, spell slots restored, half your hit dice back, conditions cleared)', 'Long rest');
+  const ok = await dialog.confirm('Take a long rest? (8 hours: full HP, spell slots restored, half your hit dice back, conditions cleared)', 'Long rest', 'Rest');
   if (!ok) return;
   const regained = Math.max(1, Math.floor(sheet.level / 2));
   change({

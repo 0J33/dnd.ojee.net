@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { srd } from '../api';
 import { ModalOverlay } from '../utils';
 import { CONDITIONS } from '../rules/engine';
-import { ConditionIcon } from './Icons';
+import { ConditionIcon, XIcon } from './Icons';
 
 const ACTIONS = [
   { name: 'Attack', desc: 'Make one attack with a weapon or unarmed strike. Roll d20 + your attack bonus vs the target\'s AC. Hit = roll damage.' },
@@ -47,7 +47,7 @@ export default function ReferencePanel({ onClose }) {
       <div className="modal" style={{ maxWidth: 720 }} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Rules reference</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="tab-row" style={{ padding: '0 18px' }}>
           <button className={tab === 'cheat' ? 'active' : ''} onClick={() => setTab('cheat')}>Cheat sheet</button>

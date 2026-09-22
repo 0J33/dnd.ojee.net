@@ -1247,10 +1247,26 @@ function HeroBust({ sheet }) {
         </>
       )}
 
-      {/* a rogue's mask covers nose and mouth, not the eyes */}
-      {mark === 'mask' && !fullFace && !race.robot && (
-        <path d={`M${cx - rx + 0.6} ${cy + 3.6} q${rx - 0.6} 2.4 ${rx * 2 - 1.2} 0 l0 5.6 q-${rx - 0.6} 5.4 -${rx * 2 - 1.2} 0z`} fill="#1c1c22" opacity="0.94" />
-      )}
+      {/* a rogue's mask: cloth in the class colours, drawn over the nose and
+          down past the chin, with its folds and the knot behind the ear.
+          It covers nose and mouth, never the eyes. */}
+      {mark === 'mask' && !fullFace && !race.robot && (() => {
+        const cloth = mix(cls.garb, cls.trim, 0.35);
+        const edge = cy + 3.2;
+        return (
+          <g>
+            <path d={`M${cx + rx - 0.2} ${edge + 0.8} L${cx + rx + 3.6} ${edge + 4} L${cx + rx + 1.6} ${edge + 4.6}Z M${cx + rx - 0.2} ${edge + 1.2} L${cx + rx + 2.6} ${edge + 6.4} L${cx + rx + 0.8} ${edge + 6.2}Z`} fill={shade(cloth, 0.15)} />
+            <path
+              d={`M${cx - rx + 0.4} ${edge} Q${cx} ${edge - 2} ${cx + rx - 0.4} ${edge} L${cx + rx * 0.93} ${cy + ry * 0.6} Q${cx + rx * 0.5} ${chin + 1.8} ${cx} ${chin + 1.5} Q${cx - rx * 0.5} ${chin + 1.8} ${cx - rx * 0.93} ${cy + ry * 0.6}Z`}
+              fill={cloth}
+            />
+            <path d={`M${cx + 0.5} ${edge - 1} Q${cx + rx * 0.7} ${edge} ${cx + rx * 0.93} ${cy + ry * 0.6} Q${cx + rx * 0.5} ${chin + 1.8} ${cx + 0.5} ${chin + 1.5}Z`} fill={shade(cloth, 0.22)} opacity="0.55" />
+            <path d={`M${cx - rx + 0.6} ${edge} Q${cx} ${edge - 2} ${cx + rx - 0.6} ${edge}`} stroke={light(cloth, 0.28)} strokeWidth="0.7" fill="none" />
+            <path d={`M${cx - rx * 0.55} ${edge + 3.4} Q${cx} ${edge + 5.4} ${cx + rx * 0.55} ${edge + 3.4} M${cx - rx * 0.4} ${edge + 6.6} Q${cx} ${edge + 8.2} ${cx + rx * 0.4} ${edge + 6.6}`} stroke={shade(cloth, 0.45)} strokeWidth="0.7" fill="none" opacity="0.8" />
+            <circle cx={cx + rx - 0.4} cy={edge + 1} r="1.4" fill={shade(cloth, 0.1)} />
+          </g>
+        );
+      })()}
       {cls.spark && <circle cx={cx + rx + 4} cy={top + 4} r="2.8" fill={cls.trim} opacity="0.95" />}
       {cls.spark && <circle cx={cx + rx + 4} cy={top + 4} r="5" fill={cls.trim} opacity="0.2" />}
     </g>

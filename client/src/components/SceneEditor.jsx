@@ -166,7 +166,7 @@ function ResizePanel({ scene, onReshape, onSceneUpdate, dialog, onDone }) {
     const nw = Math.max(8, Math.min(80, Number(w) || scene.grid.w));
     const nh = Math.max(8, Math.min(60, Number(h) || scene.grid.h));
     if (nw < scene.grid.w || nh < scene.grid.h) {
-      const ok = await dialog.confirm('Shrinking the map trims anything outside the new edge. Continue?', 'Resize map');
+      const ok = await dialog.confirm('Shrinking the map trims anything outside the new edge. Continue?', 'Resize map', 'Resize');
       if (!ok) return;
     }
     onReshape({ w: nw, h: nh, floor });

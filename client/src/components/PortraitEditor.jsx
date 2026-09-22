@@ -54,7 +54,7 @@ function Swatches({ label, colors, value, onPick }) {
   );
 }
 
-function Chips({ label, options, value, onPick }) {
+function Chips({ label, options, value, onPick, note }) {
   return (
     <div className="pe-row">
       <span className="pe-label">{label}</span>
@@ -64,13 +64,14 @@ function Chips({ label, options, value, onPick }) {
             {name}
           </button>
         ))}
+        {note && <p className="pe-row-note">{note}</p>}
       </div>
     </div>
   );
 }
 
 // Choices you judge by eye (a haircut, a beard) are shown as little portraits.
-function Faces({ label, options, value, onPick, faceFor, color }) {
+function Faces({ label, options, value, onPick, faceFor, color, note }) {
   return (
     <div className="pe-row">
       <span className="pe-label">{label}</span>
@@ -81,6 +82,7 @@ function Faces({ label, options, value, onPick, faceFor, color }) {
             <span>{name}</span>
           </button>
         ))}
+        {note && <p className="pe-row-note">{note}</p>}
       </div>
     </div>
   );
@@ -101,6 +103,7 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
   const opts = lookOptions(preview);
   const picture = safePortraitImage(portrait.image);
   const color = portrait.color || PORTRAIT_COLORS[0];
+  const masked = cur.mark === 'mask';
 
   // Pinning the seed with the first choice keeps every other trait where it
   // is, even if the hero is renamed afterwards.
@@ -159,16 +162,35 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
           <>
             <Swatches label={opts.skinLabel} colors={opts.skins} value={cur.skin} onPick={(c) => set({ skin: c })} />
             {opts.hairStyles && (
-              <Faces label="Hair" options={opts.hairStyles} value={cur.hairStyle} color={color} onPick={(k) => set({ hairStyle: k })} faceFor={(k) => faceWith({ hairStyle: k, headwear: 'off' })} />
+              <Faces
+                label="Hair"
+                options={opts.hairStyles}
+                value={cur.hairStyle}
+                color={color}
+                // A haircut you can't see is no choice at all: picking one takes
+                // off headwear the hero was only wearing by default.
+                onPick={(k) => set({ hairStyle: k, ...(!look.headwear && cur.headwear ? { headwear: 'off' } : {}) })}
+                faceFor={(k) => faceWith({ hairStyle: k, headwear: 'off' })}
+              />
             )}
             {opts.hairColors && <Swatches label="Hair colour" colors={opts.hairColors} value={cur.hair} onPick={(c) => set({ hair: c })} />}
-            {opts.beards && (
-              <Faces label="Facial hair" options={opts.beards} value={cur.beard} color={color} onPick={(k) => set({ beard: k })} faceFor={(k) => faceWith({ beard: k })} />
-            )}
-            <Swatches label={opts.eyesLabel} colors={opts.eyes} value={cur.eyes} onPick={(c) => set({ eyes: c })} />
-            {opts.moods && <Chips label="Expression" options={opts.moods} value={cur.mood} onPick={(k) => set({ mood: k })} />}
             {opts.headwear && (
               <Chips label="Headwear" options={{ on: opts.headwear, off: 'Nothing' }} value={cur.headwear ? 'on' : 'off'} onPick={(k) => set({ headwear: k })} />
+            )}
+            {opts.beards && (
+              <Faces
+                label="Facial hair"
+                options={opts.beards}
+                value={cur.beard}
+                color={color}
+                onPick={(k) => set({ beard: k })}
+                faceFor={(k) => faceWith({ beard: k, ...(masked ? { mark: 'none' } : {}) })}
+                note={masked ? 'Shown without the face mask; the mask covers it until you take it off under Marks.' : null}
+              />
+            )}
+            <Swatches label={opts.eyesLabel} colors={opts.eyes} value={cur.eyes} onPick={(c) => set({ eyes: c })} />
+            {opts.moods && (
+              <Chips label="Expression" options={opts.moods} value={cur.mood} onPick={(k) => set({ mood: k })} note={masked ? 'The face mask hides the mouth; the brows still show it.' : null} />
             )}
             {opts.marks && <Chips label="Marks" options={opts.marks} value={cur.mark} onPick={(k) => set({ mark: k })} />}
           </>

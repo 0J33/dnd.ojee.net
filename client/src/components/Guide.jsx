@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ModalOverlay } from '../utils';
-import { ChevronLeft, ChevronRight } from './Icons';
+import { ChevronLeft, ChevronRight, XIcon } from './Icons';
 
 const PAGES = [
   {
@@ -185,7 +185,7 @@ export default function Guide({ onClose }) {
       <div className="modal guide-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{p.title}</h3>
-          <button className="close-btn" onClick={onClose} aria-label="Close the guide">×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close the guide"><XIcon size={16} /></button>
         </div>
         <div className="guide-body">{p.body}</div>
         <div className="guide-foot">
