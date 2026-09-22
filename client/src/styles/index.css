@@ -326,7 +326,9 @@ label.field-label .field-hint, label.field-label .muted { font-size: 0.95rem; ma
 }
 .ctx-item:hover:not(:disabled) { background: var(--bg-hover); box-shadow: none; color: var(--gold-bright); }
 .ctx-item.danger-item { color: var(--danger-bright); }
-.ctx-item:disabled { opacity: 0.4; }
+/* unavailable items stay readable: dim text, not a faded ghost */
+.ctx-item:disabled { opacity: 1; color: var(--text-dim); cursor: default; }
+.ctx-item:focus-visible { outline: none; background: var(--bg-hover); color: var(--gold-bright); box-shadow: inset 0 0 0 1px var(--gold-dim); }
 .ctx-icon { width: 18px; text-align: center; }
 .ctx-divider { height: 1px; background: var(--border-soft); margin: 5px 8px; }
 .ctx-header {

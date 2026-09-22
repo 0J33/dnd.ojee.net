@@ -55,6 +55,8 @@ export function useLocalStorage(key, initial) {
 
 // ---------- Modal overlay ----------
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 // Open overlays, oldest first. Escape closes only the top one, so dismissing a
 // spell's details doesn't also throw away the character sheet under it.
 const openOverlays = [];
@@ -79,11 +81,32 @@ export function ModalOverlay({ children, onClose, className = '' }) {
   useEscapeKey(() => {
     if (onClose && openOverlays[openOverlays.length - 1] === id.current) onClose();
   });
+  // Tab and Shift+Tab wrap inside the top dialog instead of wandering onto
+  // the page behind it.
+  const trapTab = (e) => {
+    if (e.key !== 'Tab' || openOverlays[openOverlays.length - 1] !== id.current || !ref.current) return;
+    const focusable = [...ref.current.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null || el === document.activeElement);
+    if (!focusable.length) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === ref.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
   return createPortal(
     <div
       ref={ref}
       tabIndex={-1}
       className={`modal-overlay ${className}`}
+      onKeyDown={trapTab}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && onClose) onClose();
       }}
@@ -173,6 +196,32 @@ export function ContextMenu({ x, y, items, onClose }) {
   useOutsideClick(ref, onClose);
   useEscapeKey(onClose);
 
+  // The menu takes focus on its first usable item, arrow keys move through
+  // it, and focus goes back where it was when it closes.
+  useEffect(() => {
+    const before = document.activeElement;
+    return () => {
+      if (before && before.isConnected && typeof before.focus === 'function') before.focus({ preventScroll: true });
+    };
+  }, []);
+  // Only once it is placed: a menu still hidden while it measures can't
+  // take focus.
+  useEffect(() => {
+    if (!pos.ready || !ref.current || ref.current.contains(document.activeElement)) return;
+    const first = ref.current.querySelector('.ctx-item:not(:disabled)');
+    if (first) first.focus({ preventScroll: true });
+  }, [pos.ready]);
+  const onKeyDown = (e) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) || !ref.current) return;
+    e.preventDefault();
+    const list = [...ref.current.querySelectorAll('.ctx-item:not(:disabled)')];
+    if (!list.length) return;
+    const i = list.indexOf(document.activeElement);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1
+      : e.key === 'ArrowDown' ? (i + 1) % list.length : (i - 1 + list.length) % list.length;
+    list[next].focus();
+  };
+
   useLayoutEffect(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -184,7 +233,7 @@ export function ContextMenu({ x, y, items, onClose }) {
   }, [x, y]);
 
   return createPortal(
-    <div ref={ref} className="context-menu" style={{ left: pos.x, top: pos.y, visibility: pos.ready ? 'visible' : 'hidden' }}>
+    <div ref={ref} role="menu" className="context-menu" onKeyDown={onKeyDown} style={{ left: pos.x, top: pos.y, visibility: pos.ready ? 'visible' : 'hidden' }}>
       {items.map((item, i) => {
         if (!item) return null;
         if (item.divider) return <div key={i} className="ctx-divider" />;
@@ -192,6 +241,7 @@ export function ContextMenu({ x, y, items, onClose }) {
         return (
           <button
             key={i}
+            role="menuitem"
             className={`ctx-item ${item.danger ? 'danger-item' : ''}`}
             disabled={item.disabled}
             onClick={() => {
