@@ -11,6 +11,7 @@ import './styles/board.css';
 import './styles/tutorial.css';
 import './styles/scenes.css';
 import './styles/mobile.css';
+import './styles/ledger.css';
 
 reloadIfStale();
 

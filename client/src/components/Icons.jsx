@@ -21,6 +21,9 @@ import React from 'react';
    ============================================================ */
 
 const P = {
+  image: 'M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm56-97h489L578-473 446-302l-93-127-117 152Zm-56 97v-600 600Z',
+  upload: 'M450-313v-371L330-564l-43-43 193-193 193 193-43 43-120-120v371h-60ZM220-160q-24 0-42-18t-18-42v-143h60v143h520v-143h60v143q0 24-18 42t-42 18H220Z',
+  logout: 'M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h299v60H180v600h299v60H180Zm486-185-43-43 102-102H360v-60h363L621-612l43-43 176 176-174 174Z',
   add: 'M450-450H200v-60h250v-250h60v250h250v60H510v250h-60v-250Z',
   airline_seat_flat: 'M360-400v-280h368q63 0 107 44t44 107v129H360Zm60-220v160-160ZM80-280v-60h800v60H80Zm35-155q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm127.5-42.5Q260-495 260-520t-17.5-42.5Q225-580 200-580t-42.5 17.5Q140-545 140-520t17.5 42.5Q175-460 200-460t42.5-17.5ZM420-460h399v-69q0-37.54-26.73-64.27Q765.54-620 728-620H420v160Zm-220-60Z',
   back_hand: 'M507-40q-93 0-171.5-47.5T209-215L60-463l20-20q16-16 38-17.5t40 11.5l122 90v-411q0-12 8.5-21t21.5-9q12 0 21 9t9 21v528L161-414l98 164q38 69 104 109.5T507-100q113 0 193-78t80-190v-402q0-12 8.5-21t21.5-9q12 0 21 9t9 21v402q0 137-97.5 232.5T507-40Zm-60-450v-400q0-12 9-21t21-9q13 0 21.5 9t8.5 21v400h-60Zm167 0v-360q0-12 8.5-21t21.5-9q12 0 21 9t9 21v360h-60ZM471-295Z',
@@ -128,6 +131,9 @@ export const SparkleIcon = (p) => <I d={P.star_shine} {...p} />;
 export const CampfireIcon = (p) => <I d={P.local_fire_department} {...p} />;
 export const BackpackIcon = (p) => <I d={P.backpack} {...p} />;
 export const PlusIcon = (p) => <I d={P.add} {...p} />;
+export const LogoutIcon = (p) => <I d={P.logout} {...p} />;
+export const UploadIcon = (p) => <I d={P.upload} {...p} />;
+export const ImageIcon = (p) => <I d={P.image} {...p} />;
 export const XIcon = (p) => <I d={P.close} {...p} />;
 export const ChevronLeft = (p) => <I d={P.chevron_left} {...p} />;
 export const ChevronRight = (p) => <I d={P.chevron_right} {...p} />;
@@ -186,8 +192,8 @@ export const D20Icon = ({ size = 18, className = '', ...rest }) => (
   </svg>
 );
 
-export const DragonLogo = ({ size = 30 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+export const DragonLogo = ({ size = 30, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
     <defs>
       <linearGradient id="dnd-logo-gold" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" style={{ stopColor: 'var(--gold-bright)' }} />

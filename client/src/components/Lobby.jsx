@@ -9,7 +9,7 @@ import { SceneThumb } from './ScenePrep';
 import CharacterBuilder from './CharacterBuilder';
 import CharacterSheet from './CharacterSheet';
 import Guide from './Guide';
-import { DragonLogo, D20Icon, MapIcon, UsersIcon, BookIcon, PlusIcon, SparkleIcon, SwordIcon, CrownIcon, ShieldIcon, HeartIcon, XIcon, TrashIcon, ScrollIcon } from './Icons';
+import { DragonLogo, D20Icon, MapIcon, UsersIcon, BookIcon, PlusIcon, SparkleIcon, SwordIcon, CrownIcon, ShieldIcon, HeartIcon, XIcon, TrashIcon, ScrollIcon, EyeIcon, PlayIcon, LogoutIcon } from './Icons';
 import { VERSION } from '../version';
 
 export default function Lobby({ user, connected, onEnterGame, onLogout }) {
@@ -92,160 +92,152 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
     refreshChars();
   };
 
-  const startLearning = () => createCampaign('Learn to Play', 'guided', 'blank');
+  const startLearning = () => createCampaign('The Cellar of the Gilded Flagon', 'guided', 'blank');
+  const guided = (campaignList || []).find((c) => c.mode === 'guided');
+  const others = (campaignList || []).filter((c) => c !== guided);
 
   return (
-    <div className="lobby">
-      <header className="topbar">
-        <div className="topbar-brand">
+    <div className="lg-screen lg-home">
+      <header className="lg-bar">
+        <div className="lg-brand">
           <DragonLogo size={30} />
-          <span className="topbar-title">dnd.ojee.net</span>
-          <span className="topbar-sub">D&D virtual tabletop</span>
+          <span className="lg-brand-name">dnd.ojee.net</span>
         </div>
-        <div className="grow" />
-        <span className={`conn-dot ${connected ? 'on' : ''}`} title={connected ? 'Connected' : 'Connecting...'} />
-        <span className="topbar-user">{user.username}</span>
-        <button className="small-btn ghost-btn" onClick={() => setShowGuide(true)}>
-          <BookIcon size={13} /> Guide
+        <div className="lg-bar-gap" />
+        <button className="lg-btn" onClick={() => setShowGuide(true)}><BookIcon size={14} /> Guide</button>
+        <span className="lg-me">
+          <span className={`lg-conn ${connected ? 'is-on' : ''}`} title={connected ? 'Connected' : 'Connecting…'} />
+          {user.username}
+        </span>
+        <button className="lg-icon-btn" onClick={onLogout} title="Sign out (of mtg.ojee.net too)" aria-label="Sign out">
+          <LogoutIcon size={17} />
         </button>
-        <button className="small-btn ghost-btn" onClick={onLogout}>Sign out</button>
       </header>
 
-      <main className="lobby-main">
-        <section className="hero-banner">
-          <div className="hero-copy">
-            <h2><SparkleIcon size={18} /> New to D&D? Start here.</h2>
-            <p>
-              Dungeons & Dragons is a game of shared storytelling - one part improv, one part tactics, all dice.
-              Nobody at your table needs to know the rules: the <strong>guided adventure</strong> teaches everyone
-              by playing through a real (short) quest, step by step, with the app as your narrator.
-            </p>
+      <main className="lg-spread">
+        <section className="lg-page lg-party" aria-labelledby="lg-party-title">
+          <div className="lg-page-head">
+            <h2 id="lg-party-title">Your heroes</h2>
+            {charList && charList.length > 0 && <span className="lg-page-note">{charList.length} in the register</span>}
           </div>
-          <div className="hero-actions">
-            <button className="primary-btn big-btn" onClick={startLearning} disabled={!connected || busy}>
-              <D20Icon size={16} /> Learn to Play
-            </button>
-            <button className="ghost-btn" onClick={() => setShowGuide(true)}>
-              <BookIcon size={15} /> Read the player's guide
-            </button>
+          {charList === null ? (
+            <p className="lg-empty">Opening the register…</p>
+          ) : charList.length === 0 ? (
+            <p className="lg-empty">No heroes yet. The builder walks you through every choice, or you can take one of six ready-made heroes and play right away.</p>
+          ) : (
+            <ul className="lg-entries">
+              {charList.map((c) => {
+                const sheet = c.sheet || {};
+                const meta = CLASS_META[sheet.classIndex] || {};
+                const derived = deriveSheet(sheet);
+                return (
+                  <li className="lg-entry lg-hero" key={c.id}>
+                    <Avatar sheet={sheet} name={c.name} color={sheet.portrait?.color || 'var(--gold)'} size={72} />
+                    <button className="lg-hero-open" onClick={() => setEditChar(c)} title={`Open ${c.name}'s sheet`}>
+                      <span className="lg-entry-name">{c.name}</span>
+                      <span className="lg-entry-sub">
+                        Level {sheet.level || 1} {sheet.raceName || ''} {meta.name || ''}{sheet.subclassName ? ` (${sheet.subclassName})` : ''}
+                      </span>
+                      <span className="lg-entry-stats">
+                        <span title="Hit points"><HeartIcon size={13} /> {sheet.currentHp ?? sheet.maxHp ?? derived.maxHp}/{sheet.maxHp ?? derived.maxHp}</span>
+                        <span title="Armour class"><ShieldIcon size={13} /> {derived.ac}</span>
+                        <span title="Passive Perception"><EyeIcon size={13} /> {derived.passivePerception}</span>
+                      </span>
+                    </button>
+                    <span className="lg-entry-actions">
+                      <button className="lg-btn" onClick={() => setEditChar(c)}><ScrollIcon size={13} /> Sheet</button>
+                      <button className="lg-icon-btn is-danger" onClick={() => deleteChar(c)} title={`Retire ${c.name}`} aria-label={`Retire ${c.name}`}>
+                        <TrashIcon size={15} />
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="lg-blank-line">
+            <span>Write in a new hero</span>
+            <button className="lg-btn" onClick={() => setShowBuilder(true)}><PlusIcon size={13} /> New hero</button>
           </div>
         </section>
 
-        <div className="lobby-columns">
-          <section className="panel lobby-section">
-            <div className="panel-header">
-              <h3><MapIcon size={14} /> Campaigns</h3>
-              <button className="small-btn primary-btn" onClick={() => setShowCreate(true)} disabled={!connected}>
-                <PlusIcon size={12} /> New campaign
-              </button>
-            </div>
-            <div className="lobby-section-body">
-              <div className="join-row">
-                <input
-                  placeholder="ENTER CODE"
-                  value={joinCode}
-                  maxLength={6}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === 'Enter' && joinCampaign(joinCode)}
-                />
-                <button onClick={() => joinCampaign(joinCode)} disabled={joinCode.length < 4 || !connected}>Join</button>
-              </div>
-              {campaignList === null ? (
-                <div className="empty-note">Loading...</div>
-              ) : campaignList.length === 0 ? (
-                <div className="empty-note">
-                  No campaigns yet. Create one and share the invite link with your friends -
-                  or hit <strong>Learn to Play</strong> above for the guided adventure.
-                </div>
-              ) : (
-                campaignList.map((c) => (
-                  <div className="campaign-card" key={c.code}>
-                    <div>
-                      <div className="card-title">
-                        {c.name} {c.mode === 'guided' && <span className="chip magic">guided</span>}
-                      </div>
-                      <div className="card-sub">
-                        Code <strong>{c.code}</strong> · {c.members.slice(0, 4).join(', ')}{c.members.length > 4 ? '…' : ''}
-                        {c.online > 0 && <span className="gold-text"> · {c.online} online</span>}
-                        {' · '}{timeAgo(c.lastActivity)}
-                      </div>
-                    </div>
-                    <div className="card-actions">
-                      {c.isHost && (
-                        <button className="small-btn danger-btn" onClick={() => deleteCampaign(c)} title={`Delete ${c.name}`} aria-label={`Delete ${c.name}`}>
-                          <TrashIcon size={12} />
-                        </button>
-                      )}
-                      <button className="small-btn primary-btn" onClick={() => joinCampaign(c.code)} disabled={!connected}>Resume</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
+        <section className="lg-page lg-quests" aria-labelledby="lg-quests-title">
+          <div className="lg-page-head">
+            <h2 id="lg-quests-title">Quests</h2>
+            {others.length > 0 && <span className="lg-page-note">{others.length} campaign{others.length === 1 ? '' : 's'}</span>}
+          </div>
 
-          <section className="panel lobby-section">
-            <div className="panel-header">
-              <h3><UsersIcon size={14} /> Your heroes</h3>
-              <button className="small-btn primary-btn" onClick={() => setShowBuilder(true)}>
-                <PlusIcon size={12} /> New character
-              </button>
-            </div>
-            <div className="lobby-section-body">
-              {charList === null ? (
-                <div className="empty-note">Loading...</div>
-              ) : charList.length === 0 ? (
-                <div className="empty-note">
-                  No heroes yet. The builder walks you through every choice - or grab a ready-made hero in one click.
-                </div>
+          <article className={`lg-first ${guided ? 'is-done' : ''}`} aria-labelledby="lg-first-title">
+            <span className="lg-seal" aria-hidden="true"><D20Icon size={26} /></span>
+            <h3 id="lg-first-title">Your first quest: The Cellar of the Gilded Flagon</h3>
+            <p>Nobody needs to know the rules. The app narrates and runs the monsters, and teaches one thing per scene: checks, combat, saves, healing, a boss, and levelling up.</p>
+            <p className="lg-first-meta">About an hour. Everyone joins with the code; ready-made heroes are waiting.</p>
+            <div className="lg-first-actions">
+              {guided ? (
+                <>
+                  <button className="lg-primary" onClick={() => joinCampaign(guided.code)} disabled={!connected || busy}><PlayIcon size={15} /> Continue the quest</button>
+                  <button className="lg-link" onClick={startLearning} disabled={!connected || busy}>Start it fresh</button>
+                </>
               ) : (
-                charList.map((c) => {
-                  const sheet = c.sheet || {};
-                  const meta = CLASS_META[sheet.classIndex] || {};
-                  const derived = deriveSheet(sheet);
-                  return (
-                    <div className="character-card" key={c.id}>
-                      <Avatar sheet={sheet} name={c.name} color={sheet.portrait?.color || 'var(--gold)'} size={54} />
-                      <div className="char-card-info">
-                        <div className="card-title">{c.name}</div>
-                        <div className="card-sub">
-                          Level {sheet.level || 1} {sheet.raceName || ''} {meta.name || ''}{sheet.subclassName ? ` (${sheet.subclassName})` : ''}
-                          {sheet.background ? ` · ${sheet.background[0].toUpperCase()}${sheet.background.slice(1)}` : ''}
-                        </div>
-                        <div className="char-stats">
-                          <span className="char-stat" title="Hit points">
-                            <HeartIcon size={12} /> {sheet.currentHp ?? sheet.maxHp ?? derived.maxHp}/{sheet.maxHp ?? derived.maxHp}
-                          </span>
-                          <span className="char-stat" title="Armour class">
-                            <ShieldIcon size={12} /> {derived.ac}
-                          </span>
-                          <span className="char-stat" title="Passive Perception">
-                            <SparkleIcon size={12} /> {derived.passivePerception}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="card-actions">
-                        <button className="small-btn danger-btn" onClick={() => deleteChar(c)} title={`Retire ${c.name}`} aria-label={`Retire ${c.name}`}>
-                          <TrashIcon size={12} />
-                        </button>
-                        <button className="small-btn" onClick={() => setEditChar(c)}>
-                          <ScrollIcon size={12} /> Sheet
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
+                <button className="lg-primary" onClick={startLearning} disabled={!connected || busy}><D20Icon size={15} /> Begin the first quest</button>
               )}
+              <button className="lg-link" onClick={() => setShowGuide(true)}>Read the player's guide</button>
             </div>
-          </section>
-        </div>
+          </article>
+
+          <h3 className="lg-subhead">Your campaigns</h3>
+          {campaignList === null ? (
+            <p className="lg-empty">Opening the register…</p>
+          ) : others.length === 0 ? (
+            <p className="lg-empty">None yet. Start one and share its code with your friends, or ask a friend for theirs.</p>
+          ) : (
+            <ul className="lg-entries">
+              {others.map((c) => (
+                <li className="lg-entry" key={c.code} style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                  <span>
+                    <span className="lg-entry-name">{c.name}</span>
+                    <span className="lg-entry-sub" style={{ display: 'block' }}>
+                      <span className="lg-campaign-code" title="Campaign code">{c.code}</span>
+                      {' · '}<span className="lg-mode">{c.mode === 'guided' ? 'Guided' : c.isHost ? 'You run it' : 'DM game'}</span>
+                      {' · '}{c.members.slice(0, 4).join(', ')}{c.members.length > 4 ? '…' : ''}
+                      {c.online > 0 ? <span className="lg-online"> · {c.online} at the table</span> : <> · {timeAgo(c.lastActivity)}</>}
+                    </span>
+                  </span>
+                  <span className="lg-entry-actions">
+                    <button className="lg-primary" onClick={() => joinCampaign(c.code)} disabled={!connected || busy}>Resume</button>
+                    {c.isHost && (
+                      <button className="lg-icon-btn is-danger" onClick={() => deleteCampaign(c)} title={`Delete ${c.name}`} aria-label={`Delete ${c.name}`}>
+                        <TrashIcon size={15} />
+                      </button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="lg-blank-line">
+            <span>Start a new campaign</span>
+            <button className="lg-btn" onClick={() => setShowCreate(true)} disabled={!connected}><PlusIcon size={13} /> New campaign</button>
+          </div>
+          <form className="lg-code-line" onSubmit={(e) => { e.preventDefault(); joinCampaign(joinCode); }}>
+            <label htmlFor="lg-code">Joining a friend's game?</label>
+            <input
+              id="lg-code"
+              className="lg-input"
+              placeholder="Code"
+              value={joinCode}
+              maxLength={6}
+              autoComplete="off"
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            />
+            <button type="submit" className="lg-btn" disabled={joinCode.length < 4 || !connected}>Join</button>
+          </form>
+        </section>
       </main>
 
-      <footer className="lobby-footer">
-        <div>
-          dnd.ojee.net v{VERSION} · an unofficial fan-made tabletop, compatible with fifth edition ·{' '}
-          <button className="link-btn" onClick={() => setShowCredits(true)}>licenses & credits</button>
-        </div>
+      <footer className="lg-foot">
+        dnd.ojee.net v{VERSION} · an unofficial fan-made tabletop, compatible with fifth edition ·{' '}
+        <button className="lg-link" onClick={() => setShowCredits(true)}>licenses &amp; credits</button>
       </footer>
 
       {showCreate && (
@@ -312,8 +304,8 @@ function CreateCampaignModal({ onClose, onCreate }) {
             style={{ width: '100%' }}
           />
 
-          <label className="field-label mt">Who runs the game</label>
-          <div className="mode-pick">
+          <label className="field-label mt" id="campaign-mode-label">Who runs the game</label>
+          <div className="mode-pick" role="group" aria-labelledby="campaign-mode-label">
             <button
               type="button"
               className={`mode-card ${mode === 'dm' ? 'selected' : ''}`}
@@ -336,13 +328,10 @@ function CreateCampaignModal({ onClose, onCreate }) {
 
           {mode === 'dm' && (
             <>
-              <label className="field-label mt">
-                Starting scenes{' '}
-                <span className="muted small" style={{ textTransform: 'none', letterSpacing: 0 }}>
-                  - a set of maps ready to go. You can add, edit and build more at any time.
-                </span>
+              <label className="field-label mt" id="campaign-pack-label">
+                Starting scenes <span className="field-hint">a set of maps ready to go; you can add, edit and build more any time</span>
               </label>
-              <div className="pack-pick">
+              <div className="pack-pick" role="group" aria-labelledby="campaign-pack-label">
                 {STARTER_PACKS.map((p) => (
                   <button
                     type="button"

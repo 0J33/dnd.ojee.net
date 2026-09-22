@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { auth } from '../api';
-import { DragonLogo, D20Icon } from './Icons';
+import { DragonLogo } from './Icons';
 
+// The guild register's front page. The account is shared with mtg.ojee.net:
+// signing in here signs you in there too.
 export default function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
@@ -14,55 +16,61 @@ export default function Login({ onLogin }) {
     if (busy) return;
     setBusy(true);
     setError('');
-    const fn = isRegister ? auth.register : auth.login;
-    const res = await fn(username.trim(), password);
+    const res = await (isRegister ? auth.register : auth.login)(username.trim(), password);
     setBusy(false);
     if (res && res.user) onLogin(res.user);
-    else setError((res && res.error) || 'Something went wrong');
+    else setError((res && res.error) || "Can't reach the server. Check your connection and try again.");
   };
 
   return (
-    <div className="login-screen">
-      <div className="login-card panel">
-        <div className="login-brand">
-          <DragonLogo size={64} />
-          <h1 className="login-title">dnd.ojee.net</h1>
-          <p className="login-sub">A virtual tabletop for Dungeons & Dragons</p>
-          <p className="login-sub-tiny muted">Compatible with fifth edition · play with friends in your browser</p>
-        </div>
-        <form onSubmit={submit} className="login-form">
-          <label className="field-label">Adventurer name</label>
-          <input
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="e.g. Mila"
-            maxLength={24}
-            autoComplete="username"
-          />
-          <label className="field-label">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={isRegister ? 'At least 4 characters' : 'Your password'}
-            autoComplete={isRegister ? 'new-password' : 'current-password'}
-          />
-          {error && <p className="login-error">{error}</p>}
-          <button type="submit" className="primary-btn big-btn login-submit" disabled={busy || !username.trim() || !password}>
-            <D20Icon size={16} /> {isRegister ? 'Create account' : 'Enter the hold'}
+    <main className="lg-screen lg-signin">
+      <section className="lg-page lg-front" aria-labelledby="lg-front-title">
+        <DragonLogo size={58} className="lg-front-logo" />
+        <h1 id="lg-front-title">dnd.ojee.net</h1>
+        <p className="lg-front-sub">A virtual tabletop for Dungeons &amp; Dragons</p>
+        <div className="lg-front-rule" />
+        <p className="lg-front-sign">{isRegister ? 'Add your name to the register' : 'Sign the register'}</p>
+        <form onSubmit={submit}>
+          <label className="lg-field">
+            <span>Your name</span>
+            <input
+              className="lg-input"
+              autoFocus
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              maxLength={24}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck="false"
+              required
+            />
+          </label>
+          <label className="lg-field">
+            <span>Password</span>
+            <input
+              className="lg-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              required
+            />
+          </label>
+          {isRegister && <p className="lg-front-hint">Names are 2 to 24 characters; passwords at least 4.</p>}
+          {error && <p className="lg-error" role="alert">{error}</p>}
+          <button type="submit" className="lg-primary" disabled={busy || !username.trim() || !password}>
+            {busy ? (isRegister ? 'Writing you in…' : 'Opening the register…') : isRegister ? 'Join the guild' : 'Sign in'}
           </button>
         </form>
-        <p className="login-flip">
-          {isRegister ? 'Already have an account?' : 'First time here?'}{' '}
-          <button type="button" className="link-btn" onClick={() => { setIsRegister(!isRegister); setError(''); }}>
-            {isRegister ? 'Sign in' : 'Create an account'}
+        <p className="lg-front-shared">One account for dnd.ojee.net and mtg.ojee.net: sign in on either and you're in on both.</p>
+        <p className="lg-front-flip">
+          {isRegister ? 'Already in the register? ' : 'New here? '}
+          <button type="button" className="lg-link" onClick={() => { setIsRegister(!isRegister); setError(''); }}>
+            {isRegister ? 'Sign in' : 'Add your name'}
           </button>
         </p>
-      </div>
-      <p className="login-footnote muted">
-        New to D&D? Perfect - there's a guided first adventure that teaches you everything.
-      </p>
-    </div>
+      </section>
+      <p className="lg-signin-foot">Never played? Nobody at your table needs to know the rules: the guided first adventure teaches everyone as you play.</p>
+    </main>
   );
 }
