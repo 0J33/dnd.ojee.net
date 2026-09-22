@@ -14,3 +14,7 @@ client/build/
 
 # Deploy credentials.
 deploy.local.env
+
+# Impeccable scratch: review captures and question-page state
+.impeccable/review/
+.impeccable/questions/

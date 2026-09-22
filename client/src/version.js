@@ -1,6 +1,18 @@
-export const VERSION = '1.1.1';
+export const VERSION = '1.2.0';
 
 export const CHANGELOG = [
+  {
+    version: '1.2.0',
+    date: '2026-09-22',
+    notes: [
+      'One account for dnd.ojee.net and mtg.ojee.net: make it on either site and it works on both; signing in or out of one does the same on the other. Existing dnd accounts were joined to the matching mtg account (the mtg password is the one to use)',
+      'New sign-in: the guild register\'s front page. New home: your heroes on the left page, quests on the right, with the first quest sealed at the top and campaigns with their codes below',
+      'Portraits redrawn: faces with brows, noses, mouths, eye colour and candlelight, and far more variety in hair, beards, expressions and marks. Dragonborn get scales and horns instead of hair',
+      'New portrait editor in the builder and on every sheet (click the portrait): roll a new face, pick skin, hair, facial hair, eyes, expression, headwear and marks, or use your own picture. It follows you onto the battle map',
+      'Menus fixed up: Escape closes only the top window, keyboard focus moves into dialogs, readable hints and dimmer text, builder steps open at the top, the sheet\'s tabs fit on phones, clearer guide and quest wording, loading and empty states in the monster browser, and an "Added" confirmation when you place a monster',
+      'Fixes: a DM with no hero was offered a monster\'s initiative roll; the guided campaign is named after its quest',
+    ],
+  },
   {
     version: '1.1.1',
     date: '2026-09-22',
