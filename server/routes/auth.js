@@ -3,40 +3,37 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const Session = require('../models/Session');
+const { setSessionCookie, clearSessionCookies } = require('../middleware/auth');
 
 const router = express.Router();
 
-const COOKIE_OPTS = {
-  httpOnly: true,
-  maxAge: 30 * 24 * 60 * 60 * 1000,
-  sameSite: 'none',
-  secure: true,
-};
+// Same rules, messages and user shape as mtg.ojee.net/server/routes/auth.js:
+// an account made here is an mtg.ojee.net account too.
+const USERNAME_RULE = 'Username must be 2-24 characters';
+const PASSWORD_RULE = 'Password must be at least 4 characters';
 
-async function createSession(res, user) {
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const byUsername = (username) => User.findOne({ username: { $regex: new RegExp(`^${escapeRegex(username)}$`, 'i') } });
+
+async function startSession(res, user) {
   const token = uuidv4();
   await Session.create({ sessionToken: token, userId: user._id });
-  res.cookie('dndSession', token, COOKIE_OPTS);
+  setSessionCookie(res, token);
 }
 
-function publicUser(user) {
-  return { id: user._id, username: user.username, preferences: user.preferences || {} };
-}
+const publicUser = (user) => ({ id: user._id, username: user.username });
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body || {};
-    if (!username || username.length < 2 || username.length > 24) {
-      return res.status(400).json({ error: 'Username must be 2-24 characters' });
-    }
-    if (!password || password.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters' });
-    }
-    const existing = await User.findOne({ username: new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
-    if (existing) return res.status(400).json({ error: 'Username is taken' });
+    const username = String((req.body && req.body.username) || '').trim();
+    const password = String((req.body && req.body.password) || '');
+    if (username.length < 2 || username.length > 24) return res.status(400).json({ error: USERNAME_RULE });
+    if (password.length < 4) return res.status(400).json({ error: PASSWORD_RULE });
+    if (await byUsername(username)) return res.status(400).json({ error: 'That username is taken' });
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, password: hash });
-    await createSession(res, user);
+    // decks/preferences match what mtg.ojee.net gives a new user
+    const user = await User.create({ username, password: hash, decks: [], preferences: { defaultBackground: null, cardSize: 'normal' } });
+    await startSession(res, user);
     res.json({ user: publicUser(user) });
   } catch (err) {
     console.error('register error', err);
@@ -46,14 +43,15 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body || {};
-    const user = await User.findOne({ username: new RegExp(`^${(username || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
-    if (!user) return res.status(400).json({ error: 'Invalid username or password' });
-    const ok = await bcrypt.compare(password || '', user.password);
-    if (!ok) return res.status(400).json({ error: 'Invalid username or password' });
+    const username = String((req.body && req.body.username) || '').trim();
+    const password = String((req.body && req.body.password) || '');
+    const user = username && (await byUsername(username));
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ error: 'Wrong username or password' });
+    }
     user.lastLogin = new Date();
     await user.save();
-    await createSession(res, user);
+    await startSession(res, user);
     res.json({ user: publicUser(user) });
   } catch (err) {
     console.error('login error', err);
@@ -61,11 +59,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Deleting the shared session signs out of mtg.ojee.net too.
 router.post('/logout', async (req, res) => {
   try {
-    const token = req.cookies && req.cookies.dndSession;
-    if (token) await Session.deleteOne({ sessionToken: token });
-    res.clearCookie('dndSession', { ...COOKIE_OPTS, maxAge: 0 });
+    if (req.sessionToken) await Session.deleteOne({ sessionToken: req.sessionToken });
+    clearSessionCookies(res);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Logout failed' });
