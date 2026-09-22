@@ -1,0 +1,725 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T04:41:41.921695+00:00",
+  "title": "Design System: dnd.ojee.net",
+  "extensions": {
+    "colorMeta": {
+      "bg-deep": {
+        "role": "neutral",
+        "displayName": "Deep Night",
+        "canonical": "#070604",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "bg-base": {
+        "role": "neutral",
+        "displayName": "Base",
+        "canonical": "#0d0b08",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "bg-panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#14110c",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "bg-panel-2": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "#181410",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "bg-elev": {
+        "role": "neutral",
+        "displayName": "Elevated",
+        "canonical": "#1e1912",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "bg-hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "canonical": "#282218",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "ledger-page": {
+        "role": "neutral",
+        "displayName": "Ledger Page",
+        "canonical": "#16120c",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "ledger-page-2": {
+        "role": "neutral",
+        "displayName": "Ledger Page Foot",
+        "canonical": "#120e09",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "ledger-well": {
+        "role": "neutral",
+        "displayName": "Ink Well",
+        "canonical": "#0b0906",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "border-soft": {
+        "role": "neutral",
+        "displayName": "Soft Border",
+        "canonical": "#2b261c",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "#3b3428",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Strong Border",
+        "canonical": "#5a4f38",
+        "tonalRamp": [
+          "#070604",
+          "#0d0b08",
+          "#14110c",
+          "#181410",
+          "#1e1912",
+          "#282218",
+          "#3b3428",
+          "#5a4f38"
+        ]
+      },
+      "ledger-rule": {
+        "role": "neutral",
+        "displayName": "Ledger Hairline",
+        "canonical": "rgba(212, 169, 79, 0.2)"
+      },
+      "ledger-rule-strong": {
+        "role": "neutral",
+        "displayName": "Ledger Rule",
+        "canonical": "rgba(212, 169, 79, 0.42)"
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "canonical": "#ece5d6",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "text-mid": {
+        "role": "neutral",
+        "displayName": "Faded Ink",
+        "canonical": "#b3a992",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "text-dim": {
+        "role": "neutral",
+        "displayName": "Dim",
+        "canonical": "#857b64",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "text-faint": {
+        "role": "neutral",
+        "displayName": "Faint",
+        "canonical": "#57503e",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "text-dim-lifted": {
+        "role": "neutral",
+        "displayName": "Lifted Dim",
+        "canonical": "#968b72",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "text-faint-lifted": {
+        "role": "neutral",
+        "displayName": "Lifted Faint",
+        "canonical": "#7d735c",
+        "tonalRamp": [
+          "#57503e",
+          "#7d735c",
+          "#857b64",
+          "#968b72",
+          "#b3a992",
+          "#d0c7b4",
+          "#ece5d6",
+          "#f6f1e7"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Candle Gold",
+        "canonical": "#d4a94f",
+        "tonalRamp": [
+          "#3a2f17",
+          "#634f26",
+          "#8c7035",
+          "#b59144",
+          "#d4a94f",
+          "#dfbc72",
+          "#eace96",
+          "#f4e0b9"
+        ]
+      },
+      "gold-bright": {
+        "role": "primary",
+        "displayName": "Lamplit Gold",
+        "canonical": "#e8c476",
+        "tonalRamp": [
+          "#3f3620",
+          "#6c5b37",
+          "#99824e",
+          "#c6a865",
+          "#e8c476",
+          "#eed090",
+          "#f4dca9",
+          "#f9e7c2"
+        ]
+      },
+      "gold-dim": {
+        "role": "primary",
+        "displayName": "Tarnished Gold",
+        "canonical": "#8a7448",
+        "tonalRamp": [
+          "#282215",
+          "#423723",
+          "#5c4e30",
+          "#76643e",
+          "#8a7448",
+          "#a7946d",
+          "#c4b492",
+          "#e2d3b7"
+        ]
+      },
+      "gold-ink": {
+        "role": "primary",
+        "displayName": "Gold Ink",
+        "canonical": "#1d150a",
+        "tonalRamp": [
+          "#0c0a06",
+          "#110d07",
+          "#151008",
+          "#1a1309",
+          "#1d150a",
+          "#564c3e",
+          "#8e8473",
+          "#c6bca8"
+        ]
+      },
+      "ember": {
+        "role": "secondary",
+        "displayName": "Ember",
+        "canonical": "#c2542e",
+        "tonalRamp": [
+          "#361a0e",
+          "#5b2917",
+          "#81391f",
+          "#a64828",
+          "#c2542e",
+          "#d17c5a",
+          "#e0a485",
+          "#f0cbb0"
+        ]
+      },
+      "ember-bright": {
+        "role": "secondary",
+        "displayName": "Ember Bright",
+        "canonical": "#e07040",
+        "tonalRamp": [
+          "#3d2013",
+          "#69361f",
+          "#944b2b",
+          "#bf6037",
+          "#e07040",
+          "#e89167",
+          "#f0b28e",
+          "#f7d2b5"
+        ]
+      },
+      "magic": {
+        "role": "tertiary",
+        "displayName": "Arcane Violet",
+        "canonical": "#8f7fd4",
+        "tonalRamp": [
+          "#292438",
+          "#443c62",
+          "#5f558b",
+          "#7b6db5",
+          "#8f7fd4",
+          "#ab9cd6",
+          "#c7b9d8",
+          "#e3d6da"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Danger",
+        "canonical": "#b04444",
+        "tonalRamp": [
+          "#311614",
+          "#532221",
+          "#752e2e",
+          "#973b3a",
+          "#b04444",
+          "#c4706a",
+          "#d89c90",
+          "#ebc7b6"
+        ]
+      },
+      "danger-bright": {
+        "role": "status",
+        "displayName": "Danger Bright",
+        "canonical": "#d05c5c",
+        "tonalRamp": [
+          "#391c1a",
+          "#612d2c",
+          "#8a3e3d",
+          "#b24f4f",
+          "#d05c5c",
+          "#dc827c",
+          "#e8a89c",
+          "#f3cdbc"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success",
+        "canonical": "#6f9f5f",
+        "tonalRamp": [
+          "#212c1b",
+          "#364b2d",
+          "#4b693f",
+          "#5f8851",
+          "#6f9f5f",
+          "#93b47e",
+          "#b7c99e",
+          "#dbdebd"
+        ]
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Info",
+        "canonical": "#5f87a8",
+        "tonalRamp": [
+          "#1d262d",
+          "#2f404e",
+          "#405a6f",
+          "#52748f",
+          "#5f87a8",
+          "#87a2b5",
+          "#afbdc2",
+          "#d7d8cf"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Wordmark on the register's front page."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Ledger page heads; balanced wrap."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Register entry names, first-quest heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All reading text."
+      },
+      "marginalia": {
+        "displayName": "Marginalia",
+        "purpose": "Italic asides, subtitles, counts, empty states, hints."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase Cinzel field names."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Uppercase tracked Cinzel on every engraved button."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 6px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03)",
+        "purpose": "Base panels."
+      },
+      {
+        "name": "modal",
+        "value": "0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(212,169,79,0.08)",
+        "purpose": "Dialogs over the warm-black overlay."
+      },
+      {
+        "name": "pop",
+        "value": "0 12px 40px rgba(0,0,0,0.8)",
+        "purpose": "Context menus, toasts, popovers."
+      },
+      {
+        "name": "page-rest",
+        "value": "0 30px 60px -34px rgba(0,0,0,1)",
+        "purpose": "Ledger pages resting on the table."
+      },
+      {
+        "name": "gutter",
+        "value": "inset -22px 0 30px -26px rgba(0,0,0,0.9)",
+        "purpose": "Bound fold on the left page; mirrored (22px) on the right."
+      },
+      {
+        "name": "engraved-rule",
+        "value": "inset 0 0 0 7px #16120c, inset 0 0 0 8px rgba(212,169,79,0.42), 0 30px 60px -30px rgba(0,0,0,0.95)",
+        "purpose": "The register front page's double rule."
+      },
+      {
+        "name": "gold-lift",
+        "value": "0 6px 16px -8px rgba(212,169,79,0.6)",
+        "purpose": "Ledger primary button."
+      },
+      {
+        "name": "portrait-ring",
+        "value": "0 0 0 1.5px color-mix(in srgb, var(--av-color) 55%, #000 45%), 0 2px 8px rgba(0,0,0,0.5)",
+        "purpose": "Every framed portrait, in the hero's colour."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ledger-ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Ledger entrances (front page rise 0.7s, seal stamp 0.8s)."
+      },
+      {
+        "name": "state",
+        "value": "0.15s",
+        "purpose": "Hover, focus and border transitions everywhere."
+      },
+      {
+        "name": "rise-in",
+        "value": "riseIn 0.18s ease",
+        "purpose": "Modals rising 10px into place; overlay fades in 0.15s."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "All animation collapses to a state change; Ledger rise and seal stamp removed."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "ledger-phone",
+        "value": "520px"
+      },
+      {
+        "name": "editor-stack",
+        "value": "640px"
+      },
+      {
+        "name": "board-compact",
+        "value": "820px"
+      },
+      {
+        "name": "spread-stack",
+        "value": "900px"
+      }
+    ],
+    "portraitPalette": [
+      "#d4a94f",
+      "#c2542e",
+      "#7fb069",
+      "#5f87a8",
+      "#8f7fd4",
+      "#c94f6d",
+      "#5fb0a5",
+      "#b8b8b8",
+      "#e0c060",
+      "#b06ab0"
+    ],
+    "portraitLighting": {
+      "shade": "mix(c, #140c08, t)",
+      "light": "mix(c, #fff3dc, t)",
+      "sizes": [
+        34,
+        54,
+        72,
+        132
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Ledger Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one gold slab per page area: begin the quest, resume, sign in.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polygon points=\"12 2 21 7 21 17 12 22 3 17 3 7\"/><polygon points=\"12 7 16.5 15 7.5 15\"/></svg> Begin the first quest</button>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:linear-gradient(180deg,#e2bd67,#c79a45);border:1px solid #e8c476;color:#1d150a;box-shadow:0 6px 16px -8px rgba(212,169,79,.6);} .ds-btn-primary:hover{background:linear-gradient(180deg,#edcb7d,#d4a94f);} .ds-btn-primary:focus-visible{outline:2px solid var(--gold);outline-offset:2px;} .ds-btn-primary:disabled{background:rgba(212,169,79,.08);border-color:var(--gold-dim);color:var(--gold);box-shadow:none;cursor:not-allowed;}"
+    },
+    {
+      "name": "Ledger Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined engraved button for everything that is not the page's main action.",
+      "html": "<button class=\"ds-btn\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z\"/></svg> New hero</button>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-btn:hover{border-color:var(--gold-dim);color:var(--gold-bright);background:rgba(212,169,79,.06);} .ds-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+    },
+    {
+      "name": "Marginalia Link",
+      "kind": "button",
+      "refersTo": "button-link",
+      "description": "Italic Garamond action beside a primary.",
+      "html": "<button class=\"ds-link\">Start it fresh</button>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-link{background:none;border:none;padding:2px;cursor:pointer;color:var(--gold-bright);font-family:var(--font-body);font-size:1rem;font-style:italic;text-decoration:underline;text-decoration-color:rgba(212,169,79,.45);text-underline-offset:3px;} .ds-link:hover{color:#f3d58f;} .ds-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+    },
+    {
+      "name": "Icon Button (danger)",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Quiet drawn-icon control; the danger variant warms on hover.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"Retire hero\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 21q-.8 0-1.4-.6T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .8-.6 1.4T17 21zm2-4h2V8H9zm4 0h2V8h-2z\"/></svg></button>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border-radius:var(--radius-sm);background:transparent;border:1px solid transparent;color:var(--text-mid);cursor:pointer;} .ds-icon-btn:hover{color:var(--danger-bright);border-color:rgba(176,68,68,.5);} .ds-icon-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+    },
+    {
+      "name": "Ledger Field",
+      "kind": "input",
+      "refersTo": "input-ledger",
+      "description": "Labelled field on the register's front page.",
+      "html": "<label class=\"ds-field\"><span>Your name</span><input class=\"ds-input\" placeholder=\"Written in ink\"></label>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-field{display:flex;flex-direction:column;gap:6px;} .ds-field>span{font-family:var(--font-display);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mid);} .ds-input{min-height:44px;padding:10px 14px;border-radius:var(--radius-sm);background:#0b0906;border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:1.08rem;transition:border-color .15s,box-shadow .15s;} .ds-input::placeholder{color:#9a8f76;font-style:italic;} .ds-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,79,.16);}"
+    },
+    {
+      "name": "Choice Chip",
+      "kind": "chip",
+      "refersTo": "chip-choice",
+      "description": "Portrait-editor option in Garamond; selected is gold-washed.",
+      "html": "<span class=\"ds-chips\"><button class=\"ds-chip on\" aria-pressed=\"true\">Hood</button><button class=\"ds-chip\" aria-pressed=\"false\">Nothing</button></span>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-chips{display:flex;gap:7px;} .ds-chip{font-family:var(--font-body);font-size:.95rem;padding:5px 12px;min-height:32px;border-radius:16px;border:1px solid var(--border);background:linear-gradient(180deg,var(--bg-elev),var(--bg-panel));color:var(--text);cursor:pointer;} .ds-chip:hover{border-color:var(--gold-dim);} .ds-chip.on{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,169,79,.12);} .ds-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+    },
+    {
+      "name": "Ledger Bar",
+      "kind": "nav",
+      "refersTo": "ledger-page",
+      "description": "Sticky home bar: wordmark, guide, user with connection dot, sign out.",
+      "html": "<header class=\"ds-bar\"><span class=\"ds-brand\">dnd.ojee.net</span><span style=\"flex:1\"></span><button class=\"ds-bar-btn\">Guide</button><span class=\"ds-me\"><span class=\"ds-dot\"></span>ojee</span></header>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-bar{display:flex;align-items:center;gap:14px;padding:12px 26px;background:linear-gradient(180deg,rgba(14,11,7,.97),rgba(10,8,5,.94));border-bottom:1px solid var(--border-soft);} .ds-brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem;letter-spacing:.14em;color:var(--gold-bright);} .ds-bar-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-bar-btn:hover{border-color:var(--gold-dim);color:var(--gold-bright);} .ds-me{display:flex;align-items:center;gap:8px;color:var(--text-mid);font-family:var(--font-body);font-style:italic;} .ds-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 8px rgba(111,159,95,.7);}"
+    },
+    {
+      "name": "Register Entry",
+      "kind": "custom",
+      "refersTo": "ledger-page",
+      "description": "A ruled row on a Ledger page: portrait, name and marginalia, actions; blank line at the foot.",
+      "html": "<div class=\"ds-page\"><h2>Your heroes</h2><div class=\"ds-entry\"><span class=\"ds-av\"></span><span><span class=\"ds-name\">Brenna Ironvow</span><span class=\"ds-sub\">Level 1 Hill Dwarf Fighter</span></span><button class=\"ds-b\">Sheet</button></div><div class=\"ds-blank\"><span>Write in a new hero</span><button class=\"ds-b\">New hero</button></div></div>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-page{padding:30px 34px;background:linear-gradient(180deg,#16120c,#120e09);border:1px solid var(--border);border-radius:4px;box-shadow:0 30px 60px -34px #000;} .ds-page h2{margin:0;padding-bottom:12px;border-bottom:1px solid rgba(212,169,79,.42);font-family:var(--font-display);font-size:1.25rem;letter-spacing:.12em;color:var(--gold-bright);} .ds-entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;padding:16px 4px;border-bottom:1px solid rgba(212,169,79,.2);} .ds-av{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 50% 22%,#7a6433,#2a2317 78%);box-shadow:0 0 0 1.5px #755d2b,0 2px 8px rgba(0,0,0,.5);} .ds-name{display:block;font-family:var(--font-display);font-weight:700;font-size:1.06rem;letter-spacing:.05em;color:var(--text);} .ds-entry:hover .ds-name{color:var(--gold-bright);} .ds-sub{display:block;font-family:var(--font-body);font-style:italic;color:var(--text-mid);} .ds-blank{display:flex;align-items:center;gap:14px;padding:18px 4px;border-bottom:1px dashed rgba(212,169,79,.42);color:var(--text-mid);font-family:var(--font-body);font-style:italic;} .ds-blank .ds-b{margin-left:auto;} .ds-b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-b:hover{border-color:var(--gold-dim);color:var(--gold-bright);}"
+    },
+    {
+      "name": "Modal (base)",
+      "kind": "card",
+      "refersTo": "modal",
+      "description": "The incumbent dialog: gold Cinzel header, lifted text scope, action-named confirm.",
+      "html": "<div class=\"ds-modal\"><div class=\"ds-mh\">Start the quest fresh</div><div class=\"ds-mb\">Your current run stays in Your campaigns.</div><div class=\"ds-ma\"><button class=\"ds-ghost\">Cancel</button><button class=\"ds-pri\">Start fresh</button></div></div>",
+      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-modal{max-width:420px;background:linear-gradient(180deg,#1a160f,var(--bg-panel));border:1px solid var(--border-strong);border-radius:var(--radius);box-shadow:0 24px 80px rgba(0,0,0,.85),0 0 0 1px rgba(212,169,79,.08);color:var(--text);font-family:var(--font-body);} .ds-mh{padding:14px 18px;border-bottom:1px solid var(--border-soft);font-family:var(--font-display);font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);} .ds-mb{padding:16px 18px;} .ds-ma{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--border-soft);} .ds-ghost,.ds-pri{font-family:var(--font-display);font-size:.78em;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:9px 18px;border-radius:var(--radius-sm);cursor:pointer;} .ds-ghost{background:transparent;border:1px solid var(--border-soft);color:var(--text-mid);} .ds-ghost:hover{color:var(--text);border-color:var(--gold-dim);} .ds-pri{background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);color:#241c0d;} .ds-pri:hover{box-shadow:0 0 18px rgba(212,169,79,.35);} .ds-ghost:focus-visible,.ds-pri:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Guild Ledger by Candlelight",
+    "overview": "The whole app is one candlelit room: a warm near-black ramp that never goes neutral grey, gold as the light that falls on anything you can act on, ember as the flame itself, and a faint violet reserved for magic. Headings are engraved in Cinzel, everything a person reads runs in EB Garamond, and asides are set as italic marginalia rather than as small grey UI text. This base (the builder, the sheet, the board, every modal and menu) is the incumbent world; it is dense, panelled and practical, because a table mid-session needs many controls at once.\n\nThe sign-in and home are the Guild Ledger, which sits inside that room and inherits all of its tokens. Home is the adventurers' register opened to a spread: your heroes on the left page, your quests on the right, a gold-ruled gutter where the book is bound. Rows are register entries separated by hairline gold rules, not equal cards; the empty slot at the foot of each page is a dashed \"blank line\" you write into; the first quest carries one poured-wax seal. Sign-in is the register's front page with a double engraved rule. The Ledger is quieter and more generous than the table: more air, larger portraits, prose in place of labels.\n\nEvery hero has a drawn likeness (derived from race, class and name) that appears wherever the character does, from a 34px map token to the 132px editor stage. Portraits are part of the visual system, not decoration: they carry the hero's chosen colour as a ring and a lit backdrop.",
+    "keyCharacteristics": [
+      "Warm near-black ramp (#070604 up to #282218); no neutral greys, no pure black surfaces.",
+      "Gold marks what you can act on; ember appears once per surface at most (the seal, a fire-lit glow).",
+      "Cinzel for engraved headings, labels and buttons; EB Garamond for reading and italic marginalia.",
+      "Ledger surfaces are ruled pages and entries, not grids of cards.",
+      "Every character is shown by its drawn portrait, sized to the context.",
+      "Icons are one drawn SVG set (Material Symbols, shared across ojee.net); controls never use text glyphs."
+    ],
+    "rules": [
+      {
+        "name": "The Candle Rule",
+        "body": "Gold is the light that falls on what you can act on. A gold surface is always a control or the single most important heading on its page.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Flame Rule",
+        "body": "Ember is the flame, not a colour for UI. On the Ledger it appears exactly once, as the wax seal on the first quest, plus the faint ember glow in the page background.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lifted Scope Rule",
+        "body": "Anything that opens over the page (modal, panel, builder, context menu) uses the lifted dim and faint values. Never put page-level #57503e text on a lifted surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Hands Rule",
+        "body": "Cinzel names things; Garamond explains them. A hint inside a heading or a field label drops to Garamond italic with no capitals, because Cinzel has no lowercase and cannot say a sentence.",
+        "section": "typography"
+      },
+      {
+        "name": "The Marginalia Rule",
+        "body": "Secondary information is set as italic Garamond prose in Faded ink, not as small uppercase grey UI text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Soft Table Rule",
+        "body": "Shadows are long, blurred and dark, like paper resting under a candle. No hard offset shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** build every new surface from the warm ramp (#070604 to #282218) and the gold family; take ember and violet only for flame and magic.",
+      "**Do** put names, headings, labels and buttons in tracked Cinzel, and every sentence, hint and count in EB Garamond (italic for asides).",
+      "**Do** show a character by its drawn portrait at a size suited to the context (34, 54, 72, 132px), ringed in the hero's colour.",
+      "**Do** present lists on the Ledger as ruled register entries with a dashed blank line at the foot, not as a grid of equal cards.",
+      "**Do** keep a disabled primary as a readable gold outline (8% wash, Tarnished Gold border).",
+      "**Do** name the action on a confirmation button (\"Delete\", \"Start fresh\").",
+      "**Do** draw every control icon as an SVG from the shared icon set; draw close and minus too (XIcon, MinusIcon).",
+      "**Do** grow Ledger controls to 44px on coarse pointers and balance heading wraps."
+    ],
+    "donts": [
+      "**Don't** use neutral greys or pure black for surfaces or text; everything leans warm.",
+      "**Don't** use ember as a button or a general accent; it is the one flame on a surface.",
+      "**Don't** set sentences or hints in Cinzel, or add small uppercase kickers above headings.",
+      "**Don't** use text glyphs (×, —, ✓) as controls or icons.",
+      "**Don't** use hard offset shadows; shadows are long, soft and dark.",
+      "**Don't** put page-level dim or faint text (#857b64, #57503e) on modals, panels, the builder or menus.",
+      "**Don't** add a second wax seal or turn the seal into a button; it marks the first quest only."
+    ]
+  }
+}
