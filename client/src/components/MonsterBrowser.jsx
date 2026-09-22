@@ -10,15 +10,27 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
   const [search, setSearch] = useState('');
   const [crMax, setCrMax] = useState(''); // default: show all CRs so nothing is hidden
   const [list, setList] = useState([]);
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
+    let live = true;
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     // When searching, ignore the CR cap so a query finds monsters of any CR
     // (otherwise typing "ogre" while capped at CR 1 shows nothing).
     if (crMax !== '' && !search) params.set('crMax', crMax);
-    srd.monsters(`?${params.toString()}`).then((res) => Array.isArray(res) && setList(res));
+    setStatus('loading');
+    srd.monsters(`?${params.toString()}`)
+      .then((res) => {
+        if (!live) return;
+        if (Array.isArray(res)) {
+          setList(res);
+          setStatus('ready');
+        } else setStatus('error');
+      })
+      .catch(() => live && setStatus('error'));
+    return () => { live = false; };
   }, [search, crMax]);
 
   // encounter budget helper
@@ -40,7 +52,7 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
     <ModalOverlay onClose={onClose}>
       <div className="modal monster-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Monsters ({list.length})</h3>
+          <h3>Monsters{status === 'ready' ? ` (${list.length})` : ''}</h3>
           {budget && (
             <span className="muted small" title="2024 encounter budget for the current party. Low = warm-up, Moderate = real fight, High = dangerous.">
               Budget: {budget.low} / {budget.moderate} / {budget.high} XP · on map: <strong className={spentXp > budget.high ? 'gold-text' : ''}>{spentXp} XP</strong>
@@ -52,7 +64,7 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
           <div className="monster-list-col">
             <div className="row" style={{ padding: '10px 12px 6px' }}>
               <input placeholder="Search monsters..." aria-label="Search monsters" value={search} onChange={(e) => setSearch(e.target.value)} className="grow" />
-              <select value={crMax} onChange={(e) => setCrMax(e.target.value)} title="Max challenge rating">
+              <select value={crMax} onChange={(e) => setCrMax(e.target.value)} title="Max challenge rating" aria-label="Highest challenge rating">
                 <option value="0.25">CR ≤ 1/4</option>
                 <option value="0.5">CR ≤ 1/2</option>
                 <option value="1">CR ≤ 1</option>
@@ -62,7 +74,14 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
               </select>
             </div>
             <div className="monster-list">
-              {list.map((m) => (
+              {status === 'error' && <p className="muted center" style={{ padding: 24 }}>Couldn't load the monster list. Check your connection and try again.</p>}
+              {status === 'loading' && !list.length && <p className="muted center" style={{ padding: 24 }}>Loading monsters…</p>}
+              {status === 'ready' && !list.length && (
+                <p className="muted center" style={{ padding: 24 }}>
+                  {search ? `No monsters match "${search}".` : 'No monsters at this challenge rating.'}
+                </p>
+              )}
+              {status !== 'error' && list.map((m) => (
                 <button key={m.index} className={`monster-row ${selected === m.index ? 'on' : ''}`} onClick={() => setSelected(m.index)}>
                   <Avatar art={artKeyForMonster(m)} name={m.name} color="#8a3d3d" size={26} shape="square" ring={false} />
                   <span className="grow">{m.name}</span>
@@ -87,12 +106,19 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
 
 export function StatBlock({ index, onAddToken, onRoll }) {
   const [m, setM] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [added, setAdded] = useState(0);
   useEffect(() => {
     setM(null);
-    srd.monster(index).then((res) => res && !res.error && setM(res));
+    setFailed(false);
+    setAdded(0);
+    srd.monster(index)
+      .then((res) => (res && !res.error ? setM(res) : setFailed(true)))
+      .catch(() => setFailed(true));
   }, [index]);
 
-  if (!m) return <p className="muted center" style={{ padding: 40 }}>Loading...</p>;
+  if (failed) return <p className="muted center" style={{ padding: 40 }}>Couldn't load this stat block. Try picking it again.</p>;
+  if (!m) return <p className="muted center" style={{ padding: 40 }}>Loading…</p>;
 
   const ac = Array.isArray(m.armor_class) && m.armor_class.length ? m.armor_class[0].value : 10;
   const abilities = [
@@ -100,7 +126,10 @@ export function StatBlock({ index, onAddToken, onRoll }) {
     ['INT', m.intelligence], ['WIS', m.wisdom], ['CHA', m.charisma],
   ];
 
-  const addToMap = () => onAddToken(tokenFromMonster(m));
+  const addToMap = () => {
+    onAddToken(tokenFromMonster(m));
+    setAdded((n) => n + 1);
+  };
 
   return (
     <div className="statblock">
@@ -113,7 +142,10 @@ export function StatBlock({ index, onAddToken, onRoll }) {
           </div>
         </div>
         {onAddToken && (
-          <button className="primary-btn small-btn" onClick={addToMap}><PlusIcon size={12} /> Add to map</button>
+          <div className="row" style={{ gap: 8 }}>
+            {added > 0 && <span className="chip gold" role="status">{added === 1 ? 'Added' : `Added ${added}`}</span>}
+            <button className="primary-btn small-btn" onClick={addToMap}><PlusIcon size={12} /> {added ? 'Add another' : 'Add to map'}</button>
+          </div>
         )}
       </div>
       <hr className="ornament-line" />

@@ -8,6 +8,7 @@ import {
 } from '../rules/engine';
 import { SubclassPicker, useSubclass, subclassFeaturesBetween } from './ContentChoices';
 import { Avatar } from './Portrait';
+import PortraitEditor from './PortraitEditor';
 import { HeartIcon, ShieldIcon, D20Icon, CampfireIcon, SparkleIcon, SkullIcon, PlusIcon, BookIcon, ChevronUp, XIcon, ConditionIcon } from './Icons';
 
 // The interactive 5e character sheet.
@@ -32,6 +33,7 @@ export default function CharacterSheet({
   const [showPrepare, setShowPrepare] = useState(false);
   const [showSubclass, setShowSubclass] = useState(false);
   const [showLearn, setShowLearn] = useState(false);
+  const [showPortrait, setShowPortrait] = useState(false);
   const [localRoll, setLocalRoll] = useState(null);
   const saveTimer = useRef(null);
 
@@ -85,7 +87,13 @@ export default function CharacterSheet({
     <div className="sheet panel" onMouseDown={(e) => e.stopPropagation()}>
       {/* ---------- header ---------- */}
       <div className="sheet-head">
-        <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} />
+        {readOnly ? (
+          <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} />
+        ) : (
+          <button type="button" className="sheet-portrait-btn" onClick={() => setShowPortrait(true)} title="Change your portrait">
+            <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} title="Change your portrait" />
+          </button>
+        )}
         <div className="sheet-title">
           <div className="row">
             <input
@@ -120,7 +128,7 @@ export default function CharacterSheet({
               <ChevronUp size={12} /> Level {sheet.level + 1}
             </button>
           )}
-          {onClose && <button className="close-btn" onClick={onClose}>×</button>}
+          {onClose && <button className="close-btn" onClick={onClose} aria-label="Close the character sheet">×</button>}
         </div>
       </div>
 
@@ -332,12 +340,35 @@ export default function CharacterSheet({
       {showLevelUp && <LevelUpModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowLevelUp(false)} change={change} dialog={dialog} onAnnounce={onAnnounce} />}
       {showPrepare && <PrepareModal sheet={sheet} derived={derived} meta={meta} onClose={() => setShowPrepare(false)} change={change} />}
       {showLearn && <LearnSpellsModal sheet={sheet} derived={derived} onClose={() => setShowLearn(false)} change={change} />}
+      {showPortrait && <PortraitModal sheet={sheet} onClose={() => setShowPortrait(false)} change={change} />}
       {showSubclass && <SubclassModal sheet={sheet} meta={meta} onClose={() => setShowSubclass(false)} change={change} onAnnounce={onAnnounce} />}
     </div>
   );
 }
 
 // ---------- pieces ----------
+
+// The portrait editor over the sheet: nothing changes until Save.
+function PortraitModal({ sheet, onClose, change }) {
+  const [draft, setDraft] = useState(sheet.portrait || {});
+  return (
+    <ModalOverlay onClose={onClose}>
+      <div className="modal portrait-modal">
+        <div className="modal-header">
+          <h3>{sheet.name ? `${sheet.name}'s portrait` : 'Portrait'}</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <div className="modal-body">
+          <PortraitEditor sheet={sheet} portrait={draft} onChange={setDraft} />
+        </div>
+        <div className="modal-actions">
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary-btn" onClick={() => { change({ portrait: draft }); onClose(); }}>Save portrait</button>
+        </div>
+      </div>
+    </ModalOverlay>
+  );
+}
 
 function VitalStat({ label, value, icon, onClick, title }) {
   const Comp = onClick ? 'button' : 'div';
@@ -376,7 +407,7 @@ function HpEditor({ sheet, readOnly, onChange }) {
       </span>
       {!readOnly && (
         <span className="row" style={{ gap: 4 }}>
-          <input className="hp-amt" value={amt} onChange={(e) => setAmt(e.target.value.replace(/\D/g, ''))} placeholder="#" />
+          <input className="hp-amt" inputMode="numeric" aria-label="Amount of damage or healing" value={amt} onChange={(e) => setAmt(e.target.value.replace(/\D/g, ''))} placeholder="#" />
           <button className="small-btn danger-btn" onClick={() => apply(-1)} title="Take damage">Dmg</button>
           <button className="small-btn" onClick={() => apply(1)} title="Heal">Heal</button>
         </span>
@@ -544,7 +575,7 @@ function SpellDetailModal({ index, onClose, sheet, derived, roll, change, readOn
       <div className="modal">
         <div className="modal-header">
           <h3>{spell ? spell.name : '...'}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         {spell && (
           <>
@@ -600,7 +631,7 @@ function GearTab({ sheet, readOnly, change, dialog }) {
         {Object.entries(coins).map(([c, v]) => (
           <label key={c} className="coin-box">
             <span>{c.toUpperCase()}</span>
-            <input value={v} disabled={readOnly} onChange={(e) => change({ coins: { ...coins, [c]: parseInt(e.target.value, 10) || 0 } })} />
+            <input value={v} inputMode="numeric" disabled={readOnly} onChange={(e) => change({ coins: { ...coins, [c]: parseInt(e.target.value, 10) || 0 } })} />
           </label>
         ))}
       </div>
@@ -708,7 +739,7 @@ function LevelUpModal({ sheet, derived, meta, onClose, change, dialog, onAnnounc
       <div className="modal" style={needsPick ? { maxWidth: 820 } : undefined}>
         <div className="modal-header">
           <h3>Level up! {sheet.level} to {newLevel}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <h4>Hit points</h4>
@@ -817,7 +848,7 @@ function SubclassModal({ sheet, meta, onClose, change, onAnnounce }) {
       <div className="modal" style={{ maxWidth: 820 }}>
         <div className="modal-header">
           <h3>Choose your {SUBCLASS_LABEL[sheet.classIndex].toLowerCase()}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <p className="muted small">{meta.name}s pick this at level {from}. You'll get every feature it grants up to level {sheet.level}.</p>
@@ -911,7 +942,7 @@ function LearnSpellsModal({ sheet, derived, onClose, change }) {
       <div className="modal" style={{ maxWidth: 680 }}>
         <div className="modal-header">
           <h3>{kind === 'spellbook' ? 'Your spellbook' : 'Learn spells'}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           {!ready ? (
@@ -965,7 +996,7 @@ function PrepareModal({ sheet, derived, meta, onClose, change }) {
       <div className="modal" style={{ maxWidth: 640 }}>
         <div className="modal-header">
           <h3>Prepare spells ({picked.length}/{maxPrepared})</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="modal-body">
           <p className="muted small">After a long rest you can change which spells you have ready. Pick up to {maxPrepared}.</p>

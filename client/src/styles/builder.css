@@ -24,10 +24,10 @@
 .builder-steps { display: flex; gap: 4px; flex-wrap: wrap; }
 .builder-step-dot {
   font-family: var(--font-display); font-size: 0.62em; letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 9px; border: 1px solid var(--border-soft); color: var(--text-faint);
+  padding: 3px 9px; border-radius: 9px; border: 1px solid var(--border-soft); color: var(--text-dim);
 }
 .builder-step-dot.active { color: var(--gold-bright); border-color: var(--gold-dim); background: rgba(212, 169, 79, 0.08); }
-.builder-step-dot.done { color: var(--text-dim); border-color: var(--border); }
+.builder-step-dot.done { color: var(--text-mid); border-color: var(--border); }
 .builder-step-dot.skipped { text-decoration: line-through; opacity: 0.5; }
 .builder-head .close-btn { margin-left: auto; }
 
@@ -93,7 +93,7 @@
 .ability-slot.primary { border-color: var(--gold-dim); }
 .ability-slot-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ability-slot-name { font-family: var(--font-display); font-weight: 700; letter-spacing: 1px; font-size: 0.95em; }
-.ability-slot-blurb { font-size: 0.78em; color: var(--text-faint); line-height: 1.35; }
+.ability-slot-blurb { font-size: 0.8em; color: var(--text-dim); line-height: 1.35; }
 .ability-slot-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
 .ability-slot select { width: 78px; }
 .ability-stepper { display: flex; align-items: center; gap: 6px; }

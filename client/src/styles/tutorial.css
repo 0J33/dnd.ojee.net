@@ -16,7 +16,15 @@
   padding: 12px 22px; border-top: 1px solid var(--border-soft); flex-shrink: 0;
 }
 .guide-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.guide-dot { width: 9px; height: 9px; border-radius: 50%; padding: 0; border: 1px solid var(--border-strong); background: transparent; }
+.guide-dot { position: relative; width: 9px; height: 9px; min-height: 0; border-radius: 50%; padding: 0; border: 1px solid var(--border-strong); background: transparent; }
+/* the dot stays small; the tap area around it doesn't */
+.guide-dot::after { content: ''; position: absolute; inset: -6px; }
+@media (pointer: coarse), (max-width: 640px) {
+  .guide-dots { gap: 10px; }
+  .guide-dot { width: 11px; height: 11px; }
+  .guide-dot::after { inset: -5px; }
+  .guide-foot .icon-btn { width: 44px; height: 44px; }
+}
 .guide-dot.on { background: var(--gold); border-color: var(--gold); }
 
 /* ================= Tutorial overlay ================= */
@@ -51,7 +59,7 @@
   flex-shrink: 0;
 }
 .tut-head h3 { flex: 1; color: var(--gold-bright); font-size: 0.98em; }
-.tut-step-num { font-family: var(--font-display); font-size: 0.6em; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+.tut-step-num { font-family: var(--font-display); font-size: 0.66em; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; white-space: nowrap; }
 .tut-body { overflow-y: auto; padding: 14px 16px; }
 .tut-narration p { margin: 0 0 10px; line-height: 1.5; }
 .tut-narration p:first-child::first-letter {
@@ -59,13 +67,15 @@
   margin: 4px 8px 0 0; color: var(--gold); font-weight: 900;
 }
 .tut-rule {
-  border: 1px solid var(--border); border-left: 3px solid var(--info);
+  border: 1px solid rgba(95, 135, 168, 0.45);
   border-radius: var(--radius-sm); background: rgba(95, 135, 168, 0.08);
   padding: 10px 14px; margin: 12px 0;
 }
 .tut-rule h4 { color: #9db4c4; margin-bottom: 6px; letter-spacing: 1px; text-transform: none; font-size: 0.85em; }
 .tut-rule ul { margin: 0; padding-left: 18px; font-size: 0.88em; color: var(--text-mid); }
 .tut-rule li { margin: 3px 0; }
+/* lines that carry their own number don't also get a bullet */
+.tut-rule li.is-numbered { list-style: none; }
 .tut-instruction {
   border-radius: var(--radius-sm); background: rgba(212, 169, 79, 0.1);
   border: 1px solid var(--gold-dim); padding: 10px 14px; margin-top: 12px;

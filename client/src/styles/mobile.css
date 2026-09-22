@@ -73,7 +73,9 @@
   .sheet-vitals { padding: 4px 12px 10px; gap: 6px; }
   .vital { min-width: 72px; padding: 6px 10px; }
   .hp-vital { min-width: 100%; }
-  .sheet-tabs { padding: 0 12px; overflow-x: auto; }
+  /* all five tabs on one line: Story used to sit off the right edge */
+  .sheet-tabs { padding: 0 6px; overflow-x: auto; }
+  .sheet-tabs button { flex: 1 0 auto; padding: 9px 6px; font-size: 0.7em; letter-spacing: 1px; }
   .sheet-body { padding: 12px 12px 20px; }
   .ability-grid { gap: 6px; }
   .attack-name { min-width: 0; }

@@ -55,10 +55,34 @@ export function useLocalStorage(key, initial) {
 
 // ---------- Modal overlay ----------
 
+// Open overlays, oldest first. Escape closes only the top one, so dismissing a
+// spell's details doesn't also throw away the character sheet under it.
+const openOverlays = [];
+
 export function ModalOverlay({ children, onClose, className = '' }) {
-  useEscapeKey(onClose || (() => {}));
+  const id = useRef(null);
+  const ref = useRef(null);
+  if (!id.current) id.current = Symbol('overlay');
+  useEffect(() => {
+    const me = id.current;
+    openOverlays.push(me);
+    // Keyboard focus moves into the dialog (unless a field already took it
+    // with autoFocus) and goes back where it was when the dialog closes.
+    const before = document.activeElement;
+    if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus({ preventScroll: true });
+    return () => {
+      const i = openOverlays.indexOf(me);
+      if (i >= 0) openOverlays.splice(i, 1);
+      if (before && before.isConnected && typeof before.focus === 'function') before.focus({ preventScroll: true });
+    };
+  }, []);
+  useEscapeKey(() => {
+    if (onClose && openOverlays[openOverlays.length - 1] === id.current) onClose();
+  });
   return createPortal(
     <div
+      ref={ref}
+      tabIndex={-1}
       className={`modal-overlay ${className}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && onClose) onClose();

@@ -41,6 +41,9 @@
   padding: 9px 11px;
 }
 .party-card.down { border-color: var(--danger); }
+/* someone without a sheet (the DM, or a player still choosing) isn't greyed
+   out, there's just nothing to open */
+.party-list .party-card:disabled { opacity: 1; cursor: default; }
 .party-dot { width: 11px; height: 11px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
 .party-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .party-name { font-weight: 600; display: flex; gap: 6px; align-items: center; }
@@ -154,9 +157,11 @@
 .init-order { display: flex; gap: 5px; flex-wrap: wrap; }
 .init-chip {
   display: inline-flex; align-items: center; gap: 6px; font-size: 0.82em;
-  border: 1px solid var(--border); border-left: 4px solid var(--tk-color, #888);
+  border: 1px solid var(--border);
   border-radius: 4px; background: var(--bg-elev); padding: 3px 9px; white-space: nowrap;
 }
+/* the token's colour, as a dot rather than a side stripe */
+.init-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--tk-color, #888); flex-shrink: 0; }
 .init-chip.current { border-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); color: var(--gold-bright); }
 .init-chip.dead { opacity: 0.4; text-decoration: line-through; }
 

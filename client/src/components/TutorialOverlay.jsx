@@ -76,10 +76,10 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
       <div className="tut-launch panel">
         <div className="tut-launch-inner">
           <SparkleIcon size={30} />
-          <h2>Learn to Play</h2>
+          <h2>The Cellar of the Gilded Flagon</h2>
           <p className="muted">
-            A 60-90 minute guided adventure that teaches D&D by playing it. Everyone needs a hero first
-            (grab a ready-made one - it's one click).
+            Your first quest: about an hour of guided play that teaches D&D as you go. Everyone needs a hero
+            first (a ready-made one is one click).
           </p>
           <div className="tut-launch-roster">
             {state.members.map((m) => (
@@ -116,7 +116,7 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
       <div className="tut-head">
         <span className="tut-step-num">Scene {tut.step + 1} / {TUTORIAL_STEPS.length}</span>
         <h3>{step.title}</h3>
-        <button className="close-btn" onClick={() => setCollapsed(true)} title="Minimize">—</button>
+        <button className="close-btn" onClick={() => setCollapsed(true)} title="Minimize" aria-label="Minimize the adventure guide">—</button>
       </div>
 
       <div className="tut-body">
@@ -127,7 +127,7 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
         {step.rule && (
           <div className="tut-rule">
             <h4><BookIcon size={14} /> {step.rule.title}</h4>
-            <ul>{step.rule.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+            <ul>{step.rule.lines.map((l, i) => <li key={i} className={/^\d+\.\s/.test(l) ? 'is-numbered' : undefined}>{l}</li>)}</ul>
           </div>
         )}
 

@@ -9,7 +9,7 @@ const PAGES = [
       <>
         <p>Dungeons & Dragons is a game of collaborative storytelling. Together you tell a story about a band of heroes exploring a fantasy world - and dice decide the uncertain moments.</p>
         <p>One person is the <strong>Dungeon Master (DM)</strong>: they describe the world, play every monster and townsperson, and referee the rules. Everyone else plays one <strong>hero</strong> (a "player character").</p>
-        <p>Nobody wins or loses. The fun is the shared adventure. If your group is brand new, use <strong>Learn to Play</strong> on the home screen - the app plays the DM for a first quest and teaches you everything.</p>
+        <p>Nobody wins or loses. The fun is the shared adventure. If your group is brand new, start <strong>your first quest</strong> on the home screen: the app plays the DM for about an hour and teaches you everything as you go.</p>
         <p className="muted">This guide is always here (the Guide button). Skim it, or read it as you play.</p>
       </>
     ),
@@ -185,17 +185,17 @@ export default function Guide({ onClose }) {
       <div className="modal guide-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{p.title}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Close the guide">×</button>
         </div>
         <div className="guide-body">{p.body}</div>
         <div className="guide-foot">
-          <button className="icon-btn" disabled={page === 0} onClick={() => go(-1)}><ChevronLeft /></button>
+          <button className="icon-btn" disabled={page === 0} onClick={() => go(-1)} aria-label="Previous page"><ChevronLeft /></button>
           <div className="guide-dots">
             {PAGES.map((_, i) => (
-              <button key={i} className={`guide-dot ${i === page ? 'on' : ''}`} onClick={() => setPage(i)} title={PAGES[i].title} />
+              <button key={i} className={`guide-dot ${i === page ? 'on' : ''}`} onClick={() => setPage(i)} title={PAGES[i].title} aria-label={`Page ${i + 1}: ${PAGES[i].title}`} aria-current={i === page ? 'page' : undefined} />
             ))}
           </div>
-          <button className="icon-btn" disabled={page === PAGES.length - 1} onClick={() => go(1)}><ChevronRight /></button>
+          <button className="icon-btn" disabled={page === PAGES.length - 1} onClick={() => go(1)} aria-label="Next page"><ChevronRight /></button>
         </div>
       </div>
     </ModalOverlay>

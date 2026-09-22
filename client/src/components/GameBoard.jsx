@@ -234,7 +234,9 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   }, [state.charSheets]);
 
   const mySheet = myCharacterId ? charSheets[myCharacterId] : null;
-  const myToken = renderScene ? renderScene.tokens.find((t) => t.characterId === myCharacterId) : null;
+  // A DM with no hero has no token: without the guard, undefined === undefined
+  // matched the first monster and offered the DM its initiative roll.
+  const myToken = renderScene && myCharacterId ? renderScene.tokens.find((t) => t.characterId === myCharacterId) : null;
 
   // ---------- actions ----------
   const doRoll = useCallback(

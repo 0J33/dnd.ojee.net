@@ -200,6 +200,56 @@ input[type='checkbox']:checked::after {
   background-repeat: no-repeat; background-position: center; background-size: 13px 13px;
 }
 
+/* ================= Menus, modals and panels =================
+   Everything that opens over or beside the map. Scoped here so the battle
+   map itself keeps its own look. */
+.modal, .panel, .builder, .context-menu {
+  /* the page-level dim/faint greys fall under 4.5:1 on these lifted
+     surfaces; nudge them up where people actually read */
+  --text-dim: #968b72;
+  --text-faint: #7d735c;
+  color-scheme: dark;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+.modal ::selection, .panel ::selection, .builder ::selection { background: rgba(212, 169, 79, 0.32); color: var(--text); }
+
+/* a disabled choice still has to be readable, it just can't be picked */
+.modal button:disabled, .panel button:disabled, .builder button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* a primary that isn't ready yet stays an outline, not a faded slab */
+.modal .primary-btn:disabled, .panel .primary-btn:disabled, .builder .primary-btn:disabled {
+  opacity: 1;
+  background: rgba(212, 169, 79, 0.08);
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  text-shadow: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* the browser's white number spinners, gone; the fields are typed into */
+.modal input[type='number'], .panel input[type='number'], .builder input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.modal input[type='number']::-webkit-inner-spin-button, .modal input[type='number']::-webkit-outer-spin-button,
+.panel input[type='number']::-webkit-inner-spin-button, .panel input[type='number']::-webkit-outer-spin-button,
+.builder input[type='number']::-webkit-inner-spin-button, .builder input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+
+.modal summary::marker, .panel summary::marker, .builder summary::marker { color: var(--gold-dim); }
+
+/* A hint inside a heading or a field label reads as a sentence: body face,
+   no capitals. Cinzel has no lowercase, so text-transform alone can't do it. */
+h4 .muted, h4 .field-hint, label.field-label .field-hint, label.field-label .muted {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 1rem;
+  color: var(--text-dim);
+}
+label.field-label .field-hint, label.field-label .muted { font-size: 0.95rem; margin-left: 4px; }
+
 /* ================= Panels / cards ================= */
 .panel {
   background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
@@ -367,6 +417,8 @@ textarea:focus-visible {
   outline: 2px solid var(--gold-bright);
   outline-offset: 1px;
 }
+/* An overlay takes focus only so Tab starts inside it; it draws no ring. */
+.modal-overlay:focus, .builder:focus { outline: none; }
 /* The map is a canvas surface - keep its ring tight to the viewport edge. */
 .map-viewport:focus-visible { outline-offset: -2px; }
 

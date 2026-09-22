@@ -12,11 +12,10 @@ import { resolveRace, needsSubrace, choicePool, racialBonuses as sumRacialBonuse
 import { PREGENS } from '../data/pregens';
 import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon } from './Icons';
 import { Avatar } from './Portrait';
+import PortraitEditor, { PORTRAIT_COLORS } from './PortraitEditor';
 import { useSources, SourceChip, SourceHead, SubclassPicker, useSubclass, subclassFeaturesBetween, pressable, groupBySource } from './ContentChoices';
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
-
-const PORTRAIT_COLORS = ['#d4a94f', '#c2542e', '#7fb069', '#5f87a8', '#8f7fd4', '#c94f6d', '#5fb0a5', '#b8b8b8', '#e0c060', '#b06ab0'];
 
 const FIGHTING_STYLES = [
   { id: 'defense', name: 'Defense', desc: '+1 AC while wearing armor. Simple and always useful.', acBonus: 1 },
@@ -57,7 +56,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   const [name, setName] = useState('');
   const [alignment, setAlignment] = useState('Neutral Good');
   const [personality, setPersonality] = useState({ traits: '', ideals: '', bonds: '', flaws: '' });
-  const [color, setColor] = useState(PORTRAIT_COLORS[0]);
+  const [portrait, setPortrait] = useState({ color: PORTRAIT_COLORS[0] });
 
   useEffect(() => {
     srd.races().then((r) => Array.isArray(r) && setRaces(r));
@@ -295,7 +294,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
       acOverride: null,
       personality,
       backstory: '',
-      portrait: { color, icon: classIndex },
+      portrait: { ...portrait, icon: classIndex },
       notes: '',
     };
     return sheet;
@@ -321,8 +320,25 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     else dialog.alert((res && res.error) || 'Could not save character');
   };
 
+  // Each step opens at its top, not wherever the last step was scrolled to.
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [step]);
+
+  // Keyboard focus starts inside the builder, not on the page behind it.
+  const rootRef = useRef(null);
+  useEffect(() => {
+    if (embedded || !rootRef.current) return undefined;
+    const before = document.activeElement;
+    if (!rootRef.current.contains(document.activeElement)) rootRef.current.focus({ preventScroll: true });
+    return () => {
+      if (before && before.isConnected && typeof before.focus === 'function') before.focus({ preventScroll: true });
+    };
+  }, [embedded]);
+
   const body = (
-    <div className={`builder ${embedded ? 'builder-embedded' : ''}`}>
+    <div ref={rootRef} tabIndex={-1} role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-label="Create a hero" className={`builder ${embedded ? 'builder-embedded' : ''}`}>
       <div className="builder-head">
         <h2><D20Icon size={18} /> Create a hero</h2>
         <div className="builder-steps">
@@ -332,10 +348,10 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             </span>
           ))}
         </div>
-        {!embedded && <button className="close-btn" onClick={onClose}>×</button>}
+        {!embedded && <button className="close-btn" onClick={onClose} aria-label="Close the hero builder">×</button>}
       </div>
 
-      <div className="builder-body">
+      <div className="builder-body" ref={bodyRef}>
         {STEPS[step] === 'Start' && (
           <div>
             <p className="builder-intro">
@@ -346,7 +362,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <h4 className="mt">Quick start - pick a ready-made hero</h4>
             <div className="pregen-grid">
               {PREGENS.map((p) => (
-                <div key={p.id} className="pregen-card" onClick={() => pickPregen(p)}>
+                <div key={p.id} className="pregen-card" {...pressable(() => pickPregen(p))}>
                   <Avatar sheet={p.sheet} name={p.sheet.name} color={p.sheet.portrait.color} size={54} />
                   <div className="pregen-info">
                     <div className="card-title">{p.sheet.name}</div>
@@ -396,7 +412,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <p className="builder-intro">Your class is your job in the party: how you fight, what you're good at, and whether you sling spells.</p>
             <div className="choice-grid">
               {Object.entries(CLASS_META).map(([idx, c]) => (
-                <div key={idx} className={`choice-card ${classIndex === idx ? 'selected' : ''}`} onClick={() => setClassIndex(idx)}>
+                <div key={idx} className={`choice-card ${classIndex === idx ? 'selected' : ''}`} aria-pressed={classIndex === idx} {...pressable(() => setClassIndex(idx))}>
                   <h4>{c.name} {c.caster && <span className="chip magic">magic</span>}</h4>
                   <p>{c.blurb}</p>
                   <p className="choice-playstyle">▸ {c.playstyle}</p>
@@ -412,7 +428,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 <h4>Fighting style</h4>
                 <div className="choice-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
                   {FIGHTING_STYLES.map((s) => (
-                    <div key={s.id} className={`choice-card slim ${fightingStyle === s.id ? 'selected' : ''}`} onClick={() => setFightingStyle(s.id)}>
+                    <div key={s.id} className={`choice-card slim ${fightingStyle === s.id ? 'selected' : ''}`} aria-pressed={fightingStyle === s.id} {...pressable(() => setFightingStyle(s.id))}>
                       <h4>{s.name}</h4>
                       <p>{s.desc}</p>
                     </div>
@@ -476,12 +492,13 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                     <div className="ability-slot-controls">
                       {method === 'pointbuy' ? (
                         <div className="ability-stepper">
-                          <button className="small-btn" disabled={pb[a] <= 8} onClick={() => setPb({ ...pb, [a]: pb[a] - 1 })}>−</button>
+                          <button className="small-btn" aria-label={`Lower ${ABILITY_NAMES[a]}`} disabled={pb[a] <= 8} onClick={() => setPb({ ...pb, [a]: pb[a] - 1 })}>−</button>
                           <strong className="ability-slot-score">{pb[a]}</strong>
-                          <button className="small-btn" disabled={pb[a] >= 15 || pointsSpent >= POINT_BUY_TOTAL} onClick={() => setPb({ ...pb, [a]: pb[a] + 1 })}>+</button>
+                          <button className="small-btn" aria-label={`Raise ${ABILITY_NAMES[a]}`} disabled={pb[a] >= 15 || pointsSpent >= POINT_BUY_TOTAL} onClick={() => setPb({ ...pb, [a]: pb[a] + 1 })}>+</button>
                         </div>
                       ) : (
                         <select
+                          aria-label={`${ABILITY_NAMES[a]} score`}
                           value={assign[a] ?? ''}
                           onChange={(e) => {
                             const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
@@ -525,7 +542,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <p className="builder-intro">Your background is who you were before adventuring - it grants two skills and a story hook.</p>
             <div className="choice-grid">
               {backgrounds.map((b) => (
-                <div key={b.index} className={`choice-card ${background === b.index ? 'selected' : ''}`} onClick={() => {
+                <div key={b.index} className={`choice-card ${background === b.index ? 'selected' : ''}`} aria-pressed={background === b.index} {...pressable(() => {
                   setBackground(b.index);
                   setPersonality({
                     traits: b.suggested_personality.traits[0],
@@ -534,7 +551,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                     flaws: b.suggested_personality.flaws[0],
                   });
                   setClassSkills((prev) => prev.filter((s) => !b.skill_proficiencies.includes(s)));
-                }}>
+                })}>
                   <h4>{b.name}</h4>
                   <p>{b.blurb}</p>
                   <div className="choice-tags">
@@ -644,38 +661,33 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
         {STEPS[step] === 'Details' && (
           <div>
-            <div className="portrait-preview">
-              <Avatar
-                sheet={{ name: name || 'Hero', race, subrace, classIndex, raceName: resolved && resolved.name, className: meta && meta.name }}
-                name={name || 'Hero'}
-                color={color}
-                size={84}
-              />
-              <p className="muted small">
-                Your portrait is drawn from your race, class and name. It follows you onto the battle map, so the table
-                always knows which token is you.
-              </p>
-            </div>
-            <label className="field-label">Character name</label>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kaelen Brightspear" maxLength={40} style={{ width: '100%' }} />
-            <label className="field-label">Alignment (your moral compass - just a roleplay guide)</label>
-            <select value={alignment} onChange={(e) => setAlignment(e.target.value)} style={{ width: '100%' }}>
+            <label className="field-label" htmlFor="hero-name">Character name</label>
+            <input id="hero-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kaelen Brightspear" maxLength={40} style={{ width: '100%' }} />
+            <label className="field-label">
+              Portrait <span className="field-hint">it follows you onto the battle map, so the table always knows which token is you</span>
+            </label>
+            <PortraitEditor
+              sheet={{ name: name || 'Hero', race, subrace, classIndex, raceName: resolved && resolved.name, className: meta && meta.name }}
+              portrait={portrait}
+              onChange={setPortrait}
+            />
+            <label className="field-label" htmlFor="hero-alignment">
+              Alignment <span className="field-hint">your moral compass, just a roleplay guide</span>
+            </label>
+            <select id="hero-alignment" value={alignment} onChange={(e) => setAlignment(e.target.value)} style={{ width: '100%' }}>
               {['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'].map((a) => <option key={a}>{a}</option>)}
             </select>
-            <label className="field-label">Portrait & token colour</label>
-            <div className="row wrap">
-              {PORTRAIT_COLORS.map((c) => (
-                <button key={c} className="color-swatch" style={{ background: c, outline: color === c ? '2px solid var(--gold-bright)' : 'none' }} onClick={() => setColor(c)} />
-              ))}
-            </div>
             {bgData && (
               <>
-                <label className="field-label">Personality (prefilled from your background - edit freely)</label>
+                <label className="field-label">
+                  Personality <span className="field-hint">prefilled from your background, change anything</span>
+                </label>
                 {['traits', 'ideals', 'bonds', 'flaws'].map((k) => (
                   <div key={k} className="row mb" style={{ alignItems: 'flex-start' }}>
                     <span className="chip" style={{ width: 64, justifyContent: 'center', textTransform: 'capitalize' }}>{k}</span>
                     <select
                       className="grow"
+                      aria-label={`Personality ${k}`}
                       value={personality[k]}
                       onChange={(e) => setPersonality({ ...personality, [k]: e.target.value })}
                     >
