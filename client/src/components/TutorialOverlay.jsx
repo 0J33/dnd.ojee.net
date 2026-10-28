@@ -1,28 +1,48 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { socket } from '../socket';
-import { buildTutorialScenes, TUTORIAL_STEPS } from '../data/tutorialScript';
+import { adventureByKey, forParty } from '../data/adventures';
 import { ScrollIcon, ChevronRight, D20Icon, SparkleIcon, BookIcon, TrophyIcon, MinusIcon } from './Icons';
 
 // Drives the guided "Learn to Play" adventure. Reads room.tutorial from server
 // state; the client that presses Continue/Choice applies that step's effects and
 // broadcasts the advance so every table member stays in sync.
+// The narration shouts names and dangers in capitals (MARLA, TWO GOBLINS);
+// set them in small caps so they read as emphasis, not yelling.
+function smallCaps(text) {
+  const parts = text.split(/(\b[A-Z][A-Z'’]{2,}(?:[\s-]+[A-Z][A-Z'’]*)*\b)/);
+  return parts.map((s, i) => (i % 2 ? <span key={i} className="tut-sc">{s.toLowerCase()}</span> : s));
+}
+
 export default function TutorialOverlay({ state, me, mySheet, charSheets, needsCharacter }) {
   const tut = state.tutorial || { active: false, step: 0 };
   const [collapsed, setCollapsed] = useState(false);
   const [started, setStarted] = useState(tut.active);
+  // When a fight actually starts, get out of the way of the battlefield
+  // (tap the Step button to bring the story back).
+  const fighting = !!(state.combat?.active && state.combat.round > 0);
+  useEffect(() => { if (fighting) setCollapsed(true); }, [fighting]);
   const appliedRef = useRef(-1);
 
-  const step = TUTORIAL_STEPS[tut.step] || TUTORIAL_STEPS[0];
+  // Which adventure this table is playing (the first quest unless chosen).
+  const adv = adventureByKey(tut.adventure || state.adventureKey || 'flagon');
+  const STEPS = adv.steps;
+  const step = STEPS[tut.step] || STEPS[0];
+  const heroCount = Math.max(1, state.members.filter((m) => m.characterId).length);
   const isHost = state.hostId === me?.userId;
 
-  // Apply a step's on-enter effects exactly once (host drives to avoid dupes).
+  // Apply a step's on-enter effects exactly once for the whole table: the
+  // server hands the step to the first client that claims it, so a reload or
+  // a second player never spawns the monsters twice.
   useEffect(() => {
     if (!tut.active) return;
-    if (!isHost) return;
     if (appliedRef.current === tut.step) return;
     appliedRef.current = tut.step;
-    const effects = step.effectsOnEnter || [];
-    for (const fx of effects) applyEffect(fx);
+    if (tut.applied === tut.step) return;
+    const at = tut.step;
+    socket.emit('tutorialClaimStep', { step: at }, (r) => {
+      if (!r?.ok) return;
+      for (const fx of STEPS[at]?.effectsOnEnter || []) applyEffect(fx);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tut.step, tut.active]);
 
@@ -32,7 +52,11 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
         socket.emit('switchScene', { sceneId: fx.sceneId });
         break;
       case 'spawn':
-        for (const t of fx.tokens) socket.emit('addToken', { sceneId: fx.sceneId, token: t });
+        {
+          // Going Back and forward again must not bring a second copy of anyone.
+          const there = new Set((state.scenes.find((sc) => sc.id === fx.sceneId)?.tokens || []).map((t) => t.label));
+          for (const t of forParty(fx.tokens, heroCount)) if (!there.has(t.label)) socket.emit('addToken', { sceneId: fx.sceneId, token: t });
+        }
         break;
       case 'startCombat':
         socket.emit('startCombat');
@@ -46,6 +70,9 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
       case 'awardXp':
         socket.emit('awardXp', { amount: fx.amount });
         break;
+      case 'restoreHeroes':
+        socket.emit('restoreHeroes');
+        break;
       case 'announce':
         socket.emit('announce', { text: fx.text, type: fx.logType || 'story' });
         break;
@@ -55,8 +82,8 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
   };
 
   const beginAdventure = () => {
-    const scenes = buildTutorialScenes();
-    socket.emit('tutorialStart', { scenes, step: 0 });
+    const scenes = adv.buildScenes();
+    socket.emit('tutorialStart', { scenes, step: 0, adventure: adv.key });
     setStarted(true);
   };
 
@@ -76,10 +103,10 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
       <div className="tut-launch panel">
         <div className="tut-launch-inner">
           <SparkleIcon size={30} />
-          <h2>The Cellar of the Gilded Flagon</h2>
+          <h2>{adv.name}</h2>
           <p className="muted">
-            Your first quest: about an hour of guided play that teaches D&D as you go. Everyone needs a hero
-            first (a ready-made one is one click).
+            {adv.tutorial ? 'Your first quest: about an hour of guided play that teaches D&D as you go.' : `${adv.blurb} ${adv.levels}, ${adv.length.toLowerCase()}. The app narrates and runs the monsters.`}{' '}
+            Everyone needs a hero first (a ready-made one is one click).
           </p>
           <div className="tut-launch-roster">
             {state.members.map((m) => (
@@ -114,14 +141,14 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
   return (
     <div className="tut-panel panel">
       <div className="tut-head">
-        <span className="tut-step-num">Scene {tut.step + 1} / {TUTORIAL_STEPS.length}</span>
+        <span className="tut-step-num">Scene {tut.step + 1} / {STEPS.length}</span>
         <h3>{step.title}</h3>
         <button className="close-btn" onClick={() => setCollapsed(true)} title="Minimize" aria-label="Minimize the adventure guide"><MinusIcon size={16} /></button>
       </div>
 
       <div className="tut-body">
         <div className="tut-narration">
-          {step.narration.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+          {step.narration.split('\n\n').map((p, i) => <p key={i}>{smallCaps(p)}</p>)}
         </div>
 
         {step.rule && (
@@ -132,7 +159,7 @@ export default function TutorialOverlay({ state, me, mySheet, charSheets, needsC
         )}
 
         <div className="tut-instruction">
-          <strong>▸ Your move:</strong> {step.instruction}
+          <strong><ChevronRight size={13} /> Your move:</strong> {step.instruction}
         </div>
       </div>
 

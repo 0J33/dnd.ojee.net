@@ -1,725 +1,920 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-22T04:41:41.921695+00:00",
+  "generatedAt": "2026-10-28T15:46:59.335215+00:00",
   "title": "Design System: dnd.ojee.net",
   "extensions": {
     "colorMeta": {
-      "bg-deep": {
+      "oak-deep": {
         "role": "neutral",
-        "displayName": "Deep Night",
-        "canonical": "#070604",
+        "displayName": "Under the Table",
+        "canonical": "#0b0604",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#0e0a08",
+          "#292421",
+          "#47403d",
+          "#675f5c",
+          "#89807c",
+          "#aba39f",
+          "#cfc7c3",
+          "#f4ede9"
         ]
       },
-      "bg-base": {
+      "oak-base": {
         "role": "neutral",
-        "displayName": "Base",
-        "canonical": "#0d0b08",
+        "displayName": "Room Oak",
+        "canonical": "#120b07",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#0f0a07",
+          "#2a2420",
+          "#48403c",
+          "#685f5a",
+          "#8a807a",
+          "#ada39d",
+          "#d0c7c1",
+          "#f5ece7"
         ]
       },
-      "bg-panel": {
+      "oak-panel": {
         "role": "neutral",
-        "displayName": "Panel",
-        "canonical": "#14110c",
+        "displayName": "Board Oak",
+        "canonical": "#1a100a",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#100906",
+          "#2c231e",
+          "#4a4039",
+          "#6b5e57",
+          "#8d7f77",
+          "#afa29a",
+          "#d3c6bf",
+          "#f8ece5"
         ]
       },
-      "bg-panel-2": {
+      "oak-panel-2": {
         "role": "neutral",
-        "displayName": "Raised Panel",
-        "canonical": "#181410",
+        "displayName": "Board Oak, Lit",
+        "canonical": "#21150d",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#110905",
+          "#2d231c",
+          "#4b3f37",
+          "#6c5e55",
+          "#8f7f75",
+          "#b1a298",
+          "#d5c6bc",
+          "#faebe2"
         ]
       },
-      "bg-elev": {
+      "oak-elev": {
         "role": "neutral",
-        "displayName": "Elevated",
-        "canonical": "#1e1912",
+        "displayName": "Lit Board",
+        "canonical": "#2b1b11",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#130804",
+          "#2f221a",
+          "#4e3e35",
+          "#6f5d52",
+          "#927e71",
+          "#b4a195",
+          "#d8c5b9",
+          "#fdeae0"
         ]
       },
-      "bg-hover": {
+      "oak-hover": {
         "role": "neutral",
-        "displayName": "Hover",
-        "canonical": "#282218",
+        "displayName": "Oak Under the Hand",
+        "canonical": "#382416",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#140802",
+          "#312116",
+          "#503d31",
+          "#725c4e",
+          "#957d6d",
+          "#b7a090",
+          "#dbc4b5",
+          "#ffeadb"
         ]
       },
-      "ledger-page": {
+      "oak-border-soft": {
         "role": "neutral",
-        "displayName": "Ledger Page",
-        "canonical": "#16120c",
+        "displayName": "Soft Seam",
+        "canonical": "#34231a",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#130804",
+          "#2f221b",
+          "#4e3e36",
+          "#6f5d53",
+          "#927d73",
+          "#b5a096",
+          "#d8c5ba",
+          "#fdeae1"
         ]
       },
-      "ledger-page-2": {
+      "oak-border": {
         "role": "neutral",
-        "displayName": "Ledger Page Foot",
-        "canonical": "#120e09",
+        "displayName": "Board Seam",
+        "canonical": "#4a3222",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#150701",
+          "#322014",
+          "#523d2f",
+          "#745b4b",
+          "#987c6a",
+          "#ba9f8e",
+          "#ddc3b3",
+          "#ffe9d9"
         ]
       },
-      "ledger-well": {
+      "oak-border-strong": {
         "role": "neutral",
-        "displayName": "Ink Well",
-        "canonical": "#0b0906",
+        "displayName": "Strong Seam",
+        "canonical": "#6a4a2e",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#180600",
+          "#361f0a",
+          "#563b24",
+          "#795a40",
+          "#9d7a5d",
+          "#bf9e82",
+          "#e3c2a8",
+          "#ffe8cf"
         ]
       },
-      "border-soft": {
+      "board-edge": {
         "role": "neutral",
-        "displayName": "Soft Border",
-        "canonical": "#2b261c",
+        "displayName": "Board Edge",
+        "canonical": "#4a3020",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#160701",
+          "#332014",
+          "#533c2e",
+          "#765b4b",
+          "#997b69",
+          "#bc9e8d",
+          "#dfc3b2",
+          "#ffe8d9"
         ]
       },
-      "border": {
+      "candle-text": {
         "role": "neutral",
-        "displayName": "Border",
-        "canonical": "#3b3428",
+        "displayName": "Candlelit Parchment",
+        "canonical": "#f2e6cc",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#100a01",
+          "#2b2414",
+          "#4a412e",
+          "#6a604b",
+          "#8c816a",
+          "#aea48d",
+          "#d2c8b2",
+          "#f7eed9"
         ]
       },
-      "border-strong": {
+      "candle-text-mid": {
         "role": "neutral",
-        "displayName": "Strong Border",
-        "canonical": "#5a4f38",
+        "displayName": "Parchment Mid",
+        "canonical": "#cdb894",
         "tonalRamp": [
-          "#070604",
-          "#0d0b08",
-          "#14110c",
-          "#181410",
-          "#1e1912",
-          "#282218",
-          "#3b3428",
-          "#5a4f38"
+          "#130900",
+          "#30230a",
+          "#4f3f24",
+          "#705e40",
+          "#937f5d",
+          "#b5a282",
+          "#d9c7a8",
+          "#fdeccf"
         ]
       },
-      "ledger-rule": {
+      "candle-text-dim": {
         "role": "neutral",
-        "displayName": "Ledger Hairline",
-        "canonical": "rgba(212, 169, 79, 0.2)"
-      },
-      "ledger-rule-strong": {
-        "role": "neutral",
-        "displayName": "Ledger Rule",
-        "canonical": "rgba(212, 169, 79, 0.42)"
-      },
-      "text": {
-        "role": "neutral",
-        "displayName": "Parchment",
-        "canonical": "#ece5d6",
+        "displayName": "Parchment Dim",
+        "canonical": "#a68f6a",
         "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
+          "#140800",
+          "#312207",
+          "#503f21",
+          "#725e3d",
+          "#957f5a",
+          "#b7a27f",
+          "#dbc6a5",
+          "#ffeccd"
         ]
       },
-      "text-mid": {
+      "candle-text-faint": {
         "role": "neutral",
-        "displayName": "Faded Ink",
-        "canonical": "#b3a992",
+        "displayName": "Parchment Faint",
+        "canonical": "#806b4e",
         "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
+          "#140800",
+          "#30220d",
+          "#503f27",
+          "#715e43",
+          "#947f61",
+          "#b6a285",
+          "#dac6ab",
+          "#feebd2"
         ]
       },
-      "text-dim": {
-        "role": "neutral",
-        "displayName": "Dim",
-        "canonical": "#857b64",
-        "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
-        ]
-      },
-      "text-faint": {
-        "role": "neutral",
-        "displayName": "Faint",
-        "canonical": "#57503e",
-        "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
-        ]
-      },
-      "text-dim-lifted": {
-        "role": "neutral",
-        "displayName": "Lifted Dim",
-        "canonical": "#968b72",
-        "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
-        ]
-      },
-      "text-faint-lifted": {
-        "role": "neutral",
-        "displayName": "Lifted Faint",
-        "canonical": "#7d735c",
-        "tonalRamp": [
-          "#57503e",
-          "#7d735c",
-          "#857b64",
-          "#968b72",
-          "#b3a992",
-          "#d0c7b4",
-          "#ece5d6",
-          "#f6f1e7"
-        ]
-      },
-      "gold": {
+      "brass": {
         "role": "primary",
-        "displayName": "Candle Gold",
-        "canonical": "#d4a94f",
+        "displayName": "Candlelit Brass",
+        "canonical": "#cfa75b",
         "tonalRamp": [
-          "#3a2f17",
-          "#634f26",
-          "#8c7035",
-          "#b59144",
-          "#d4a94f",
-          "#dfbc72",
-          "#eace96",
-          "#f4e0b9"
+          "#1a0500",
+          "#391f00",
+          "#5a3c00",
+          "#7d5b07",
+          "#a27b2d",
+          "#c49f5a",
+          "#e7c484",
+          "#ffeaae"
         ]
       },
-      "gold-bright": {
+      "brass-bright": {
         "role": "primary",
-        "displayName": "Lamplit Gold",
-        "canonical": "#e8c476",
+        "displayName": "Polished Brass",
+        "canonical": "#ebcb88",
         "tonalRamp": [
-          "#3f3620",
-          "#6c5b37",
-          "#99824e",
-          "#c6a865",
-          "#e8c476",
-          "#eed090",
-          "#f4dca9",
-          "#f9e7c2"
+          "#180700",
+          "#352100",
+          "#553e00",
+          "#785d1e",
+          "#9c7e3c",
+          "#bea165",
+          "#e1c68d",
+          "#ffecb7"
         ]
       },
-      "gold-dim": {
+      "brass-dim": {
         "role": "primary",
-        "displayName": "Tarnished Gold",
-        "canonical": "#8a7448",
+        "displayName": "Tarnished Brass",
+        "canonical": "#8f703f",
         "tonalRamp": [
-          "#282215",
-          "#423723",
-          "#5c4e30",
-          "#76643e",
-          "#8a7448",
-          "#a7946d",
-          "#c4b492",
-          "#e2d3b7"
+          "#170600",
+          "#352000",
+          "#553d12",
+          "#785c2f",
+          "#9c7d4c",
+          "#bea072",
+          "#e1c499",
+          "#ffeac1"
         ]
       },
-      "gold-ink": {
+      "brass-plate": {
         "role": "primary",
-        "displayName": "Gold Ink",
-        "canonical": "#1d150a",
+        "displayName": "Brass Plate",
+        "canonical": "#c99d52",
         "tonalRamp": [
-          "#0c0a06",
-          "#110d07",
-          "#151008",
-          "#1a1309",
-          "#1d150a",
-          "#564c3e",
-          "#8e8473",
-          "#c6bca8"
+          "#1b0400",
+          "#3a1d00",
+          "#5c3a00",
+          "#7f5907",
+          "#a47a2d",
+          "#c69e5a",
+          "#e9c384",
+          "#ffe9ae"
+        ]
+      },
+      "brass-plate-edge": {
+        "role": "primary",
+        "displayName": "Brass Plate Edge",
+        "canonical": "#6e4f22",
+        "tonalRamp": [
+          "#180600",
+          "#362000",
+          "#563c16",
+          "#795b32",
+          "#9d7c4f",
+          "#bf9f75",
+          "#e2c49c",
+          "#ffe9c4"
+        ]
+      },
+      "brass-ink": {
+        "role": "primary",
+        "displayName": "Engraved Brown",
+        "canonical": "#2a1906",
+        "tonalRamp": [
+          "#130801",
+          "#302213",
+          "#4f3e2e",
+          "#705d4a",
+          "#937e69",
+          "#b6a18c",
+          "#d9c5b1",
+          "#feebd8"
+        ]
+      },
+      "wax": {
+        "role": "secondary",
+        "displayName": "Red Wax",
+        "canonical": "#b8402f",
+        "tonalRamp": [
+          "#250000",
+          "#530000",
+          "#7b1509",
+          "#a53627",
+          "#d05644",
+          "#f37e6b",
+          "#ffaa98",
+          "#ffe1d6"
+        ]
+      },
+      "wax-deep": {
+        "role": "secondary",
+        "displayName": "Deep Wax",
+        "canonical": "#8a2519",
+        "tonalRamp": [
+          "#260000",
+          "#4e0000",
+          "#752016",
+          "#9d3f31",
+          "#c75e4e",
+          "#ea8474",
+          "#ffab9a",
+          "#ffe1d8"
+        ]
+      },
+      "wax-text": {
+        "role": "secondary",
+        "displayName": "Wax Highlight",
+        "canonical": "#fbe3d8",
+        "tonalRamp": [
+          "#130804",
+          "#2f211b",
+          "#4e3e36",
+          "#705d54",
+          "#927d73",
+          "#b5a097",
+          "#d8c4bb",
+          "#fdeae1"
+        ]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Danger Wax",
+        "canonical": "#a8322a",
+        "tonalRamp": [
+          "#240000",
+          "#520000",
+          "#7a1612",
+          "#a4372e",
+          "#cf574b",
+          "#f27e71",
+          "#ffaa9d",
+          "#ffe0d9"
+        ]
+      },
+      "danger-bright": {
+        "role": "secondary",
+        "displayName": "Damage Red",
+        "canonical": "#e0624e",
+        "tonalRamp": [
+          "#250000",
+          "#530000",
+          "#7c1306",
+          "#a63525",
+          "#d15542",
+          "#f47d69",
+          "#ffaa97",
+          "#ffe2d8"
         ]
       },
       "ember": {
         "role": "secondary",
         "displayName": "Ember",
-        "canonical": "#c2542e",
+        "canonical": "#b8372a",
         "tonalRamp": [
-          "#361a0e",
-          "#5b2917",
-          "#81391f",
-          "#a64828",
-          "#c2542e",
-          "#d17c5a",
-          "#e0a485",
-          "#f0cbb0"
-        ]
-      },
-      "ember-bright": {
-        "role": "secondary",
-        "displayName": "Ember Bright",
-        "canonical": "#e07040",
-        "tonalRamp": [
-          "#3d2013",
-          "#69361f",
-          "#944b2b",
-          "#bf6037",
-          "#e07040",
-          "#e89167",
-          "#f0b28e",
-          "#f7d2b5"
-        ]
-      },
-      "magic": {
-        "role": "tertiary",
-        "displayName": "Arcane Violet",
-        "canonical": "#8f7fd4",
-        "tonalRamp": [
-          "#292438",
-          "#443c62",
-          "#5f558b",
-          "#7b6db5",
-          "#8f7fd4",
-          "#ab9cd6",
-          "#c7b9d8",
-          "#e3d6da"
-        ]
-      },
-      "danger": {
-        "role": "status",
-        "displayName": "Danger",
-        "canonical": "#b04444",
-        "tonalRamp": [
-          "#311614",
-          "#532221",
-          "#752e2e",
-          "#973b3a",
-          "#b04444",
-          "#c4706a",
-          "#d89c90",
-          "#ebc7b6"
-        ]
-      },
-      "danger-bright": {
-        "role": "status",
-        "displayName": "Danger Bright",
-        "canonical": "#d05c5c",
-        "tonalRamp": [
-          "#391c1a",
-          "#612d2c",
-          "#8a3e3d",
-          "#b24f4f",
-          "#d05c5c",
-          "#dc827c",
-          "#e8a89c",
-          "#f3cdbc"
+          "#260000",
+          "#550000",
+          "#7e0d07",
+          "#a83125",
+          "#d45242",
+          "#f77b69",
+          "#ffac9c",
+          "#ffe1d8"
         ]
       },
       "success": {
-        "role": "status",
-        "displayName": "Success",
-        "canonical": "#6f9f5f",
+        "role": "neutral",
+        "displayName": "Live Green",
+        "canonical": "#7da35f",
         "tonalRamp": [
-          "#212c1b",
-          "#364b2d",
-          "#4b693f",
-          "#5f8851",
-          "#6f9f5f",
-          "#93b47e",
-          "#b7c99e",
-          "#dbdebd"
+          "#011000",
+          "#142d00",
+          "#2f4b13",
+          "#4c6d2f",
+          "#6a8f4c",
+          "#8eb273",
+          "#b3d69a",
+          "#dafbc2"
         ]
       },
       "info": {
-        "role": "status",
-        "displayName": "Info",
-        "canonical": "#5f87a8",
+        "role": "neutral",
+        "displayName": "Temp-HP Blue",
+        "canonical": "#6a93b0",
         "tonalRamp": [
-          "#1d262d",
-          "#2f404e",
-          "#405a6f",
-          "#52748f",
-          "#5f87a8",
-          "#87a2b5",
-          "#afbdc2",
-          "#d7d8cf"
+          "#000d1c",
+          "#09283b",
+          "#25465c",
+          "#41667f",
+          "#5f88a4",
+          "#84abc6",
+          "#aacfe9",
+          "#d1f4ff"
+        ]
+      },
+      "magic": {
+        "role": "neutral",
+        "displayName": "Spell Violet",
+        "canonical": "#9a88df",
+        "tonalRamp": [
+          "#0f002d",
+          "#281651",
+          "#453476",
+          "#64529e",
+          "#8572c7",
+          "#a797e8",
+          "#cabcff",
+          "#efe3ff"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Rag Paper",
+        "canonical": "#e9dcbc",
+        "tonalRamp": [
+          "#110a00",
+          "#2c2410",
+          "#4a412a",
+          "#6b6046",
+          "#8d8164",
+          "#b0a488",
+          "#d3c8ad",
+          "#f8eed4"
+        ]
+      },
+      "paper-panel": {
+        "role": "neutral",
+        "displayName": "Rag Paper Panel",
+        "canonical": "#eadcbc",
+        "tonalRamp": [
+          "#110a00",
+          "#2d240f",
+          "#4b412a",
+          "#6c6046",
+          "#8e8164",
+          "#b0a488",
+          "#d4c8ad",
+          "#f9eed4"
+        ]
+      },
+      "paper-panel-2": {
+        "role": "neutral",
+        "displayName": "Rag Paper, Light",
+        "canonical": "#efe3c7",
+        "tonalRamp": [
+          "#100a01",
+          "#2b2413",
+          "#4a412d",
+          "#6a6049",
+          "#8c8168",
+          "#afa48c",
+          "#d2c8b1",
+          "#f7eed8"
+        ]
+      },
+      "paper-edge": {
+        "role": "neutral",
+        "displayName": "Paper Edge",
+        "canonical": "#b89a68",
+        "tonalRamp": [
+          "#170700",
+          "#342100",
+          "#543e13",
+          "#765d2f",
+          "#9a7d4c",
+          "#bda172",
+          "#e0c59a",
+          "#ffebc2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Iron-Gall Ink",
+        "canonical": "#2a1b0f",
+        "tonalRamp": [
+          "#120903",
+          "#2e2219",
+          "#4d3f33",
+          "#6e5d51",
+          "#917e70",
+          "#b4a193",
+          "#d7c5b8",
+          "#fcebde"
+        ]
+      },
+      "ink-mid": {
+        "role": "neutral",
+        "displayName": "Ink Mid",
+        "canonical": "#4b3520",
+        "tonalRamp": [
+          "#150800",
+          "#322111",
+          "#513e2c",
+          "#735c48",
+          "#967d66",
+          "#b9a08a",
+          "#dcc4af",
+          "#ffead6"
+        ]
+      },
+      "ink-dim": {
+        "role": "neutral",
+        "displayName": "Ink Dim",
+        "canonical": "#6a5034",
+        "tonalRamp": [
+          "#160700",
+          "#33210c",
+          "#533d26",
+          "#755c42",
+          "#987d5f",
+          "#bba084",
+          "#dec4a9",
+          "#ffead1"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Ink Faint",
+        "canonical": "#806546",
+        "tonalRamp": [
+          "#160700",
+          "#33210a",
+          "#533d24",
+          "#755c40",
+          "#997d5d",
+          "#bba082",
+          "#dec4a7",
+          "#ffeacf"
+        ]
+      },
+      "ink-red": {
+        "role": "tertiary",
+        "displayName": "Rubric Red",
+        "canonical": "#7a2a14",
+        "tonalRamp": [
+          "#250000",
+          "#480c00",
+          "#6d2a17",
+          "#954733",
+          "#bd6750",
+          "#e08c75",
+          "#ffb29c",
+          "#ffe1d3"
+        ]
+      },
+      "ink-sepia": {
+        "role": "tertiary",
+        "displayName": "Sepia Ink",
+        "canonical": "#7a3f0c",
+        "tonalRamp": [
+          "#200000",
+          "#411700",
+          "#643309",
+          "#8a5127",
+          "#b17144",
+          "#d3956b",
+          "#f6bb93",
+          "#ffe3c1"
+        ]
+      },
+      "ink-brass": {
+        "role": "tertiary",
+        "displayName": "Brass on Paper",
+        "canonical": "#8c5418",
+        "tonalRamp": [
+          "#1f0100",
+          "#401800",
+          "#633500",
+          "#87531e",
+          "#ae733c",
+          "#d09865",
+          "#f3bd8d",
+          "#ffe4bc"
+        ]
+      },
+      "slate": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#262b2e",
+        "tonalRamp": [
+          "#090c0e",
+          "#222628",
+          "#3e4346",
+          "#5d6265",
+          "#7d8387",
+          "#a0a6a9",
+          "#c4cacd",
+          "#eaeff3"
+        ]
+      },
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "#f4f7f6",
+        "tonalRamp": [
+          "#0a0b0b",
+          "#242525",
+          "#404242",
+          "#5f6261",
+          "#808382",
+          "#a3a6a5",
+          "#c7cac9",
+          "#edefee"
+        ]
+      },
+      "field-inlay": {
+        "role": "neutral",
+        "displayName": "Field Inlay",
+        "canonical": "#0e0805",
+        "tonalRamp": [
+          "#0f0a07",
+          "#292420",
+          "#47403c",
+          "#675f5b",
+          "#89807b",
+          "#aca39e",
+          "#d0c7c2",
+          "#f5ede8"
         ]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Display",
-        "purpose": "Wordmark on the register's front page."
+        "displayName": "Door Sign",
+        "purpose": "The site name on the sign-in door only."
       },
       "headline": {
-        "displayName": "Headline",
-        "purpose": "Ledger page heads; balanced wrap."
+        "displayName": "Notice Headline",
+        "purpose": "Quest titles (the first quest at full size), hero names, carved table labels."
       },
       "title": {
-        "displayName": "Title",
-        "purpose": "Register entry names, first-quest heading."
+        "displayName": "Board Title",
+        "purpose": "Dialog and panel headers, topbar titles, plaque names, choice-card headings."
+      },
+      "script": {
+        "displayName": "Chalk Script",
+        "purpose": "Italic IM Fell English for the slate label and placeholder only."
       },
       "body": {
-        "displayName": "Body",
-        "purpose": "All reading text."
-      },
-      "marginalia": {
-        "displayName": "Marginalia",
-        "purpose": "Italic asides, subtitles, counts, empty states, hints."
+        "displayName": "Reading Text",
+        "purpose": "All reading text; its italic marks metadata, hints, empty states and the footer."
       },
       "label": {
-        "displayName": "Label",
-        "purpose": "Uppercase Cinzel field names."
-      },
-      "button": {
-        "displayName": "Button",
-        "purpose": "Uppercase tracked Cinzel on every engraved button."
+        "displayName": "Stamped Label",
+        "purpose": "Buttons, tabs, field labels, menu headers, stat numerals. Small caps come from the font."
       }
     },
     "shadows": [
       {
-        "name": "panel",
-        "value": "0 6px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03)",
-        "purpose": "Base panels."
+        "name": "board",
+        "value": "0 10px 28px -6px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,214,160,0.07), inset 0 0 0 1px rgba(0,0,0,0.35)",
+        "purpose": "Panels and every oak board."
       },
       {
         "name": "modal",
-        "value": "0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(212,169,79,0.08)",
-        "purpose": "Dialogs over the warm-black overlay."
+        "value": "0 34px 80px -10px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,214,160,0.08), inset 0 0 0 1px rgba(0,0,0,0.4)",
+        "purpose": "Dialogs over the rgba(6,3,1,0.72) overlay."
       },
       {
         "name": "pop",
-        "value": "0 12px 40px rgba(0,0,0,0.8)",
-        "purpose": "Context menus, toasts, popovers."
+        "value": "0 16px 40px -6px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,214,160,0.07)",
+        "purpose": "Context menus and floating HUD boards."
       },
       {
-        "name": "page-rest",
-        "value": "0 30px 60px -34px rgba(0,0,0,1)",
-        "purpose": "Ledger pages resting on the table."
+        "name": "paper",
+        "value": "0 2px 3px rgba(20,10,4,0.35), 0 18px 34px -12px rgba(0,0,0,0.8)",
+        "purpose": "Any paper object lying on the table."
       },
       {
-        "name": "gutter",
-        "value": "inset -22px 0 30px -26px rgba(0,0,0,0.9)",
-        "purpose": "Bound fold on the left page; mirrored (22px) on the right."
+        "name": "inlay",
+        "value": "inset 0 2px 5px rgba(0,0,0,0.6)",
+        "purpose": "Fields and die wells cut into oak."
       },
       {
-        "name": "engraved-rule",
-        "value": "inset 0 0 0 7px #16120c, inset 0 0 0 8px rgba(212,169,79,0.42), 0 30px 60px -30px rgba(0,0,0,0.95)",
-        "purpose": "The register front page's double rule."
-      },
-      {
-        "name": "gold-lift",
-        "value": "0 6px 16px -8px rgba(212,169,79,0.6)",
-        "purpose": "Ledger primary button."
-      },
-      {
-        "name": "portrait-ring",
-        "value": "0 0 0 1.5px color-mix(in srgb, var(--av-color) 55%, #000 45%), 0 2px 8px rgba(0,0,0,0.5)",
-        "purpose": "Every framed portrait, in the hero's colour."
+        "name": "brass-glow",
+        "value": "0 0 20px -4px rgba(235,190,110,0.32)",
+        "purpose": "Hover on brass, selected choice cards, the hero board on your turn."
       }
     ],
     "motion": [
       {
-        "name": "ledger-ease",
+        "name": "ease-settle",
         "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Ledger entrances (front page rise 0.7s, seal stamp 0.8s)."
+        "purpose": "All arrival and lift motion: settle, deal, pin, stamp, hover lift."
       },
       {
-        "name": "state",
+        "name": "settle",
+        "value": "0.32s",
+        "purpose": "Dialogs and the builder rise 14px into place."
+      },
+      {
+        "name": "deal",
+        "value": "0.6s, 50ms stagger",
+        "purpose": "Hero sheets dealt onto the table."
+      },
+      {
+        "name": "pin",
+        "value": "0.55s, 80ms stagger",
+        "purpose": "Notices pinned onto the board from above."
+      },
+      {
+        "name": "paper-hover",
+        "value": "0.4s",
+        "purpose": "Paper lifts and straightens toward the hand."
+      },
+      {
+        "name": "control",
         "value": "0.15s",
-        "purpose": "Hover, focus and border transitions everywhere."
+        "purpose": "Border, background, color and shadow changes on controls."
       },
       {
-        "name": "rise-in",
-        "value": "riseIn 0.18s ease",
-        "purpose": "Modals rising 10px into place; overlay fades in 0.15s."
-      },
-      {
-        "name": "reduced-motion",
-        "value": "prefers-reduced-motion: reduce",
-        "purpose": "All animation collapses to a state change; Ledger rise and seal stamp removed."
+        "name": "candle",
+        "value": "flame 2.6s / core 1.9s / halo 3.1s / table light 5.2s",
+        "purpose": "Ambient candle only; disabled under prefers-reduced-motion."
       }
     ],
     "breakpoints": [
       {
-        "name": "ledger-phone",
-        "value": "520px"
+        "name": "phone",
+        "value": "760px"
       },
       {
-        "name": "editor-stack",
-        "value": "640px"
+        "name": "desktop",
+        "value": "761px"
       },
       {
-        "name": "board-compact",
-        "value": "820px"
+        "name": "props",
+        "value": "1100px"
       },
       {
-        "name": "spread-stack",
-        "value": "900px"
+        "name": "short-desktop",
+        "value": "760px (max-height)"
       }
-    ],
-    "portraitPalette": [
-      "#d4a94f",
-      "#c2542e",
-      "#7fb069",
-      "#5f87a8",
-      "#8f7fd4",
-      "#c94f6d",
-      "#5fb0a5",
-      "#b8b8b8",
-      "#e0c060",
-      "#b06ab0"
-    ],
-    "portraitLighting": {
-      "shade": "mix(c, #140c08, t)",
-      "light": "mix(c, #fff3dc, t)",
-      "sizes": [
-        34,
-        54,
-        72,
-        132
-      ]
-    }
+    ]
   },
   "components": [
     {
-      "name": "Ledger Primary Button",
+      "name": "Peg Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "Default wooden button on oak boards: pegs, Join, HUD controls.",
+      "html": "<div class=\"ds-oak\"><button class=\"ds-peg\">Guide</button></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-peg { font-family: 'Alegreya Sans SC', 'Alegreya', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.06em; color: #f2e6cc; background: linear-gradient(180deg, #3a2617, #26180e); border: 1px solid #5a3d25; border-radius: 5px; padding: 8px 14px; min-height: 36px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,214,160,0.10), 0 2px 4px -1px rgba(0,0,0,0.6); transition: border-color .15s, background .15s, box-shadow .15s, color .15s; } .ds-peg:hover { border-color: #8f703f; color: #ebcb88; background: linear-gradient(180deg, #4a301c, #301e11); box-shadow: inset 0 1px 0 rgba(255,214,160,0.14), 0 3px 10px -2px rgba(0,0,0,0.7), 0 0 14px -4px rgba(235,190,110,0.32); } .ds-peg:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); } .ds-peg:focus-visible { outline: 2px solid #ebcb88; outline-offset: 2px; }"
+    },
+    {
+      "name": "Brass Plate Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one gold slab per page area: begin the quest, resume, sign in.",
-      "html": "<button class=\"ds-btn-primary\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polygon points=\"12 2 21 7 21 17 12 22 3 17 3 7\"/><polygon points=\"12 7 16.5 15 7.5 15\"/></svg> Begin the first quest</button>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:linear-gradient(180deg,#e2bd67,#c79a45);border:1px solid #e8c476;color:#1d150a;box-shadow:0 6px 16px -8px rgba(212,169,79,.6);} .ds-btn-primary:hover{background:linear-gradient(180deg,#edcb7d,#d4a94f);} .ds-btn-primary:focus-visible{outline:2px solid var(--gold);outline-offset:2px;} .ds-btn-primary:disabled{background:rgba(212,169,79,.08);border-color:var(--gold-dim);color:var(--gold);box-shadow:none;cursor:not-allowed;}"
+      "description": "The one committing action: Begin, Continue, Resume, Create.",
+      "html": "<div class=\"ds-oak\"><button class=\"ds-brass\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\"><polygon points=\"12 2 21 7 21 17 12 22 3 17 3 7\"/><polygon points=\"12 7 17 15 7 15\"/></svg> Begin the first quest</button></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-brass { font-family: 'Alegreya Sans SC', 'Alegreya', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.06em; display: inline-flex; align-items: center; gap: 7px; padding: 8px 15px; color: #2a1906; text-shadow: 0 1px 0 rgba(255,236,190,0.5); background: linear-gradient(180deg, rgba(255,244,210,0.38), rgba(255,244,210,0) 42%, rgba(70,40,8,0.28)), url('/tex/brass.webp') 0 0 / 260px auto, #c99d52; border: 1px solid #6e4f22; border-radius: 5px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,246,214,0.6), inset 0 -1px 0 rgba(70,40,8,0.35), 0 3px 8px -2px rgba(0,0,0,0.7); transition: box-shadow .15s, background .15s; } .ds-brass:hover { color: #24150a; background: linear-gradient(180deg, rgba(255,248,220,0.5), rgba(255,244,210,0.06) 42%, rgba(70,40,8,0.2)), url('/tex/brass.webp') 0 0 / 260px auto, #d4a95c; border-color: #7c5a27; box-shadow: inset 0 1px 0 rgba(255,246,214,0.7), inset 0 -1px 0 rgba(70,40,8,0.3), 0 4px 14px -3px rgba(0,0,0,0.7), 0 0 20px -4px rgba(235,190,110,0.32); } .ds-brass:active { transform: translateY(1px); } .ds-brass:focus-visible { outline: 2px solid #ebcb88; outline-offset: 2px; }"
     },
     {
-      "name": "Ledger Secondary Button",
+      "name": "Red Wax Button",
       "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "Outlined engraved button for everything that is not the page's main action.",
-      "html": "<button class=\"ds-btn\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z\"/></svg> New hero</button>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-btn:hover{border-color:var(--gold-dim);color:var(--gold-bright);background:rgba(212,169,79,.06);} .ds-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+      "refersTo": "button-danger",
+      "description": "Destructive confirms: Delete, Retire, Dmg.",
+      "html": "<div class=\"ds-oak\"><button class=\"ds-wax\">Retire</button></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-wax { font-family: 'Alegreya Sans SC', 'Alegreya', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.06em; padding: 8px 15px; color: #fbe3d8; background: linear-gradient(180deg, #b8402f, #8a2519); border: 1px solid #5e170f; border-radius: 5px; text-shadow: 0 1px 0 rgba(60,8,2,0.5); cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,190,170,0.35), 0 2px 6px -1px rgba(0,0,0,0.6); } .ds-wax:hover { color: #fff0e8; border-color: #6e1d13; background: linear-gradient(180deg, #c84a37, #96291c); box-shadow: inset 0 1px 0 rgba(255,190,170,0.4), 0 3px 10px -2px rgba(0,0,0,0.7); } .ds-wax:active { transform: translateY(1px); } .ds-wax:focus-visible { outline: 2px solid #ebcb88; outline-offset: 2px; }"
     },
     {
-      "name": "Marginalia Link",
+      "name": "Wax Seal Delete",
       "kind": "button",
-      "refersTo": "button-link",
-      "description": "Italic Garamond action beside a primary.",
-      "html": "<button class=\"ds-link\">Start it fresh</button>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-link{background:none;border:none;padding:2px;cursor:pointer;color:var(--gold-bright);font-family:var(--font-body);font-size:1rem;font-style:italic;text-decoration:underline;text-decoration-color:rgba(212,169,79,.45);text-underline-offset:3px;} .ds-link:hover{color:#f3d58f;} .ds-link:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+      "refersTo": "wax-seal-button",
+      "description": "Round wax seal on a hero sheet or plaque that retires or deletes it.",
+      "html": "<div class=\"ds-oak\"><button class=\"ds-seal\" aria-label=\"Retire hero\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3\"/></svg></button></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-seal { width: 30px; height: 30px; padding: 0; border-radius: 50%; display: grid; place-items: center; color: #fbe3d8; background: radial-gradient(circle at 36% 30%, #d4553f, #9a2a1d 62%, #6a1810); border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,190,170,0.35); transition: transform .2s; } .ds-seal:hover { color: #fff; background: radial-gradient(circle at 36% 30%, #e2654c, #a82f20 62%, #701a11); box-shadow: 0 3px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,190,170,0.4); } .ds-seal:focus-visible { outline: 2px solid #ebcb88; outline-offset: 2px; }"
     },
     {
-      "name": "Icon Button (danger)",
-      "kind": "button",
-      "refersTo": "button-icon",
-      "description": "Quiet drawn-icon control; the danger variant warms on hover.",
-      "html": "<button class=\"ds-icon-btn\" aria-label=\"Retire hero\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 21q-.8 0-1.4-.6T5 19V6H4V4h5V3h6v1h5v2h-1v13q0 .8-.6 1.4T17 21zm2-4h2V8H9zm4 0h2V8h-2z\"/></svg></button>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border-radius:var(--radius-sm);background:transparent;border:1px solid transparent;color:var(--text-mid);cursor:pointer;} .ds-icon-btn:hover{color:var(--danger-bright);border-color:rgba(176,68,68,.5);} .ds-icon-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
-    },
-    {
-      "name": "Ledger Field",
+      "name": "Field on Paper",
       "kind": "input",
-      "refersTo": "input-ledger",
-      "description": "Labelled field on the register's front page.",
-      "html": "<label class=\"ds-field\"><span>Your name</span><input class=\"ds-input\" placeholder=\"Written in ink\"></label>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-field{display:flex;flex-direction:column;gap:6px;} .ds-field>span{font-family:var(--font-display);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mid);} .ds-input{min-height:44px;padding:10px 14px;border-radius:var(--radius-sm);background:#0b0906;border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:1.08rem;transition:border-color .15s,box-shadow .15s;} .ds-input::placeholder{color:#9a8f76;font-style:italic;} .ds-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,79,.16);}"
+      "refersTo": "field-paper",
+      "description": "Text field inside a paper scope (sign-in notice, sheet, builder).",
+      "html": "<div class=\"ds-paper\"><label class=\"ds-field\"><span>Your name</span><input placeholder=\"Brenna\"></label></div>",
+      "css": ".ds-paper { background: radial-gradient(ellipse 120% 100% at 50% 40%, transparent 60%, rgba(120,78,30,0.24) 100%), url('/tex/paper.webp') 0 0 / 420px auto, #e9dcbc; border: 1px solid #b89a68; padding: 24px; box-shadow: 0 2px 3px rgba(20,10,4,0.35), 0 18px 34px -12px rgba(0,0,0,0.8); } .ds-field { display: flex; flex-direction: column; gap: 4px; } .ds-field span { font-family: 'Alegreya Sans SC', sans-serif; font-weight: 700; font-size: 0.86rem; letter-spacing: 0.06em; color: #4b3520; } .ds-field input { font-family: 'Alegreya', Georgia, serif; font-size: 1.05rem; min-height: 44px; padding: 0 10px; color: #2a1b0f; background: rgba(255,250,236,0.45); border: 1px solid rgba(96,66,32,0.32); border-radius: 4px; box-shadow: inset 0 1px 2px rgba(60,36,12,0.16); outline: none; transition: border-color .15s, box-shadow .15s; } .ds-field input::placeholder { color: #8c7455; } .ds-field input:focus { border-color: #8c5418; box-shadow: inset 0 1px 2px rgba(60,36,12,0.16), 0 0 0 3px rgba(140,84,24,0.16); }"
     },
     {
-      "name": "Choice Chip",
-      "kind": "chip",
-      "refersTo": "chip-choice",
-      "description": "Portrait-editor option in Garamond; selected is gold-washed.",
-      "html": "<span class=\"ds-chips\"><button class=\"ds-chip on\" aria-pressed=\"true\">Hood</button><button class=\"ds-chip\" aria-pressed=\"false\">Nothing</button></span>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-chips{display:flex;gap:7px;} .ds-chip{font-family:var(--font-body);font-size:.95rem;padding:5px 12px;min-height:32px;border-radius:16px;border:1px solid var(--border);background:linear-gradient(180deg,var(--bg-elev),var(--bg-panel));color:var(--text);cursor:pointer;} .ds-chip:hover{border-color:var(--gold-dim);} .ds-chip.on{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,169,79,.12);} .ds-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}"
+      "name": "Field on Oak",
+      "kind": "input",
+      "refersTo": "field-oak",
+      "description": "Sunken field cut into an oak board (dialogs, chat, dice formula).",
+      "html": "<div class=\"ds-oak\"><input class=\"ds-inlay\" placeholder=\"or type: 2d6+3\"></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-inlay { font-family: 'Alegreya', Georgia, serif; font-size: 1rem; padding: 8px 10px; color: #f2e6cc; background: #0e0805; border: 1px solid #4a3222; border-radius: 4px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.6), 0 1px 0 rgba(255,214,160,0.05); outline: none; caret-color: #ebcb88; } .ds-inlay::placeholder { color: #806b4e; font-style: italic; } .ds-inlay:focus { border-color: #cfa75b; box-shadow: inset 0 2px 5px rgba(0,0,0,0.6), 0 0 0 3px rgba(207,167,91,0.18); }"
     },
     {
-      "name": "Ledger Bar",
+      "name": "Tabs",
       "kind": "nav",
-      "refersTo": "ledger-page",
-      "description": "Sticky home bar: wordmark, guide, user with connection dot, sign out.",
-      "html": "<header class=\"ds-bar\"><span class=\"ds-brand\">dnd.ojee.net</span><span style=\"flex:1\"></span><button class=\"ds-bar-btn\">Guide</button><span class=\"ds-me\"><span class=\"ds-dot\"></span>ojee</span></header>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-bar{display:flex;align-items:center;gap:14px;padding:12px 26px;background:linear-gradient(180deg,rgba(14,11,7,.97),rgba(10,8,5,.94));border-bottom:1px solid var(--border-soft);} .ds-brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem;letter-spacing:.14em;color:var(--gold-bright);} .ds-bar-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-bar-btn:hover{border-color:var(--gold-dim);color:var(--gold-bright);} .ds-me{display:flex;align-items:center;gap:8px;color:var(--text-mid);font-family:var(--font-body);font-style:italic;} .ds-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 8px rgba(111,159,95,.7);}"
+      "refersTo": "tab-active",
+      "description": "Tab row on oak; brass underline marks the active tab.",
+      "html": "<div class=\"ds-oak\"><div class=\"ds-tabs\"><button class=\"on\">Chat</button><button>Log</button></div></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 16px 24px; } .ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(207,167,91,0.2); } .ds-tabs button { font-family: 'Alegreya Sans SC', 'Alegreya', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.06em; background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; color: #a68f6a; cursor: pointer; } .ds-tabs button:hover { color: #f2e6cc; } .ds-tabs button.on { color: #ebcb88; border-bottom-color: #cfa75b; } .ds-tabs button:focus-visible { outline: 2px solid #ebcb88; outline-offset: -2px; }"
     },
     {
-      "name": "Register Entry",
-      "kind": "custom",
-      "refersTo": "ledger-page",
-      "description": "A ruled row on a Ledger page: portrait, name and marginalia, actions; blank line at the foot.",
-      "html": "<div class=\"ds-page\"><h2>Your heroes</h2><div class=\"ds-entry\"><span class=\"ds-av\"></span><span><span class=\"ds-name\">Brenna Ironvow</span><span class=\"ds-sub\">Level 1 Hill Dwarf Fighter</span></span><button class=\"ds-b\">Sheet</button></div><div class=\"ds-blank\"><span>Write in a new hero</span><button class=\"ds-b\">New hero</button></div></div>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-page{padding:30px 34px;background:linear-gradient(180deg,#16120c,#120e09);border:1px solid var(--border);border-radius:4px;box-shadow:0 30px 60px -34px #000;} .ds-page h2{margin:0;padding-bottom:12px;border-bottom:1px solid rgba(212,169,79,.42);font-family:var(--font-display);font-size:1.25rem;letter-spacing:.12em;color:var(--gold-bright);} .ds-entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;padding:16px 4px;border-bottom:1px solid rgba(212,169,79,.2);} .ds-av{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 50% 22%,#7a6433,#2a2317 78%);box-shadow:0 0 0 1.5px #755d2b,0 2px 8px rgba(0,0,0,.5);} .ds-name{display:block;font-family:var(--font-display);font-weight:700;font-size:1.06rem;letter-spacing:.05em;color:var(--text);} .ds-entry:hover .ds-name{color:var(--gold-bright);} .ds-sub{display:block;font-family:var(--font-body);font-style:italic;color:var(--text-mid);} .ds-blank{display:flex;align-items:center;gap:14px;padding:18px 4px;border-bottom:1px dashed rgba(212,169,79,.42);color:var(--text-mid);font-family:var(--font-body);font-style:italic;} .ds-blank .ds-b{margin-left:auto;} .ds-b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 16px;border-radius:var(--radius-sm);font-family:var(--font-display);font-size:0.72rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s;background:transparent;border:1px solid var(--border);color:var(--text);} .ds-b:hover{border-color:var(--gold-dim);color:var(--gold-bright);}"
-    },
-    {
-      "name": "Modal (base)",
+      "name": "Quest Notice",
       "kind": "card",
-      "refersTo": "modal",
-      "description": "The incumbent dialog: gold Cinzel header, lifted text scope, action-named confirm.",
-      "html": "<div class=\"ds-modal\"><div class=\"ds-mh\">Start the quest fresh</div><div class=\"ds-mb\">Your current run stays in Your campaigns.</div><div class=\"ds-ma\"><button class=\"ds-ghost\">Cancel</button><button class=\"ds-pri\">Start fresh</button></div></div>",
-      "css": ":host{--bg-deep:#070604;--bg-panel:#14110c;--bg-elev:#1e1912;--bg-hover:#282218;--border-soft:#2b261c;--border:#3b3428;--border-strong:#5a4f38;--text:#ece5d6;--text-mid:#b3a992;--text-dim:#968b72;--gold:#d4a94f;--gold-bright:#e8c476;--gold-dim:#8a7448;--danger-bright:#d05c5c;--success:#6f9f5f;--font-display:'Cinzel',Georgia,serif;--font-body:'EB Garamond',Georgia,serif;--radius-sm:4px;--radius:6px} .ds-modal{max-width:420px;background:linear-gradient(180deg,#1a160f,var(--bg-panel));border:1px solid var(--border-strong);border-radius:var(--radius);box-shadow:0 24px 80px rgba(0,0,0,.85),0 0 0 1px rgba(212,169,79,.08);color:var(--text);font-family:var(--font-body);} .ds-mh{padding:14px 18px;border-bottom:1px solid var(--border-soft);font-family:var(--font-display);font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);} .ds-mb{padding:16px 18px;} .ds-ma{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--border-soft);} .ds-ghost,.ds-pri{font-family:var(--font-display);font-size:.78em;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:9px 18px;border-radius:var(--radius-sm);cursor:pointer;} .ds-ghost{background:transparent;border:1px solid var(--border-soft);color:var(--text-mid);} .ds-ghost:hover{color:var(--text);border-color:var(--gold-dim);} .ds-pri{background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);color:#241c0d;} .ds-pri:hover{box-shadow:0 0 18px rgba(212,169,79,.35);} .ds-ghost:focus-visible,.ds-pri:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px;}"
+      "refersTo": "quest-notice",
+      "description": "Pinned paper notice on the recessed oak quest board.",
+      "html": "<div class=\"ds-qboard\"><article class=\"ds-notice\"><span class=\"ds-tack\"></span><h3>The Lantern Road</h3><p class=\"ds-line\">Wolves at the bridge, goblins in the woods, and a village waiting in the dark.</p><p class=\"ds-meta\">Levels 1-2 · About an hour</p><button class=\"ds-link\">Run it as DM</button></article></div>",
+      "css": ".ds-qboard { padding: 24px; border-radius: 4px; background: linear-gradient(180deg, rgba(8,4,2,0.42), rgba(8,4,2,0.6)), url('/tex/oak.webp') 37px 0 / 520px auto, #1a100a; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.7), inset 0 0 0 9px #26170d, inset 0 0 0 10px rgba(255,214,160,0.09), inset 0 14px 26px rgba(0,0,0,0.55); } .ds-notice { position: relative; max-width: 300px; padding: 20px 18px 16px; color: #2a1b0f; border-radius: 2px; background: radial-gradient(ellipse 120% 100% at 50% 40%, transparent 60%, rgba(120,78,30,0.26) 100%), url('/tex/paper.webp') 0 0 / 420px auto, #e9dcbc; border: 1px solid #b89a68; box-shadow: 0 2px 3px rgba(20,10,4,0.35), 0 18px 34px -12px rgba(0,0,0,0.8); transform: rotate(1.3deg); transition: transform .4s cubic-bezier(0.16,1,0.3,1), box-shadow .4s; } .ds-notice:hover, .ds-notice:focus-within { transform: translateY(-3px) rotate(0deg); box-shadow: 0 3px 5px rgba(20,10,4,0.35), 0 26px 40px -14px rgba(0,0,0,0.85); } .ds-tack { position: absolute; top: 7px; left: 50%; width: 13px; height: 13px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #b9b4ab, #57524c 55%, #23201d); box-shadow: 0 2px 2px rgba(0,0,0,0.55); } .ds-notice h3 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: 400; font-size: 1.25rem; line-height: 1.15; color: #7a2a14; margin: 2px 0 4px; } .ds-line { font-family: 'Alegreya', Georgia, serif; margin: 0; color: #3b2816; line-height: 1.35; } .ds-meta { font-family: 'Alegreya', Georgia, serif; margin: 4px 0 8px; color: #6a5034; font-style: italic; font-size: 0.92rem; } .ds-link { font-family: 'Alegreya', Georgia, serif; font-style: italic; background: none; border: none; padding: 0; color: #7a3f0c; text-decoration: underline; text-decoration-color: rgba(122,63,12,0.45); text-underline-offset: 3px; cursor: pointer; } .ds-link:hover { color: #5a2a06; } .ds-link:focus-visible { outline: 2px solid #8c5418; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campaign Plaque",
+      "kind": "card",
+      "refersTo": "campaign-plaque",
+      "description": "A campaign as a wooden plaque along the table's near edge.",
+      "html": "<div class=\"ds-oak\"><div class=\"ds-plaque\"><span class=\"ds-pname\">The Ember Vale</span><span class=\"ds-psub\"><span class=\"ds-chalk\">DFJ7MZ</span> You run it</span><span class=\"ds-pwho\">2 days ago · Brenna, Ash</span></div></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-plaque { width: 248px; display: grid; gap: 2px; padding: 11px 13px 10px; background: linear-gradient(180deg, rgba(42,26,14,0.55), rgba(20,12,6,0.78)), url('/tex/oak.webp') 0 -128px / 600px auto, #1a100a; border: 1px solid #5a3b25; border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255,214,160,0.1), 0 8px 18px -8px rgba(0,0,0,0.85); transition: transform .3s; } .ds-plaque:hover { transform: translateY(-2px); } .ds-pname { font-family: 'IM Fell English SC', Georgia, serif; font-size: 1.06rem; color: #ebcb88; } .ds-psub { display: flex; gap: 8px; align-items: center; font-family: 'Alegreya Sans SC', sans-serif; font-weight: 500; font-size: 0.86rem; color: #cdb894; } .ds-chalk { font-family: 'Alegreya Sans SC', sans-serif; font-weight: 700; letter-spacing: 0.16em; padding: 0 6px; border-radius: 2px; color: #eef1ef; background: linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)), url('/tex/slate.webp') 0 0 / 200px auto, #262b2e; } .ds-pwho { font-family: 'Alegreya', Georgia, serif; font-style: italic; font-size: 0.88rem; color: #a68f6a; margin-top: 3px; }"
+    },
+    {
+      "name": "Friend's Code Slate",
+      "kind": "custom",
+      "refersTo": "slate",
+      "description": "Chalk slate in an oak frame for entering a friend's campaign code.",
+      "html": "<div class=\"ds-oak\"><form class=\"ds-slate\" onsubmit=\"return false\"><label for=\"ds-code\">A friend's game</label><input id=\"ds-code\" placeholder=\"code\" maxlength=\"6\"></form></div>",
+      "css": ".ds-oak { background: linear-gradient(180deg, rgba(16,9,5,0.46), rgba(12,7,4,0.6)), url('/tex/oak.webp') 0 0 / 640px auto, #1a100a; padding: 24px; } .ds-slate { width: 236px; padding: 12px 16px 14px; border-radius: 3px; background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.22)), url('/tex/slate.webp') 0 0 / 320px auto, #262b2e; border: 7px solid #3b2516; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 3px 10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,214,160,0.08), 0 12px 24px -10px rgba(0,0,0,0.9); transform: rotate(-1deg); } .ds-slate label { display: block; font-family: 'IM Fell English', Georgia, serif; font-style: italic; font-size: 1.08rem; color: rgba(236,240,238,0.86); margin-bottom: 4px; } .ds-slate input { width: 100%; background: transparent; border: none; border-bottom: 2px dashed rgba(230,236,234,0.45); padding: 4px 2px; font-family: 'Alegreya Sans SC', sans-serif; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.28em; text-transform: uppercase; color: #f4f7f6; caret-color: #f4f7f6; outline: none; } .ds-slate input::placeholder { color: rgba(230,236,234,0.45); letter-spacing: 0.1em; text-transform: none; font-family: 'IM Fell English', Georgia, serif; font-style: italic; font-weight: 400; } .ds-slate input:focus { border-bottom-color: rgba(244,247,246,0.85); }"
     }
   ],
   "narrative": {
-    "northStar": "The Guild Ledger by Candlelight",
-    "overview": "The whole app is one candlelit room: a warm near-black ramp that never goes neutral grey, gold as the light that falls on anything you can act on, ember as the flame itself, and a faint violet reserved for magic. Headings are engraved in Cinzel, everything a person reads runs in EB Garamond, and asides are set as italic marginalia rather than as small grey UI text. This base (the builder, the sheet, the board, every modal and menu) is the incumbent world; it is dense, panelled and practical, because a table mid-session needs many controls at once.\n\nThe sign-in and home are the Guild Ledger, which sits inside that room and inherits all of its tokens. Home is the adventurers' register opened to a spread: your heroes on the left page, your quests on the right, a gold-ruled gutter where the book is bound. Rows are register entries separated by hairline gold rules, not equal cards; the empty slot at the foot of each page is a dashed \"blank line\" you write into; the first quest carries one poured-wax seal. Sign-in is the register's front page with a double engraved rule. The Ledger is quieter and more generous than the table: more air, larger portraits, prose in place of labels.\n\nEvery hero has a drawn likeness (derived from race, class and name) that appears wherever the character does, from a 34px map token to the 132px editor stage. Portraits are part of the visual system, not decoration: they carry the hero's chosen colour as a ring and a lit backdrop.",
+    "northStar": "The Tavern Table",
+    "overview": "**Creative North Star: \"The Tavern Table\"**\n\nYou sit down at a table in the Gilded Flagon, and everything you use is an object on that table or on the wall. The system has no abstract surfaces. Each element is made of one of three materials: **oak** (the table, and every board that holds controls: the sign bar, dialogs, menus, the game HUD), **paper** (documents you read and write on: hero sheets, quest notices, the character sheet, the builder, the guide, the story note, handouts) or **slate** (the chalk board for a friend's code). **Brass** is what you press and **red wax** is what destroys. One candle lights the room, so light is warm, comes from the middle of the table and fades to black at the edges.\n\nThe materials are real raster textures (`/tex/oak.webp`, `paper.webp`, `slate.webp`, `brass.webp`), drawn from periodic noise by `client/scripts/make-textures.py` so every tile repeats without a seam. Gradients sit on top of the textures to darken oak enough to hold text, to burn the edges of paper and to light brass from above. Objects sit at small tilts and settle into place when they arrive. The home screen is one desktop viewport with no page scroll. On phones one part of the table fills the screen at a time.\n\nThe world rejects a dashboard of cards and a book spread. A notice is pinned paper with an iron tack, not a card with a header. A campaign is a wooden plaque, not a row in a table.",
     "keyCharacteristics": [
-      "Warm near-black ramp (#070604 up to #282218); no neutral greys, no pure black surfaces.",
-      "Gold marks what you can act on; ember appears once per surface at most (the seal, a fire-lit glow).",
-      "Cinzel for engraved headings, labels and buttons; EB Garamond for reading and italic marginalia.",
-      "Ledger surfaces are ruled pages and entries, not grids of cards.",
-      "Every character is shown by its drawn portrait, sized to the context.",
-      "Icons are one drawn SVG set (Material Symbols, shared across ojee.net); controls never use text glyphs."
+      "Three materials (oak, paper, slate) and two fittings (brass, wax). Every surface is one of them.",
+      "Warm candle light from the middle of the table, falling to black at the edges.",
+      "Real textures with gradient light on top. Never flat color fills that stand in for a material.",
+      "Small tilts and settle-in motion on paper objects. Boards and controls stay square.",
+      "Typography from early modern print: IM Fell small caps for names and titles, Alegreya for reading, Alegreya Sans SC for anything you press."
     ],
     "rules": [
       {
-        "name": "The Candle Rule",
-        "body": "Gold is the light that falls on what you can act on. A gold surface is always a control or the single most important heading on its page.",
+        "name": "The Brass Presses, Wax Destroys Rule",
+        "body": "A control that commits an action is brass. A control that deletes, retires or deals damage is red wax. No other accent marks an action, and wax never marks anything that is not destructive.",
         "section": "colors"
       },
       {
-        "name": "The One Flame Rule",
-        "body": "Ember is the flame, not a colour for UI. On the Ledger it appears exactly once, as the wax seal on the first quest, plus the faint ember glow in the page background.",
+        "name": "The Scope Flip Rule",
+        "body": "Paper is a token scope, not a separate palette. A paper surface re-points the same custom properties (`--text` becomes ink, `--gold` becomes sepia ink, `--bg-panel` becomes rag). Components read the tokens and take the right material from their scope. Do not hard-code oak colors into a component that can sit on paper.",
         "section": "colors"
       },
       {
-        "name": "The Lifted Scope Rule",
-        "body": "Anything that opens over the page (modal, panel, builder, context menu) uses the lifted dim and faint values. Never put page-level #57503e text on a lifted surface.",
+        "name": "The One Candle Rule",
+        "body": "Light is warm and comes from the middle of the table. The room's radial vignette, the breathing candlelight on the home table and the lit top edge of every board (`inset 0 1px 0 rgba(255, 214, 160, 0.07)`) all assume one warm source above. No cool glows and no colored light from other directions.",
         "section": "colors"
       },
       {
-        "name": "The Two Hands Rule",
-        "body": "Cinzel names things; Garamond explains them. A hint inside a heading or a field label drops to Garamond italic with no capitals, because Cinzel has no lowercase and cannot say a sentence.",
+        "name": "The Small Caps Are Cut, Not Forced Rule",
+        "body": "Small capitals come from the SC fonts. Do not use `text-transform: uppercase` with wide tracking to fake them. The only uppercase text in the system is a typed campaign code on the slate.",
         "section": "typography"
       },
       {
-        "name": "The Marginalia Rule",
-        "body": "Secondary information is set as italic Garamond prose in Faded ink, not as small uppercase grey UI text.",
+        "name": "The Italic Is a Pencil Note Rule",
+        "body": "Alegreya italic marks secondary information: metadata, hints, empty states, the footer, \"click to roll\". Do not use it for emphasis inside body copy.",
         "section": "typography"
       },
       {
-        "name": "The Soft Table Rule",
-        "body": "Shadows are long, blurred and dark, like paper resting under a candle. No hard offset shadows.",
+        "name": "The Cast, Not Offset Rule",
+        "body": "Shadows are soft, blurred and fall downward. No hard-edged offset shadows and no flat outline \"lift\". This world is lit by a candle, not printed.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Lit Edge Rule",
+        "body": "Every oak board and wooden button carries a 1px warm top highlight (`inset 0 1px 0 rgba(255,214,160,0.07 to 0.14)`). That edge is what makes a dark panel read as a lit board instead of a hole.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** build every new surface from the warm ramp (#070604 to #282218) and the gold family; take ember and violet only for flame and magic.",
-      "**Do** put names, headings, labels and buttons in tracked Cinzel, and every sentence, hint and count in EB Garamond (italic for asides).",
-      "**Do** show a character by its drawn portrait at a size suited to the context (34, 54, 72, 132px), ringed in the hero's colour.",
-      "**Do** present lists on the Ledger as ruled register entries with a dashed blank line at the foot, not as a grid of equal cards.",
-      "**Do** keep a disabled primary as a readable gold outline (8% wash, Tarnished Gold border).",
-      "**Do** name the action on a confirmation button (\"Delete\", \"Start fresh\").",
-      "**Do** draw every control icon as an SVG from the shared icon set; draw close and minus too (XIcon, MinusIcon).",
-      "**Do** grow Ledger controls to 44px on coarse pointers and balance heading wraps."
+      "**Do** make every new surface one of the three materials. Controls and chrome go on an oak board (`--board`). Anything read or written goes in a paper scope (`.paper`), which flips the tokens for you.",
+      "**Do** use brass (`.primary-btn`) for the one action that commits, and red wax (`.danger-btn` or the round seal) for anything that deletes, retires or deals damage.",
+      "**Do** set names and titles in IM Fell English SC, reading text in Alegreya, metadata in Alegreya italic, and anything pressable in Alegreya Sans SC 700.",
+      "**Do** give paper objects a small tilt through `--tilt` and let hover straighten and lift them. Keep boards and controls square.",
+      "**Do** cast soft downward shadows from the Shadow Vocabulary, and give every oak board its warm 1px lit top edge.",
+      "**Do** keep the desktop home table to one viewport with no page scroll, and give phones one zone at a time with pegs at the bottom.",
+      "**Do** show every hero by their drawn portrait, everywhere a hero appears.",
+      "**Do** take icons from the shared ojee.net icon set as inline SVG components (`Icons.jsx`).",
+      "**Do** keep the licenses and credits screen (sources, OGL text, Section 15) reachable from the footer.",
+      "**Do** stop all ambient motion under `prefers-reduced-motion`."
     ],
     "donts": [
-      "**Don't** use neutral greys or pure black for surfaces or text; everything leans warm.",
-      "**Don't** use ember as a button or a general accent; it is the one flame on a surface.",
-      "**Don't** set sentences or hints in Cinzel, or add small uppercase kickers above headings.",
-      "**Don't** use text glyphs (×, —, ✓) as controls or icons.",
-      "**Don't** use hard offset shadows; shadows are long, soft and dark.",
-      "**Don't** put page-level dim or faint text (#857b64, #57503e) on modals, panels, the builder or menus.",
-      "**Don't** add a second wax seal or turn the seal into a button; it marks the first quest only."
+      "**Don't** use religious symbols anywhere: no crosses, holy symbols, mitres or halos in art, icons, seals or tiles.",
+      "**Don't** add rules content that is not open-licensed (SRD 5.1/5.2 and OGL 1.0a via Open5e only). No non-SRD Wizards of the Coast material, trademarks or logos.",
+      "**Don't** use text glyphs or emoji as icons. A glyph is fine as typography, such as a × between map dimensions.",
+      "**Don't** fake small caps with `text-transform: uppercase` and wide tracking. Use the SC faces.",
+      "**Don't** build a dashboard of cards or a book spread. A notice is pinned paper, a campaign is a plaque, a code goes on slate.",
+      "**Don't** use flat color fills in place of a material, or put translucent blurred glass panels over the map. HUD boards are oak.",
+      "**Don't** use hard-edged offset shadows or cool, colored glows.",
+      "**Don't** use wax red for anything that is not destructive, or add a new accent hue for actions.",
+      "**Don't** put slate anywhere except the friend's-code board and chalked campaign codes."
     ]
   }
 }

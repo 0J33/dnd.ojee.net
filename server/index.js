@@ -35,6 +35,19 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/srd', srdRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, app: 'dnd', ts: Date.now() }));
 
+// SERVE_CLIENT=1 serves client/dist from this process too, so pages, API and
+// socket share one origin, which is what a demo tunnel needs. Prod keeps
+// nginx serving the client.
+if (process.env.SERVE_CLIENT) {
+  const path = require('path');
+  const dist = path.join(__dirname, '..', 'client', 'dist');
+  app.use(express.static(dist, { index: false, maxAge: '1h' }));
+  app.get(/^\/(?!api\/|socket\.io\/).*/, (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.sendFile(path.join(dist, 'index.html'));
+  });
+}
+
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dnd')
   .then(() => console.log('MongoDB connected'))

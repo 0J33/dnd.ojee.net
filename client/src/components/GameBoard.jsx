@@ -7,7 +7,15 @@ import { PREGENS } from '../data/pregens';
 import { blankCells } from '../data/scenes';
 import { charAt } from '../render/sceneRender';
 import MapCanvas from './MapCanvas';
+import './Map3D.css';
+import '../styles/hud.css';
+const Map3D = React.lazy(() => import('./Map3D'));
+const webglOk = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
 import { PartyPanel, InitiativeBar, ChatPanel, DiceTray, RollToasts } from './BoardPanels';
+import { PartyStrip, HeroBar, OverflowMenu } from './TableHud';
+import { OBJECT_KINDS, ObjectEditor, DmPanel, TableMessages } from './DmTools';
+import SoundSettings from './SoundSettings';
+import { useGameAudio } from '../audio/useGameAudio';
 import { MonsterBrowser, StatBlock } from './MonsterBrowser';
 import ReferencePanel from './ReferencePanel';
 import CharacterSheet from './CharacterSheet';
@@ -21,7 +29,7 @@ import {
   DragonLogo, BookIcon, MapIcon, GearIcon, RulerIcon, PenIcon, FogIcon, TargetIcon, ScrollIcon,
   EyeIcon, SwordIcon, SkullIcon, LightningIcon, BurstIcon, XIcon, PersonIcon, FlagIcon, CopyIcon,
   SparkleIcon, TrophyIcon, ChevronLeft, ChevronRight, ExpandIcon, BrushIcon, EraserIcon, PlusIcon,
-  MenuIcon, UsersIcon, ChatIcon, D20Icon, PencilIcon, CheckIcon,
+  MenuIcon, UsersIcon, ChatIcon, D20Icon, PencilIcon, CheckIcon, LockIcon, CrownIcon, VolumeIcon,
 } from './Icons';
 
 const DRAW_COLORS = ['#e8c476', '#e07040', '#7fb069', '#5f87a8', '#c94f6d', '#ffffff'];
@@ -32,8 +40,9 @@ const MOBILE_MAX = 820;
 const TOOLS = [
   { key: 'select', name: 'Select', hint: 'Move tokens. Drag empty space to pan, double-click to ping.', Icon: TargetIcon, shortcut: 'V' },
   { key: 'measure', name: 'Measure', hint: 'Drag to measure - one square is 5 ft.', Icon: RulerIcon, shortcut: 'M' },
-  { key: 'draw', name: 'Draw', hint: 'Sketch on the map for everyone.', Icon: PenIcon, shortcut: 'D' },
+  { key: 'draw', name: 'Draw', hint: 'Sketch on the map for everyone.', Icon: PenIcon, shortcut: 'P' }, // not D: WASD moves the 3D camera
   { key: 'fog', name: 'Fog', hint: 'Reveal or re-hide parts of the map.', Icon: FogIcon, shortcut: 'F', dm: true },
+  { key: 'secrets', name: 'Secrets', hint: 'Traps, hidden passages, chests, levers, notes, exits and events. Click to place, click one to edit.', Icon: LockIcon, shortcut: 'T', dm: true },
   { key: 'build', name: 'Build', hint: 'Paint walls, floors, doors and furniture straight onto the map.', Icon: BrushIcon, shortcut: 'B', dm: true },
 ];
 
@@ -45,6 +54,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const activeScene = state.scenes.find((s) => s.id === state.activeSceneId) || state.scenes[0];
 
   const [tool, setTool] = useState('select');
+  const [view3d, setView3d] = useLocalStorage('dnd.view3d', typeof window !== 'undefined' && window.innerWidth > MOBILE_MAX && webglOk);
   const [fogMode, setFogMode] = useState('reveal');
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
   const [build, setBuild] = useLocalStorage('dnd_build', { ch: '#', shape: 'brush', size: 1 });
@@ -52,8 +62,16 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const [pings, setPings] = useState([]);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX);
   const [mobilePane, setMobilePane] = useState('map'); // map | party | chat | more
-  const [chatOpen, setChatOpen] = useState(() => typeof window === 'undefined' || window.innerWidth > MOBILE_MAX);
-  const [sceneStripOpen, setSceneStripOpen] = useLocalStorage('dnd_sceneStrip', true);
+  const [chatOpen, setChatOpen] = useLocalStorage('dnd_chatOpen', false);
+  const [sceneStripOpen, setSceneStripOpen] = useLocalStorage('dnd_sceneStrip2', false);
+  const [creaturesOpen, setCreaturesOpen] = useState(false);
+  const [dmTools, setDmTools] = useState(false); // guided games: DM tools on request
+  const [objKind, setObjKind] = useState('trap');
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [pickingDoors, setPickingDoors] = useState(false);
+  const [patrolDraft, setPatrolDraft] = useState(null); // { tokenId, label, pts }
+  const [showDmPanel, setShowDmPanel] = useState(false);
+  const [showSound, setShowSound] = useState(false);
   const [sheetChar, setSheetChar] = useState(null);
   const [showMonsters, setShowMonsters] = useState(false);
   const [showReference, setShowReference] = useState(false);
@@ -67,6 +85,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const [ctx, setCtx] = useState(null); // {x, y, items}
   const [posOverlay, setPosOverlay] = useState({});
   const [strokeOverlay, setStrokeOverlay] = useState({});
+  const [strokeGone, setStrokeGone] = useState({}); // sceneId -> ids erased / cleared, until the room state agrees
   const [cellOverlay, setCellOverlay] = useState({}); // sceneId -> {'x,y': ch}
   const [placeToken, setPlaceToken] = useState(null); // { kind } while placing from a menu
   const pendingSpawn = useRef(null);
@@ -127,10 +146,16 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
     const onStroke = ({ sceneId, stroke }) => {
       setStrokeOverlay((prev) => ({ ...prev, [sceneId]: [...(prev[sceneId] || []), stroke] }));
     };
+    const forget = (sceneId, ids) => setStrokeGone((prev) => ({ ...prev, [sceneId]: new Set([...(prev[sceneId] || []), ...ids]) }));
     const onErased = ({ sceneId, ids }) => {
       setStrokeOverlay((prev) => ({ ...prev, [sceneId]: (prev[sceneId] || []).filter((s) => !ids.includes(s.id)) }));
+      forget(sceneId, ids);
     };
-    const onCleared = ({ sceneId }) => setStrokeOverlay((prev) => ({ ...prev, [sceneId]: [] }));
+    const onCleared = ({ sceneId, ids }) => {
+      setStrokeOverlay((prev) => ({ ...prev, [sceneId]: (prev[sceneId] || []).filter((s) => ids && !ids.includes(s.id)) }));
+      if (ids) forget(sceneId, ids);
+      else setStrokeGone((prev) => ({ ...prev, [sceneId]: 'all' }));
+    };
     const onPainted = ({ sceneId, cells }) => {
       setCellOverlay((prev) => {
         const next = { ...(prev[sceneId] || {}) };
@@ -180,6 +205,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       for (const [id, p] of Object.entries(prev)) if (now - p.ts < 1200) next[id] = p;
       return next;
     });
+    setStrokeGone({}); // the room state is the truth again
     setStrokeOverlay((prev) => {
       const next = {};
       for (const [sceneId, strokes] of Object.entries(prev)) {
@@ -211,7 +237,13 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const renderScene = useMemo(() => {
     if (!activeScene) return null;
     const tokens = activeScene.tokens.map((t) => (posOverlay[t.id] ? { ...t, x: posOverlay[t.id].x, y: posOverlay[t.id].y } : t));
-    const strokes = [...(activeScene.strokes || []), ...(strokeOverlay[activeScene.id] || [])];
+    const gone = strokeGone[activeScene.id];
+    const seenIds = new Set();
+    const strokes = [...(activeScene.strokes || []), ...(strokeOverlay[activeScene.id] || [])].filter((st) => {
+      if (seenIds.has(st.id) || gone === 'all' || (gone && gone.has(st.id))) return false;
+      seenIds.add(st.id);
+      return true;
+    });
     let cells = activeScene.cells;
     const pending = cellOverlay[activeScene.id];
     if (pending && Object.keys(pending).length && cells) {
@@ -223,7 +255,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       cells = rows.map((r) => r.join(''));
     }
     return { ...activeScene, tokens, strokes, cells };
-  }, [activeScene, posOverlay, strokeOverlay, cellOverlay]);
+  }, [activeScene, posOverlay, strokeOverlay, strokeGone, cellOverlay]);
 
   const charSheets = useMemo(() => {
     const out = {};
@@ -234,9 +266,38 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   }, [state.charSheets]);
 
   const mySheet = myCharacterId ? charSheets[myCharacterId] : null;
+
+  // Tell the server my hero's AC / initiative / saves (it has no rules
+  // engine), so attacks against me and auto-rolled initiative are right.
+  const myDerivedKey = mySheet ? JSON.stringify([mySheet.derived?.ac, mySheet.derived?.initiative, mySheet.derived?.saves, mySheet.derived?.passivePerception]) : '';
+  useEffect(() => {
+    if (!mySheet?.derived) return;
+    const d = mySheet.derived;
+    socket.emit('sheetDerived', { characterId: myCharacterId, ac: d.ac, initiative: d.initiative, saves: d.saves, perception: d.skills?.perception?.bonus, passivePerception: d.passivePerception });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myDerivedKey, myCharacterId]);
   // A DM with no hero has no token: without the guard, undefined === undefined
   // matched the first monster and offered the DM its initiative roll.
   const myToken = renderScene && myCharacterId ? renderScene.tokens.find((t) => t.characterId === myCharacterId) : null;
+  const turnTokenId = state.combat?.active && state.combat.round > 0 ? state.combat.order[state.combat.turnIndex]?.tokenId : null;
+  const turnToken = turnTokenId ? (renderScene?.tokens || []).find((t) => t.id === turnTokenId) : null;
+  const myTurn = !!(turnToken && myToken && turnToken.id === myToken.id);
+  const monsterActing = !!(turnToken && turnToken.kind === 'monster' && !turnToken.dead && (state.mode === 'guided' || state.autoMonsters));
+  const creatureCount = (renderScene?.tokens || []).filter((t) => t.kind === 'monster' && !t.dead).length;
+
+  // Music, ambience and the sounds of the game.
+  useGameAudio({ state, scene: renderScene, log, charSheets });
+
+  // Enter ends your turn (when it is yours), like the mtg table.
+  useEffect(() => {
+    if (!myTurn) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.repeat || /input|textarea|select/i.test(document.activeElement?.tagName || '')) return;
+      socket.emit('nextTurn');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [myTurn]);
 
   // ---------- actions ----------
   const doRoll = useCallback(
@@ -264,9 +325,15 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const updateSheet = useCallback((characterId) => (sheet) => socket.emit('updateSheet', { characterId, sheet: { ...sheet, derived: deriveSheet(sheet) } }), []);
   const announce = useCallback((text) => socket.emit('sendChatMessage', { text }), []);
 
+  // Undo for building: each paint remembers what it covered.
+  const undoStack = useRef([]);
   const paintCells = useCallback(
-    (cells) => {
+    (cells, { undoing } = {}) => {
       if (!activeScene) return;
+      if (!undoing) {
+        const before = cells.map((c) => ({ x: c.x, y: c.y, ch: charAt(renderScene || activeScene, c.x, c.y) })).filter((b, i) => b.ch !== cells[i].ch);
+        if (before.length) { undoStack.current.push({ sceneId: activeScene.id, cells: before }); if (undoStack.current.length > 60) undoStack.current.shift(); }
+      }
       setCellOverlay((prev) => {
         const next = { ...(prev[activeScene.id] || {}) };
         for (const c of cells) next[`${c.x},${c.y}`] = c.ch;
@@ -274,8 +341,21 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       });
       socket.emit('paintScene', { sceneId: activeScene.id, cells });
     },
-    [activeScene]
+    [activeScene, renderScene]
   );
+  useEffect(() => {
+    if (!isDM) return undefined;
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || /input|textarea|select/i.test(document.activeElement?.tagName || '')) return;
+      const last = undoStack.current[undoStack.current.length - 1];
+      if (!last || last.sceneId !== activeScene?.id) return;
+      e.preventDefault();
+      undoStack.current.pop();
+      paintCells(last.cells, { undoing: true });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isDM, activeScene?.id, paintCells]);
 
   const selectCharacter = async (charLike) => {
     let id = charLike.id;
@@ -323,6 +403,18 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       });
     }
     if (isDM) {
+      if (token.kind !== 'pc') {
+        items.push({
+          label: `Speak as ${token.label}...`,
+          icon: <ChatIcon size={15} />,
+          onClick: async () => {
+            const v = await dialog.prompt(`What does ${token.label} say?`, '');
+            if (v) socket.emit('npcSay', { tokenId: token.id, text: v });
+          },
+        });
+        items.push({ label: token.patrol?.length ? 'Change patrol route' : 'Give it a patrol route', icon: <FlagIcon size={15} />, onClick: () => setPatrolDraft({ tokenId: token.id, label: token.label, pts: [{ x: token.x, y: token.y }] }) });
+        if (token.patrol?.length) items.push({ label: 'Stop patrolling', icon: <XIcon size={15} />, onClick: () => socket.emit('setPatrol', { tokenId: token.id, route: [] }) });
+      }
       if (token.kind === 'monster') {
         items.push({ label: 'Run its turn (auto)', icon: <SwordIcon size={15} />, onClick: () => socket.emit('autoMonsterTurn', { tokenId: token.id }) });
         items.push({
@@ -421,7 +513,11 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   if (!renderScene) return null;
 
   const party = state.members.filter((m) => m.characterId).map((m) => charSheets[m.characterId]).filter(Boolean);
-  const visibleTools = TOOLS.filter((t) => !t.dm || isDM);
+  // In a guided game everyone counts as DM, but the app is running the table:
+  // keep the DM's tools (and buttons) out of the way, one menu away.
+  const guided = state.mode === 'guided';
+  const showDm = isDM && (!guided || dmTools);
+  const visibleTools = TOOLS.filter((t) => !t.dm || showDm);
   const openPrep = (tab) => {
     setPrepTab(tab);
     setShowPrep(true);
@@ -446,56 +542,66 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
         <div className="grow" />
 
         <div className="topbar-actions">
-          {isDM && !state.combat.active && (
+          {showDm && !state.combat.active && (
             <button className="small-btn primary-btn" onClick={() => socket.emit('startCombat')} title="Start combat - everyone rolls initiative">
               <SwordIcon size={13} /> <span className="hide-sm">Combat</span>
             </button>
           )}
-          {isDM && (
+          {showDm && (
+            <button className={`small-btn ${showDmPanel ? 'primary-btn' : ''}`} onClick={() => setShowDmPanel((v) => !v)} title="Talk to the table (narrate, whisper, handouts, ask for rolls) and set the mood">
+              <CrownIcon size={13} /> <span className="hide-sm">Table</span>
+            </button>
+          )}
+          {showDm && (
             <button className="small-btn" onClick={() => setShowMonsters(true)} title="Monster library">
               <SkullIcon size={13} /> <span className="hide-sm">Monsters</span>
             </button>
           )}
-          {isDM && (
+          {showDm && (
             <button className="small-btn" onClick={() => openPrep('scenes')} title="Scenes and story prep">
               <MapIcon size={13} /> <span className="hide-sm">Prep</span>
             </button>
           )}
-          {mySheet && (
-            <button className="small-btn" onClick={() => setSheetChar(myCharacterId)} title="My character sheet">
-              <ScrollIcon size={13} /> <span className="hide-sm">Sheet</span>
-            </button>
-          )}
-          <button className="small-btn ghost-btn hide-sm" onClick={() => setShowReference(true)} title="Rules quick reference">
-            <BookIcon size={13} /> Rules
-          </button>
-          <button className="small-btn ghost-btn hide-sm" onClick={() => setShowGuide(true)} title="Player's guide" aria-label="Player's guide">
-            <BookIcon size={13} />
-          </button>
-          {(isDM || state.hostId === user.id) && (
-            <button className="small-btn ghost-btn hide-sm" onClick={() => setShowSettings(true)} title="Campaign settings" aria-label="Campaign settings">
-              <GearIcon size={13} />
-            </button>
-          )}
+          {!isMobile && <OverflowMenu
+            items={[
+              { label: 'Rules quick reference', icon: <BookIcon size={14} />, onClick: () => setShowReference(true) },
+              { label: "Player's guide", icon: <BookIcon size={14} />, onClick: () => setShowGuide(true) },
+              webglOk && !isMobile && { label: view3d ? 'Switch to the flat 2D map' : 'Switch to the 3D world', icon: <MapIcon size={14} />, onClick: () => setView3d(!view3d) },
+              { label: 'Sound', icon: <VolumeIcon size={14} />, hint: 'music, effects', onClick: () => setShowSound(true) },
+              { label: 'Copy invite link', icon: <CopyIcon size={14} />, hint: code, onClick: copyInvite },
+              (isDM || state.hostId === user.id) && { label: 'Campaign settings', icon: <GearIcon size={14} />, onClick: () => setShowSettings(true) },
+              guided && isDM && { label: dmTools ? 'Hide the DM tools' : 'Show the DM tools', icon: <SkullIcon size={14} />, hint: 'monsters, maps, fog', onClick: () => setDmTools((v) => !v) },
+            ]}
+          />}
           <span className={`conn-dot ${connected ? 'on' : ''}`} title={connected ? 'Connected' : 'Reconnecting...'} />
         </div>
       </header>
 
       {/* ---------- main area ---------- */}
       <div className="board-main">
-        <PartyPanel
+        {(isMobile || (showDm && creaturesOpen)) && <PartyPanel
           state={{ ...state, charSheets }}
-          isDM={isDM}
+          isDM={showDm}
           userId={user.id}
           onOpenSheet={setSheetChar}
           onMonsterHp={(t, hp) => socket.emit('updateToken', { tokenId: t.id, patch: { hp } })}
           onMonsterAct={(t) => socket.emit('autoMonsterTurn', { tokenId: t.id })}
           onTokenSelect={(t) => setStatblockToken(t)}
           onAddMonster={isDM ? () => setShowMonsters(true) : null}
-        />
+        />}
 
         <div className="map-area">
-          {isDM && state.scenes.length > 0 && (
+          {(!isMobile || mobilePane === 'map') && (
+            <div className="hud-topleft">
+              <PartyStrip state={state} charSheets={charSheets} userId={user.id} onOpenSheet={setSheetChar} tokens={activeScene?.tokens || []} turnTokenId={turnTokenId} />
+              {showDm && !isMobile && (
+                <button className={`hud-pill ${creaturesOpen ? 'on' : ''}`} onClick={() => setCreaturesOpen((o) => !o)} title="Creatures on this scene: HP, stat blocks, run a turn">
+                  Creatures {creatureCount > 0 && <b>{creatureCount}</b>}
+                </button>
+              )}
+            </div>
+          )}
+          {showDm && state.scenes.length > 0 && (
             <SceneStrip
               scenes={state.scenes}
               activeId={state.activeSceneId}
@@ -517,9 +623,13 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             onBegin={() => socket.emit('beginCombatOrder')}
             onNext={() => socket.emit('nextTurn')}
             onEnd={() => socket.emit('endCombat')}
+            onAutoMonsters={(on) => socket.emit('setAutoMonsters', { on })}
           />
 
           <ToolDock
+            objKind={objKind}
+            onObjKind={setObjKind}
+            canClearAll={isDM}
             tools={visibleTools}
             tool={tool}
             onTool={setTool}
@@ -533,32 +643,79 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             onClearDrawings={() => socket.emit('clearDrawings', { sceneId: activeScene.id })}
           />
 
-          <MapCanvas
-            scene={renderScene}
-            isDM={isDM}
-            tool={tool}
-            fogMode={fogMode}
-            drawColor={drawColor}
-            build={build}
-            charSheets={charSheets}
-            combat={state.combat}
-            userId={user.id}
-            canMoveToken={canMoveToken}
-            pings={pings}
-            onMoveToken={(tokenId, x, y) => socket.emit('moveToken', { tokenId, x, y })}
-            onTokenContext={tokenContext}
-            onCellContext={cellContext}
-            onTokenClick={(t) => {
-              if (t.kind === 'pc' && t.characterId) setSheetChar(t.characterId);
-              else if (t.kind === 'monster' && (isDM || !t.hidden) && t.monsterIndex) setStatblockToken(t);
-            }}
-            onRevealCells={(cells, mode2) => socket.emit('revealFog', { sceneId: activeScene.id, cells, mode: mode2 })}
-            onPing={(x, y) => socket.emit('ping', { x, y })}
-            onDrawStroke={(stroke) => socket.emit('drawStroke', { sceneId: activeScene.id, stroke })}
-            onEraseStrokes={(ids) => socket.emit('eraseStrokes', { sceneId: activeScene.id, ids })}
-            onPaint={paintCells}
-            bottomInset={isMobile && tool === 'build' ? Math.round(window.innerHeight * 0.46) : 0}
-          />
+          {view3d && webglOk ? (
+            <React.Suspense fallback={<div className="w3-loading">Building the world…</div>}>
+              <Map3D
+                scene={renderScene}
+                isDM={isDM}
+                tool={tool}
+                fogMode={fogMode}
+                drawColor={drawColor}
+                build={build}
+                charSheets={charSheets}
+                combat={state.combat}
+                userId={user.id}
+                canMoveToken={canMoveToken}
+                pings={pings}
+                onMoveToken={(tokenId, x, y) => socket.emit('moveToken', { tokenId, x, y })}
+                onTokenContext={tokenContext}
+                onCellContext={cellContext}
+                onTokenClick={(t) => {
+                  if (t.kind === 'pc' && t.characterId) setSheetChar(t.characterId);
+                  else if (t.kind === 'monster' && (isDM || !t.hidden) && t.monsterIndex) setStatblockToken(t);
+                }}
+                onRevealCells={(cells, mode2) => socket.emit('revealFog', { sceneId: activeScene.id, cells, mode: mode2 })}
+                onPing={(x, y) => socket.emit('ping', { x, y })}
+                onDrawStroke={(stroke) => socket.emit('drawStroke', { sceneId: activeScene.id, stroke })}
+                onEraseStrokes={(ids) => socket.emit('eraseStrokes', { sceneId: activeScene.id, ids })}
+                onPaint={paintCells}
+                bottomInset={isMobile && tool === 'build' ? Math.round(window.innerHeight * 0.46) : 0}
+                myTokenId={myToken?.id || null}
+                members={state.members}
+                objKind={objKind}
+                onBuildChange={setBuild}
+                selectedObjectId={selectedObjectId}
+                onSelectObject={setSelectedObjectId}
+                pickingDoors={pickingDoors}
+                onPickDoor={(c) => {
+                  const o = (activeScene.objects || []).find((x) => x.id === selectedObjectId);
+                  if (!o) return;
+                  const has = (o.targets || []).some((t) => t.x === c.x && t.y === c.y);
+                  const targets = has ? o.targets.filter((t) => t.x !== c.x || t.y !== c.y) : [...(o.targets || []), { x: c.x, y: c.y }];
+                  socket.emit('updateObject', { sceneId: activeScene.id, id: o.id, patch: { targets } });
+                }}
+                patrolDraft={patrolDraft}
+                onPatrolPoint={(c) => setPatrolDraft((d) => d && { ...d, pts: [...d.pts, { x: c.x, y: c.y }] })}
+              />
+            </React.Suspense>
+          ) : (
+            <MapCanvas
+              scene={renderScene}
+              isDM={isDM}
+              tool={tool}
+              fogMode={fogMode}
+              drawColor={drawColor}
+              build={build}
+              charSheets={charSheets}
+              combat={state.combat}
+              userId={user.id}
+              canMoveToken={canMoveToken}
+              pings={pings}
+              onMoveToken={(tokenId, x, y) => socket.emit('moveToken', { tokenId, x, y })}
+              onTokenContext={tokenContext}
+              onCellContext={cellContext}
+              onTokenClick={(t) => {
+                if (t.kind === 'pc' && t.characterId) setSheetChar(t.characterId);
+                else if (t.kind === 'monster' && (isDM || !t.hidden) && t.monsterIndex) setStatblockToken(t);
+              }}
+              onRevealCells={(cells, mode2) => socket.emit('revealFog', { sceneId: activeScene.id, cells, mode: mode2 })}
+              onPing={(x, y) => socket.emit('ping', { x, y })}
+              onDrawStroke={(stroke) => socket.emit('drawStroke', { sceneId: activeScene.id, stroke })}
+              onEraseStrokes={(ids) => socket.emit('eraseStrokes', { sceneId: activeScene.id, ids })}
+              onPaint={paintCells}
+              bottomInset={isMobile && tool === 'build' ? Math.round(window.innerHeight * 0.46) : 0}
+            />
+          )}
 
           <SceneCaption
             scene={activeScene}
@@ -576,6 +733,47 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             }}
           />
           <RollToasts toasts={toasts} />
+          {showSound && <SoundSettings onClose={() => setShowSound(false)} />}
+          <TableMessages mySheet={mySheet} onRoll={(formula, label) => doRoll({ formula, label })} />
+          {showDm && showDmPanel && (
+            <DmPanel
+              state={{ ...state, charSheets }}
+              scene={activeScene}
+              onClose={() => setShowDmPanel(false)}
+              onLookHere={() => { const g = window.__world?.rig?.goal; if (g) socket.emit('dmLookHere', { x: g.tx - 0.5, y: g.tz - 0.5, dist: g.dist }); }}
+            />
+          )}
+          {showDm && tool === 'secrets' && selectedObjectId && (activeScene.objects || []).some((o) => o.id === selectedObjectId) && (
+            <ObjectEditor
+              object={(activeScene.objects || []).find((o) => o.id === selectedObjectId)}
+              scenes={state.scenes}
+              sceneId={activeScene.id}
+              pickingDoors={pickingDoors}
+              onPickDoors={() => setPickingDoors((v) => !v)}
+              onClose={() => { setSelectedObjectId(null); setPickingDoors(false); }}
+            />
+          )}
+          {patrolDraft && (
+            <div className="dm-patrol-bar panel">
+              <span>Patrol for <b>{patrolDraft.label}</b>: click squares in order ({patrolDraft.pts.length - 1} so far). It walks the loop until it spots a hero.</span>
+              <button className="primary-btn small-btn" disabled={patrolDraft.pts.length < 2} onClick={() => { socket.emit('setPatrol', { tokenId: patrolDraft.tokenId, route: patrolDraft.pts.slice(1) }); setPatrolDraft(null); }}>Done</button>
+              <button className="small-btn ghost-btn" onClick={() => setPatrolDraft(null)}>Cancel</button>
+            </div>
+          )}
+          {showDm && tool === 'secrets' && !(view3d && webglOk) && <div className="dm-note panel">Secrets are placed in the 3D world: switch to 3D (⋯ menu) to add or edit them.</div>}
+          {!isMobile && (
+            <HeroBar
+              sheet={mySheet}
+              color={me?.color}
+              combat={state.combat}
+              myTurn={!!myTurn}
+              monsterActing={monsterActing}
+              isGuided={state.mode === 'guided'}
+              onSheet={() => setSheetChar(myCharacterId)}
+              onEndTurn={() => socket.emit('nextTurn')}
+              onSearch={() => socket.emit('searchArea', {}, (r) => r?.error && dialog.alert(r.error))}
+            />
+          )}
         </div>
 
         {tool === 'build' && isDM && (
@@ -586,8 +784,8 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             onBuildChange={setBuild}
             onClose={() => setTool('select')}
             onSceneUpdate={(patch) => socket.emit('updateScene', { sceneId: activeScene.id, patch })}
-            onReshape={({ w, h, floor }) => {
-              const cells = resizeCells(activeScene, w, h, floor);
+            onReshape={({ w, h, floor, cells: given }) => {
+              const cells = given || resizeCells(activeScene, w, h, floor);
               socket.emit('reshapeScene', { sceneId: activeScene.id, w, h, floor, cells });
             }}
           />
@@ -631,6 +829,13 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       {isMobile && mobilePane === 'more' && (
         <MoreSheet
           isDM={isDM}
+          showDm={showDm}
+          guided={guided}
+          view3d={view3d && webglOk}
+          onToggle3d={webglOk ? () => { setView3d(!view3d); setMobilePane('map'); } : null}
+          onToggleDm={() => { setDmTools((v) => !v); setMobilePane('map'); }}
+          onInvite={() => { copyInvite(); setMobilePane('map'); }}
+          onSound={() => { setShowSound(true); setMobilePane('map'); }}
           isHost={state.hostId === user.id}
           hasSheet={!!mySheet}
           onClose={() => setMobilePane('map')}
@@ -821,9 +1026,8 @@ function SceneCaption({ scene, isDM, story, onOpenStory, onEditScene }) {
 /* ---------------- tool dock ---------------- */
 
 function ToolDock({
-  tools, tool, onTool, drawColor, onDrawColor, fogMode, onFogMode, scene, onFogToggle, onFogCoverAll, onClearDrawings,
+  objKind, onObjKind, canClearAll, tools, tool, onTool, drawColor, onDrawColor, fogMode, onFogMode, scene, onFogToggle, onFogCoverAll, onClearDrawings,
 }) {
-  const active = tools.find((t) => t.key === tool);
   return (
     <div className="tool-dock">
       <div className="tool-dock-main" role="toolbar" aria-label="Map tools">
@@ -865,7 +1069,15 @@ function ToolDock({
           <button className="small-btn ghost-btn" onClick={() => onTool('draw')}>
             <PenIcon size={13} /> Back to drawing
           </button>
-          <button className="small-btn danger-btn" onClick={onClearDrawings}>Clear all</button>
+          <button className="small-btn danger-btn" onClick={onClearDrawings}>{canClearAll ? 'Clear all' : 'Clear mine'}</button>
+        </div>
+      )}
+
+      {tool === 'secrets' && (
+        <div className="tool-options dm-kinds" role="group" aria-label="What to place">
+          {OBJECT_KINDS.map((k) => (
+            <button key={k.key} className={`small-btn ${objKind === k.key ? 'primary-btn' : 'ghost-btn'}`} title={k.hint} onClick={() => onObjKind(k.key)}>{k.name}</button>
+          ))}
         </div>
       )}
 
@@ -884,7 +1096,6 @@ function ToolDock({
         </div>
       )}
 
-      {active && <p className="tool-hint">{active.hint}</p>}
     </div>
   );
 }
@@ -999,15 +1210,19 @@ function PlaceTokenModal({ kind, onClose, onPlace }) {
 
 /* ---------------- mobile "more" sheet ---------------- */
 
-function MoreSheet({ isDM, isHost, hasSheet, onClose, onSheet, onMonsters, onPrep, onStory, onRules, onGuide, onSettings }) {
+function MoreSheet({ isDM, showDm, isHost, hasSheet, onClose, onSheet, onMonsters, onPrep, onStory, onRules, onGuide, onSettings, view3d, onToggle3d, guided, onToggleDm, onInvite, onSound }) {
   const items = [
     hasSheet && { label: 'My character sheet', Icon: ScrollIcon, onClick: onSheet },
-    isDM && { label: 'Monster library', Icon: SkullIcon, onClick: onMonsters },
-    isDM && { label: 'Scenes', Icon: MapIcon, onClick: onPrep },
-    isDM && { label: 'Story outline', Icon: ScrollIcon, onClick: onStory },
+    onToggle3d && { label: view3d ? 'Switch to the flat 2D map' : 'Switch to the 3D world', Icon: MapIcon, onClick: onToggle3d },
+    { label: 'Sound', Icon: VolumeIcon, onClick: onSound },
+    { label: 'Copy invite link', Icon: CopyIcon, onClick: onInvite },
+    showDm && { label: 'Monster library', Icon: SkullIcon, onClick: onMonsters },
+    showDm && { label: 'Scenes', Icon: MapIcon, onClick: onPrep },
+    showDm && { label: 'Story outline', Icon: ScrollIcon, onClick: onStory },
     { label: 'Rules reference', Icon: BookIcon, onClick: onRules },
     { label: "Player's guide", Icon: BookIcon, onClick: onGuide },
     (isDM || isHost) && { label: 'Campaign settings', Icon: GearIcon, onClick: onSettings },
+    guided && isDM && { label: showDm ? 'Hide the DM tools' : 'Show the DM tools', Icon: SkullIcon, onClick: onToggleDm },
   ].filter(Boolean);
 
   return (

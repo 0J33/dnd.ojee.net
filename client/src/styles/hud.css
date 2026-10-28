@@ -1,0 +1,198 @@
+/* The table HUD (desktop): the map fills the screen; party along the top
+   left, your hero along the bottom, tools as a slim icon rail, dice and chat
+   tucked into corners until you want them. Phones keep their own layout. */
+
+.game-board:not(.is-mobile) .hud-topleft {
+  position: absolute; top: 10px; left: 12px; z-index: 28; display: flex; align-items: center; gap: 8px;
+  max-width: calc(50% - 240px); flex-wrap: wrap;
+}
+.hud-party { display: flex; gap: 6px; }
+.hud-party-chip {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 4px 5px;
+  background: rgba(20, 17, 12, 0.82); border: 1px solid var(--border); border-radius: 10px; backdrop-filter: blur(4px);
+}
+.hud-party-chip:hover { border-color: var(--border-strong); }
+.hud-party-chip.me { border-color: var(--gold-dim); }
+.hud-party-chip.turn { border-color: var(--gold-bright); box-shadow: 0 0 12px var(--gold-glow); }
+.hud-party-chip.away { opacity: 0.6; }
+.hud-party-chip.down img, .hud-party-chip.down svg { filter: grayscale(1) brightness(0.7); }
+.hud-party-hp { width: 34px; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.6); overflow: hidden; }
+.hud-party-hp i, .hud-hero-hp i { display: block; height: 100%; background: var(--success); transition: width 0.35s ease; }
+.hud-party-hp i.mid, .hud-hero-hp i.mid { background: #c9a03c; }
+.hud-party-hp i.low, .hud-hero-hp i.low { background: var(--danger-bright); }
+.hud-party-down { position: absolute; top: 2px; right: 2px; color: var(--danger-bright); }
+
+.hud-pill {
+  padding: 7px 12px; font-size: 0.72em; letter-spacing: 1.2px; color: var(--text-mid);
+  background: rgba(20, 17, 12, 0.82); border: 1px solid var(--border); border-radius: 18px;
+}
+.hud-pill b { margin-left: 4px; color: var(--gold-bright); }
+.hud-pill.on { color: var(--gold-bright); border-color: var(--gold-dim); }
+
+/* your hero, bottom centre */
+.game-board:not(.is-mobile) .hud-hero {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 27;
+  display: flex; align-items: center; gap: 12px; width: min(640px, calc(100% - 200px)); padding: 8px 10px;
+  background: rgba(20, 17, 12, 0.9); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-pop); backdrop-filter: blur(6px);
+}
+.hud-hero.my-turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 22px var(--gold-glow); }
+.hud-hero-face { padding: 0; border: 0; background: none; border-radius: 50%; }
+.hud-hero-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hud-hero-top { display: flex; align-items: baseline; gap: 12px; }
+.hud-hero-name { font: 700 0.95em var(--font-display); color: var(--text); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-hero-stat { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82em; color: var(--text-mid); white-space: nowrap; }
+.hud-hero-hp { height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.6); overflow: hidden; }
+.hud-hero-hint { font-size: 0.78em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-hero.my-turn .hud-hero-hint { color: var(--gold-bright); }
+.hud-hero-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 0.72em; }
+.hud-hero-end { padding: 10px 16px; white-space: nowrap; }
+
+/* tools: a slim icon rail on the left, names in the tooltip */
+.game-board:not(.is-mobile) .tool-dock { top: 50%; }
+.game-board:not(.is-mobile) .tool-btn { min-height: 40px; padding: 8px 9px; }
+.game-board:not(.is-mobile) .tool-btn-label { display: none; }
+.game-board:not(.is-mobile) .tool-dock { max-width: none; }
+
+/* dice: one toggle just above the right end of your hero bar; the tray
+   opens right above it, and the same button closes it */
+.dice-wrap {
+  position: absolute; z-index: 56; display: flex; flex-direction: column; align-items: center; gap: 10px; /* above the story panel while you roll */
+  pointer-events: none;
+}
+.dice-wrap > * { pointer-events: auto; }
+.game-board:not(.is-mobile) .dice-wrap { left: 50%; bottom: calc(12px + var(--hero-h, 62px) + 10px); width: min(640px, calc(100% - 200px)); transform: translateX(-50%); } /* 10px above the hero bar = the gap above the button */
+.game-board.is-mobile .dice-wrap { right: 10px; bottom: 74px; left: 10px; }
+.dice-wrap .dice-tray { position: static; transform: none; max-width: 100%; align-self: stretch; }
+.dice-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; width: 104px; padding: 0; border-radius: 18px;
+  color: var(--gold); background: rgba(20, 17, 12, 0.92); border: 1px solid var(--gold-dim); box-shadow: var(--shadow-pop);
+  font-size: 0.72em; letter-spacing: 1.2px; touch-action: manipulation;
+}
+.dice-toggle:hover { border-color: var(--gold); }
+.dice-toggle.on { color: var(--text-mid); border-color: var(--border-strong); }
+
+/* chat: a bubble top-right that counts unread lines and shows the newest */
+.chat-collapsed-wrap { position: absolute; right: 12px; top: 12px; z-index: 25; display: flex; align-items: flex-start; gap: 8px; }
+.chat-collapsed-wrap .chat-collapsed { position: relative; right: auto; top: auto; }
+.chat-unread {
+  position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--gold-bright); color: var(--bg-deep); font: 700 11px/18px var(--font-body); text-align: center;
+}
+.chat-peek {
+  max-width: 320px; padding: 8px 12px; text-align: left; font-size: 0.82em; line-height: 1.35; color: var(--text-mid);
+  animation: w3-pop 0.2s ease-out;
+}
+.chat-peek b { color: var(--gold); margin-right: 4px; }
+
+/* overflow menu */
+.hud-more { position: relative; }
+.hud-more-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 250px; padding: 6px;
+  display: flex; flex-direction: column; box-shadow: var(--shadow-pop);
+}
+.hud-more-menu button {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: transparent; color: var(--text);
+  text-align: left; font-size: 0.86em; border-radius: var(--radius-sm); text-transform: none; letter-spacing: 0;
+}
+.hud-more-menu button:hover { background: var(--bg-hover); }
+.hud-more-menu em { margin-left: auto; font-style: normal; color: var(--text-dim); font-size: 0.85em; letter-spacing: 1px; }
+
+/* the 3D camera buttons sit under the chat bubble */
+.game-board:not(.is-mobile) .w3-view { top: 64px; }
+.board-topbar .topbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+
+/* the story panel sits beside the tool rail, below the party, never over the tools */
+.game-board:not(.is-mobile) .tut-panel { left: 72px; top: 62px; bottom: auto; max-height: calc(100% - 160px); width: min(400px, calc(100% - 520px)); min-width: 300px; }
+.game-board:not(.is-mobile) .tut-collapsed { left: 72px; top: 62px; bottom: auto; }
+
+/* phones */
+.game-board.is-mobile .tut-collapsed { bottom: 146px; } /* above the tool bar, which sits above the tab bar */
+.game-board.is-mobile .dice-wrap { z-index: 50; bottom: 84px; }
+.game-board.is-mobile .board-topbar { flex-wrap: nowrap; }
+.game-board.is-mobile .board-topbar .topbar-title-sm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* phone top area: party (with HP) left, camera buttons right, then the turn order as one line */
+.game-board.is-mobile .hud-topleft { position: absolute; top: 8px; left: 8px; z-index: 28; display: flex; gap: 6px; max-width: calc(100% - 150px); overflow-x: auto; }
+.game-board.is-mobile .hud-party-chip { padding: 3px 3px 4px; }
+.game-board.is-mobile .w3-view { top: 8px; right: 8px; flex-direction: row; gap: 4px; }
+.game-board.is-mobile .w3-view button { padding: 7px 8px; font-size: 10px; letter-spacing: 0.5px; }
+.game-board.is-mobile .initiative-bar {
+  left: 8px; right: 8px; top: 64px; transform: none; max-width: none; padding: 6px 8px; gap: 6px;
+  flex-wrap: wrap; row-gap: 6px;
+}
+.game-board.is-mobile .init-order { flex: 1 1 calc(100% - 80px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.game-board.is-mobile .init-order > * { flex-shrink: 0; }
+.game-board.is-mobile .init-title { font-size: 0.75em; letter-spacing: 1px; white-space: nowrap; }
+.game-board.is-mobile .init-yours { display: none; } /* the End my turn button already says it */
+.game-board.is-mobile .scene-caption-bar { display: none; } /* the arrival banner names the place */
+/* the story panel only on the map pane */
+.game-board.is-mobile:not(.pane-map) .tut-collapsed, .game-board.is-mobile:not(.pane-map) .tut-panel { display: none; }
+.game-board.is-mobile .tut-panel { max-height: 44vh; }
+
+/* ---------------- DM tools ---------------- */
+.dm-panel {
+  position: absolute; right: 12px; top: 56px; z-index: 58; width: 330px; max-height: calc(100% - 170px);
+  display: flex; flex-direction: column; box-shadow: var(--shadow-pop);
+}
+.dm-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0 6px; border-bottom: 1px solid var(--border-soft); }
+.dm-panel-body { padding: 10px 12px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.dm-panel-body h5, .dm-obj h5 { margin: 8px 0 0; font: 700 0.72em var(--font-display); letter-spacing: 1.4px; color: var(--gold); text-transform: uppercase; }
+.dm-panel-body textarea, .dm-obj textarea { width: 100%; resize: vertical; font-size: 0.86em; }
+.dm-panel-row, .dm-obj-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.84em; color: var(--text-mid); }
+.dm-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.dm-chips .chip { cursor: pointer; text-transform: capitalize; }
+.dm-handout-thumb { height: 34px; border-radius: 4px; }
+.dm-obj {
+  position: absolute; right: 12px; top: 56px; z-index: 58; width: 340px; max-height: calc(100% - 170px); overflow-y: auto;
+  padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 7px; box-shadow: var(--shadow-pop);
+}
+.dm-obj-head { display: flex; align-items: center; gap: 6px; }
+.dm-obj-name { flex: 1; font: 700 1em var(--font-display); }
+.dm-obj-hint { margin: 0; font-size: 0.8em; color: var(--text-dim); font-style: italic; }
+.dm-eff { display: flex; flex-direction: column; gap: 5px; padding: 7px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
+.dm-obj-foot { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.dm-kinds { flex-wrap: wrap; max-width: 210px; }
+.dm-patrol-bar, .dm-note {
+  position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 57; display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; font-size: 0.86em; color: var(--text-mid); max-width: calc(100% - 40px);
+}
+
+/* what players get from the DM */
+.dm-banner {
+  position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 70; max-width: min(720px, calc(100% - 40px));
+  padding: 16px 26px; text-align: center; cursor: pointer; animation: dm-banner 0.5s ease-out both;
+  font: italic 1.15rem/1.5 var(--font-body); color: var(--text);
+  background: linear-gradient(90deg, transparent, rgba(10, 8, 5, 0.92) 12%, rgba(10, 8, 5, 0.92) 88%, transparent);
+  border-top: 1px solid var(--gold-dim); border-bottom: 1px solid var(--gold-dim);
+}
+.dm-banner.title { font: 700 clamp(1.4rem, 3vw, 2.2rem)/1.25 var(--font-display); font-style: normal; letter-spacing: 0.1em; color: var(--gold-bright); top: 30%; }
+.dm-banner.whisper { color: #c8b8ff; border-color: #6a5aa8; }
+.dm-banner.alert { color: #ffb0a0; border-color: #a8443a; font-style: normal; font-weight: 700; }
+.dm-banner-tag { display: block; font: 700 0.65rem var(--font-display); letter-spacing: 0.2em; color: #9a8ad8; margin-bottom: 4px; font-style: normal; text-transform: uppercase; }
+@keyframes dm-banner { from { opacity: 0; transform: translate(-50%, -8px); } }
+.dm-requests { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.dm-request { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; font-size: 0.9em; border-color: var(--gold-dim); box-shadow: var(--shadow-pop); animation: w3-pop 0.2s ease-out; }
+.dm-handout { max-width: 560px; }
+.dm-handout-img { width: 100%; border-radius: var(--radius); margin-bottom: 10px; }
+.game-board.is-mobile .dm-panel, .game-board.is-mobile .dm-obj { left: 8px; right: 8px; width: auto; top: 60px; max-height: calc(100% - 220px); }
+.game-board.is-mobile .dm-requests { bottom: 150px; width: calc(100% - 16px); }
+
+/* build: stamps */
+.build-stamps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px 2px; max-height: 46vh; overflow-y: auto; }
+.stamp-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; background: var(--bg-elev); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); color: var(--text-mid); font-size: 0.72em; }
+.stamp-card.on { border-color: var(--gold); color: var(--gold-bright); }
+.stamp-thumb { max-width: 100%; height: 40px; image-rendering: pixelated; border-radius: 3px; }
+/* the chat bubble steps aside for the build panel */
+.board-main:has(> .build-panel) .chat-collapsed-wrap { right: 270px; }
+
+/* sound settings */
+.sound-panel { position: absolute; right: 12px; top: 56px; z-index: 62; width: 300px; padding: 10px 14px 14px; box-shadow: var(--shadow-pop); display: flex; flex-direction: column; gap: 12px; }
+.sound-head { display: flex; align-items: center; justify-content: space-between; }
+.sound-head h4 { margin: 0; font: 700 0.8em var(--font-display); letter-spacing: 1.5px; color: var(--gold); text-transform: uppercase; }
+.sound-row { display: flex; flex-direction: column; gap: 4px; }
+.sound-top { display: flex; justify-content: space-between; font-size: 0.88em; color: var(--text); }
+.sound-val { color: var(--text-dim); font-size: 0.9em; }
+.sound-ctl { display: flex; align-items: center; gap: 8px; }
+.sound-ctl input[type=range] { flex: 1; accent-color: var(--gold); }
+.sound-ctl input[type=range]:disabled { opacity: 0.35; }
+.sound-hint { font-size: 0.74em; color: var(--text-dim); font-style: italic; }
+.game-board.is-mobile .sound-panel { left: 8px; right: 8px; width: auto; top: 60px; }

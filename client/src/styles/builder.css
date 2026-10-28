@@ -31,7 +31,25 @@
 .builder-step-dot.skipped { text-decoration: line-through; opacity: 0.5; }
 .builder-head .close-btn { margin-left: auto; }
 
-.builder-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.builder-mid { flex: 1; min-height: 0; display: flex; }
+.builder-body { flex: 1; min-width: 0; overflow-y: auto; padding: 20px 24px; }
+/* the hero so far, beside every step */
+.builder-figure {
+  width: 230px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px 14px; border-left: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.32));
+}
+.builder-figure-stage { flex: 1; min-height: 180px; }
+.builder-figure-cap { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; margin: 0; }
+.builder-figure-cap strong { font-family: var(--font-display); font-weight: 400; color: var(--gold-bright); font-size: 1.05rem; }
+.builder-figure-cap span { color: var(--text-mid); font-size: 0.9rem; font-style: italic; }
+@media (max-width: 860px) {
+  .builder-mid { flex-direction: column-reverse; }
+  .builder-figure { width: auto; flex-direction: row; padding: 8px 12px; gap: 10px; border-left: none; border-bottom: 1px solid var(--border-soft); }
+  .builder-figure .avatar { display: none; }
+  .builder-figure-stage { flex: 0 0 96px; min-height: 0; height: 110px !important; min-width: 0; }
+  .builder-figure-cap { align-items: flex-start; text-align: left; }
+}
 .builder-foot {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 20px; border-top: 1px solid var(--border-soft); flex-shrink: 0;
@@ -126,3 +144,6 @@
 }
 .review-stat span { font-family: var(--font-display); font-size: 0.62em; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
 .review-stat strong { font-size: 1.15em; }
+/* body, picked first */
+.builder-body-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.builder-body-pick .pe-label { padding-top: 0; margin-right: 6px; }

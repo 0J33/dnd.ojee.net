@@ -1,5 +1,5 @@
 // Built-in battle maps, grouped so the scene picker can browse them.
-// Every character is a tile from data/tiles.js - see TILES there for the legend.
+// Every character is a tile from data/tiles.js – see TILES there for the legend.
 // Maps are hand-drawn; short rows are padded on load.
 
 import { FLOOR_THEMES, FLOOR_MATERIALS, TILES, tileAt } from './tiles';
@@ -14,7 +14,7 @@ export const SCENE_CATEGORIES = ['Town & tavern', 'Dungeon', 'Cave & underdark',
 
 export const BUILTIN_SCENES = [
   /* ------------------------------------------------ Town & tavern */
-  map('taproom', 'The Gilded Flagon - Taproom', 'Town & tavern', 'wood', 'A warm inn common room. Great for the opening scene.', `
+  map('taproom', 'The Gilded Flagon – Taproom', 'Town & tavern', 'wood', 'A warm inn common room. Great for the opening scene.', `
 ######################
 #=333333=====I=====b=#
 #=1111=======2222==bb#
@@ -25,8 +25,8 @@ D====================#
 #====================#
 #==t1==t1====c====()=#
 #=================[==#
-#=========D==========#
-######################
+#====================#
+##########D###########
 `),
   map('cellar', 'The Flagon Cellar', 'Town & tavern', 'stone', 'Storage under the inn. Rats, crates and a broken wall.', `
 ##################
@@ -37,7 +37,7 @@ D................#
 #......t.......7.#
 #..............7.#
 #..B........rr...#
-#..[B.......rr%%#
+#..[B.......rr.%%#
 #############>####
 `),
   map('village', 'Village Square', 'Town & tavern', 'dirt', 'Cobbled square with a well, market carts and a signpost.', `
@@ -77,7 +77,7 @@ D................#..I#
 #..1111..........#...#
 #EE..EE..EE..EE..#...#
 #EE..EE..EE..EE..#..G#
-##########D###########
+###########D##########
 `),
 
   /* ------------------------------------------------ Dungeon */
@@ -95,7 +95,7 @@ D....#....#....#
 #..r........r..#
 ################
 `),
-  map('corridors', 'Dungeon Corridors', 'Dungeon', 'stone', 'Classic branching passages - a flexible starting dungeon.', `
+  map('corridors', 'Dungeon Corridors', 'Dungeon', 'stone', 'Classic branching passages – a flexible starting dungeon.', `
 ####################
 #....#........#....#
 #.C..D........D..$.#
@@ -105,7 +105,7 @@ D....#....#....#
 #....#........#....#
 #.X..#...<....#..C.#
 #....#........#....#
-######DDDD#DDDD#####
+#######DD###DD######
 #..................#
 #..r....7....r.....#
 #........>.........#
@@ -138,17 +138,17 @@ D..e...ZZZZ...e....#
 #FFFFFF##FFFFFFFF..#
 ####################
 `),
-  map('prison', 'The Dungeon Cells', 'Dungeon', 'stone', 'Barred cells off a guarded hall - a rescue or a jailbreak.', `
+  map('prison', 'The Dungeon Cells', 'Dungeon', 'stone', 'Barred cells off a guarded hall – a rescue or a jailbreak.', `
 ######################
-#zz.L.zz.L.zz.L.zz.L.#
-#zz#..zz#..zz#..zz#..#
-####..####..####..####
+#zz..#zz..#zz..#zz..##
+#z...#z...#z...#z...##
+##L####L####L####L####
 #....................#
-D......I......I......#
+D......G......G......#
 #....................#
-####..####..####..####
-#zz#..zz#..zz#..zz#..#
-#zz.L.zz.L.zz.L.zz.L.#
+##L####L####L####L####
+#z...#z...#z...#z...##
+#zz..#zz..#zz..#zz..##
 ######################
 `),
   map('keep', 'Ruined Keep', 'Dungeon', 'stone', 'Half-collapsed walls and rubble. Cover everywhere.', `
@@ -156,8 +156,8 @@ D......I......I......#
 %..rr...........rr...%
 %......%%%%%%........%
 %..r...%....%....r...%
-%......%.C..D........%
-D......%....%........%
+%......%.C..d........%
+d......%....%........%
 %..O...%%%%%%....O...%
 %....................%
 %..rr....))......rr..%
@@ -171,12 +171,12 @@ vvvvvvvvvvvvvvvvvvvv
 vv::::vvvvvvvvvv::vv
 v::::::::vv::::::::v
 v:::rr:::::::::::::v
-D::::::::::~~::::::v
+:::::::::::~~::::::v
 v:::::vv:::~~:::::vv
 v::::vvvv::::::::vvv
 v:::::vv::::rr::::vv
 vv:::::::::::::::::v
-vvv:::::::vv:::::::D
+vvv:::::::vv::::::::
 vvvvvvvvvvvvvvvvvvvv
 `),
   map('cavern', 'Dark Cavern', 'Cave & underdark', 'stone', 'An open natural cave with a pool and loose rock.', `
@@ -189,8 +189,8 @@ v.....~~~~.....rr....v
 v......~~............v
 vv..........6.....5..v
 _vv........vv__vv..vvv
-__vvv......v____vvvv
-____vvvvvvvv________
+__vvv......v____vvvv__
+____vvvvvvvv__________
 `),
   map('mushroom', 'Fungal Grotto', 'Cave & underdark', 'dirt', 'Glowing fungus and shallow pools deep underground.', `
 vvvvvvvvvvvvvvvvvvvvvv
@@ -198,7 +198,7 @@ v5:::::::::::::::::5:v
 v::::mm::::::::mm::::v
 v:::mmmm::5:::mmmm:::v
 v::::mm::::::::mm::::v
-D::::::::::::::::::::v
+:::::::::::::::::::::v
 v:5::::::QQ::::::::5:v
 v:::::::::::::::::::5v
 v::mm:::::::::::mm:::v
@@ -211,7 +211,7 @@ vnniiiiinnnniiiiinnv
 vniiiiiiiiiiiiiiiinv
 vniii..QQ....QQiiinv
 vnii..........iiiinv
-Dnii....xx....iiiinv
+nnii....xx....iiiinv
 vnii....xx....iiiinv
 vniii........iiiiinv
 vniiiiiiiiiiiiiiiinv
@@ -224,7 +224,7 @@ v..................v
 v...6..........6...v
 v..................v
 v.lllll....lllll...v
-D.lllll////lllll...v
+..lllll////lllll...v
 v.lllll....lllll...v
 v..................v
 v...6....A.....6...v
@@ -279,10 +279,10 @@ TTTTT,,,,TTTT,,,TTTTTTT
 ,,T,,,,,,,,,,,,,,,,,T,,,
 ,,,,,,,,,,,,,,,,,,,,,,,,
 ,,,,,,,,,,::::,,,,,,,,,,
-qqqqqqqqqq::::qqqqqqqqqq
-qqqqqqqqqq////qqqqqqqqqq
-qqqqqqqqqq////qqqqqqqqqq
-qqqqqqqqqq::::qqqqqqqqqq
+qqqqqqqqqqq//qqqqqqqqqqq
+qqqqqqqqqqq//qqqqqqqqqqq
+qqqqqqqqqqq//qqqqqqqqqqq
+qqqqqqqqqqq//qqqqqqqqqqq
 ,,,,,,,,,,::::,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,,,,,
 ,,T,,,,Y,,,,,,,,Y,,,,T,,
@@ -293,7 +293,7 @@ wwwwwwwwwwwwwwwwwwww
 w::::::::::::::::::w
 w::[[::::::::::[[::w
 w::::::::c:::::::::w
-w:::::::::::::::::Dw
+w::::::::::::::::::D
 w::::K:::::::::!!::w
 w::::::::::::::::::w
 w::[[::::c:::::))::w
@@ -339,7 +339,7 @@ ssssssssssssssssssssss
 `),
 
   /* ------------------------------------------------ Grand halls */
-  map('chamber', 'Stone Chamber', 'Grand halls', 'stone', 'A simple pillared hall - a clean, readable arena.', `
+  map('chamber', 'Stone Chamber', 'Grand halls', 'stone', 'A simple pillared hall – a clean, readable arena.', `
 ######################
 #....................#
 #..I..............I..#
@@ -355,28 +355,28 @@ D....................D
 `),
   map('throne', 'Throne Room', 'Grand halls', 'marble', 'Banners, columns and a dais. For audiences and betrayals.', `
 ##########}}##########
-#pppppppppJJpppppppppp
-#ppppppppppppppppppppp
-#ppPPpppeeeeppppPPpppp
-#pppppppeeeepppppppppp
-#ppppGppeeeeppGpppppp#
-Dppppppeeeeeeppppppppp
-#ppPPppeeeeeepppPPpppp
-#pppppppeeeepppppppppp
-#pppppppeeeepppppppppp
+#ppppppppeJJepppppppp#
+#ppppppppeeeepppppppp#
+#ppPPppppeeeepppPPppp#
+#ppppppppeeeepppppppp#
+#ppppGpppeeeepGpppppp#
+Dppppppppeeeepppppppp#
+#ppPPppppeeeepppPPppp#
+#ppppppppeeeepppppppp#
+#ppppppppeeeepppppppp#
 ##########DD##########
 `),
   map('temple', 'Temple Hall', 'Grand halls', 'marble', 'A processional aisle to the altar, flanked by braziers.', `
 ######################
-#pppppppp#AA#ppppppppp
-#ppppppppppppppppppppp
-#ppGppppeeeeeepppppGpp
-#ppppPPpeeeeeepPPppppp
+#pppppppp#AA#pppppppp#
+#pppppppppppppppppppp#
+#ppGppppeeeeeepppppGp#
+#ppppPPpeeeeeepPPpppp#
 #pppppppeeeeeeppppppp#
-Dpppppppeeeeeepppppppp
-#ppppPPpeeeeeepPPppppp
-#ppGppppeeeeeepppppGpp
-#ppppppppppppppppppppp
+Dpppppppeeeeeeppppppp#
+#ppppPPpeeeeeepPPpppp#
+#ppGppppeeeeeepppppGp#
+#pppppppppppppppppppp#
 ##########DD##########
 `),
   map('library', 'The Great Library', 'Grand halls', 'wood', 'Stacks, reading tables and a locked archive.', `
@@ -397,7 +397,7 @@ D.................L$$#
 #ssssssssssssssssssss#
 #sssOsssssssssssOssss#
 #ssssssssssssssssssss#
-Lssssssssssssssssssssl
+LssssssssssssssssssssL
 #ssssssssssssssssssss#
 #sssOsssssssssssOssss#
 #ssssssssssssssssssss#

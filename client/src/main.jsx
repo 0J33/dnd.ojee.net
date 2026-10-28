@@ -11,15 +11,21 @@ import './styles/board.css';
 import './styles/tutorial.css';
 import './styles/scenes.css';
 import './styles/mobile.css';
-import './styles/ledger.css';
+import './styles/tavern.css';
+import './styles/home.css';
 
 reloadIfStale();
 
-createRoot(document.getElementById('root')).render(
+const worldPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('world3d');
+const Preview = worldPreview ? React.lazy(() => import('./world/Preview')) : null;
+
+createRoot(document.getElementById('root')).render(worldPreview ? (
+  <React.Suspense fallback={null}><Preview sceneKey={worldPreview} /></React.Suspense>
+) : (
   <React.StrictMode>
     <DialogProvider>
       <App />
       <UpdateBanner />
     </DialogProvider>
   </React.StrictMode>
-);
+));

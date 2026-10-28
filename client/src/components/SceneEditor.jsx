@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TILES, TILE_GROUPS, tilesInGroup, FLOOR_MATERIALS } from '../data/tiles';
 import { drawTileSwatch } from '../render/sceneRender';
-import { BrushIcon, SquareIcon, RoomIcon, BucketIcon, ChevronDown, XIcon, ResizeIcon, SearchIcon } from './Icons';
+import { BrushIcon, SquareIcon, RoomIcon, BucketIcon, ChevronDown, XIcon, ResizeIcon, SearchIcon, CopyIcon, LayersIcon, SparkleIcon } from './Icons';
+import { STAMPS, GENERATORS, generateMap } from '../data/mapKit';
+import { drawTerrain } from '../render/sceneRender';
 
 // ================= Build palette =================
 // The DM paints the map directly: pick a tile, pick a shape, drag on the board.
@@ -13,7 +15,22 @@ const SHAPES = [
   { key: 'rect', name: 'Fill area', hint: 'Drag a filled rectangle', Icon: SquareIcon },
   { key: 'room', name: 'Room', hint: 'Drag a hollow rectangle - walls only', Icon: RoomIcon },
   { key: 'fill', name: 'Flood', hint: 'Replace a whole connected area', Icon: BucketIcon },
+  { key: 'copy', name: 'Copy', hint: 'Drag over part of the map to copy it, then click to paste it anywhere', Icon: CopyIcon },
+  { key: 'stamp', name: 'Stamps', hint: 'Ready-made rooms and pieces: pick one, click to place', Icon: LayersIcon },
 ];
+
+// A little picture of a stamp.
+function StampThumb({ rows, floor }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const c = ref.current; if (!c) return;
+    const w = Math.max(...rows.map((r) => r.length)), h = rows.length, cell = Math.floor(Math.min(64 / w, 40 / h));
+    c.width = w * cell; c.height = h * cell;
+    const cells = rows.map((r) => r.padEnd(w, ' ').replace(/ /g, '.'));
+    drawTerrain(c.getContext('2d'), { grid: { w, h }, cells, bg: { kind: 'builtin', floor } }, cell, { grid: false });
+  }, [rows, floor]);
+  return <canvas ref={ref} className="stamp-thumb" />;
+}
 
 const BRUSH_SIZES = [1, 2, 3, 5];
 
@@ -105,6 +122,21 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
         </div>
       )}
 
+      {build.shape === 'stamp' && (
+        <div className="build-stamps">
+          {build.stamp?.custom && (
+            <button className="stamp-card on"><StampThumb rows={build.stamp.rows} floor={floor} /><span>Your copy</span></button>
+          )}
+          {STAMPS.map((st) => (
+            <button key={st.key} className={`stamp-card ${build.stamp?.key === st.key ? 'on' : ''}`} onClick={() => set({ stamp: st })} title={st.name}>
+              <StampThumb rows={st.rows} floor={floor} />
+              <span>{st.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {build.shape === 'copy' && <p className="muted small" style={{ padding: '4px 2px' }}>Drag a box over the map to copy it. It becomes a stamp you can click down anywhere (and on other scenes).</p>}
+
       {/* the tile library */}
       <div className="build-search">
         <SearchIcon size={14} />
@@ -131,7 +163,7 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
         </div>
       )}
 
-      <div className="build-tiles">
+      <div className="build-tiles" style={build.shape === 'stamp' || build.shape === 'copy' ? { display: 'none' } : undefined}>
         {shown.map((t) => (
           <button
             key={t.ch}
@@ -149,7 +181,7 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
       </div>
 
       <p className="build-hint muted small">
-        Drag on the map to build. Right-click a square to drop a creature, NPC or marker there.
+        Drag on the map to build. Ctrl+Z undoes. Right-click a square to drop a creature, NPC or marker there.
       </p>
     </aside>
   );
@@ -188,6 +220,19 @@ function ResizePanel({ scene, onReshape, onSceneUpdate, dialog, onDone }) {
           <option key={m.key} value={m.key}>{m.name}</option>
         ))}
       </select>
+      <label className="field-label mt">Or start from a generated map</label>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        {Object.entries(GENERATORS).map(([k, g]) => (
+          <button key={k} className="small-btn" onClick={async () => {
+            const ok = await dialog.confirm(`Replace this whole map with a new ${g.name.toLowerCase()}? (Undo can't bring the old one back.)`, 'Generate a map', 'Generate');
+            if (!ok) return;
+            const nw = Math.max(8, Math.min(80, Number(w) || scene.grid.w)), nh = Math.max(8, Math.min(60, Number(h) || scene.grid.h));
+            const { cells, floor: f } = generateMap(k, nw, nh, Math.floor(Math.random() * 1e9));
+            onReshape({ w: nw, h: nh, floor: f, cells });
+            onDone();
+          }}><SparkleIcon size={12} /> {g.name}</button>
+        ))}
+      </div>
       <div className="row mt" style={{ justifyContent: 'flex-end' }}>
         <button className="small-btn ghost-btn" onClick={onDone}>Cancel</button>
         <button className="small-btn primary-btn" onClick={apply}>Apply</button>

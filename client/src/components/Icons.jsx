@@ -21,6 +21,8 @@ import React from 'react';
    ============================================================ */
 
 const P = {
+  volume_up: 'M560-131v-82q90-26 145-100t55-168q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-322q47 22 73.5 66t26.5 96q0 51-26.5 94.5T560-320ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z',
+  volume_off: 'M792-56 671-177q-25 16-53 27.5T560-131v-82q14-5 27.5-10t25.5-12L480-368v208L280-360H120v-240h128L56-792l56-56 736 736-56 56Zm-8-232-58-58q17-31 25.5-65t8.5-70q0-94-55-168T560-749v-82q124 28 202 125.5T840-481q0 53-14.5 102T784-288ZM650-422l-90-90v-130q47 22 73.5 66t26.5 96q0 15-2.5 29.5T650-422ZM480-592 376-696l104-104v208Zm-80 194v-94l-72-72H200v80h114l86 86Zm-36-130Z',
   image: 'M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm56-97h489L578-473 446-302l-93-127-117 152Zm-56 97v-600 600Z',
   upload: 'M450-313v-371L330-564l-43-43 193-193 193 193-43 43-120-120v371h-60ZM220-160q-24 0-42-18t-18-42v-143h60v143h520v-143h60v143q0 24-18 42t-42 18H220Z',
   logout: 'M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h299v60H180v600h299v60H180Zm486-185-43-43 102-102H360v-60h363L621-612l43-43 176 176-174 174Z',
@@ -175,6 +177,8 @@ export const MenuIcon = (p) => <I d={P.menu} {...p} />;
 export const InfoIcon = (p) => <I d={P.info} {...p} />;
 export const SearchIcon = (p) => <I d={P.search} {...p} />;
 export const FitIcon = (p) => <I d={P.fit_screen} {...p} />;
+export const VolumeIcon = (p) => <I d={P.volume_up} {...p} />;
+export const MuteIcon = (p) => <I d={P.volume_off} {...p} />;
 
 /* ---------- marks, not icons ---------- */
 
@@ -221,7 +225,7 @@ export const DieShape = ({ sides, size = 30, label }) => {
       <g fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round">
         {shapes[sides] || shapes[6]}
       </g>
-      <text x="50" y="50" dy="0.36em" textAnchor="middle" fontFamily="Cinzel, Georgia, serif" fontWeight="700" fontSize={sides === 100 ? 30 : 36} fill="currentColor" stroke="none">
+      <text x="50" y="50" dy="0.36em" textAnchor="middle" fontFamily="'IM Fell English SC', Georgia, serif" fontWeight="400" fontSize={sides === 100 ? 30 : 36} fill="currentColor" stroke="none">
         {label || sides}
       </text>
     </svg>

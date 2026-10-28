@@ -40,6 +40,8 @@
   text-decoration: underline; text-decoration-color: rgba(212, 169, 79, 0.45); text-underline-offset: 3px;
 }
 .lg-link:hover { color: #f3d58f; background: none; }
+.lg-link.is-danger { color: var(--text-mid); text-decoration-color: rgba(176, 68, 68, 0.4); }
+.lg-link.is-danger:hover { color: var(--danger-bright); }
 .lg-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); background: transparent; border: 1px solid transparent; color: var(--text-mid); }
 .lg-icon-btn:hover { color: var(--gold-bright); border-color: var(--border); background: rgba(255, 255, 255, 0.03); }
 .lg-icon-btn.is-danger:hover { color: var(--danger-bright); border-color: rgba(176, 68, 68, 0.5); }
@@ -175,4 +177,18 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .lg-front, .lg-seal { animation: none; }
+}
+
+/* premade adventures: the same card without the seal, stacked under the first quest */
+.lg-first.is-premade { padding: 18px 22px 20px; margin-top: 14px; }
+.lg-first.is-premade h3 { font-size: 1.05rem; }
+.lg-first + .lg-subhead { margin-top: 28px; }
+@media (max-width: 720px) { .lg-first.is-premade { padding: 16px 18px; } }
+
+/* phones: the bar keeps to one tidy line (logo, guide icon, you, sign out) */
+@media (max-width: 480px) {
+  .lg-brand-name { font-size: 0.85rem; letter-spacing: 0.12em; }
+  .lg-bar .lg-btn { padding: 6px 9px; font-size: 0; gap: 0; }
+  .lg-bar .lg-btn svg { width: 16px; height: 16px; }
+  .lg-me { font-size: 0.9rem; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }

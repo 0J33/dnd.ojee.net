@@ -117,7 +117,7 @@ export function PartyPanel({ state, isDM, userId, onOpenSheet, onMonsterHp, onMo
 
 // ---------------- Initiative bar ----------------
 
-export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollInitiative, onRollMonsters, onBegin, onNext, onEnd }) {
+export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollInitiative, onRollMonsters, onBegin, onNext, onEnd, onAutoMonsters }) {
   const combat = state.combat;
   if (!combat.active) return null;
   const scene = state.scenes.find((s) => s.id === state.activeSceneId) || state.scenes[0];
@@ -126,6 +126,8 @@ export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollI
   const current = combat.round > 0 ? combat.order[combat.turnIndex] : null;
   const currentToken = current ? tokenById(current.tokenId) : null;
   const myTurn = currentToken && currentToken.ownerId === userId;
+  const autoMonsters = state.mode === 'guided' || !!state.autoMonsters;
+  const monsterActing = autoMonsters && currentToken?.kind === 'monster' && !currentToken.dead;
 
   return (
     <div className="initiative-bar panel">
@@ -145,7 +147,7 @@ export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollI
           {isDM && (
             <>
               <button className="small-btn" onClick={onRollMonsters}>Roll monsters</button>
-              <button className="small-btn primary-btn" disabled={!combat.order.length} onClick={onBegin}>Begin!</button>
+              <button className="small-btn primary-btn" onClick={onBegin} title="Anyone who hasn't rolled rolls automatically">Begin!</button>
               <button className="small-btn ghost-btn" onClick={onEnd}>Cancel</button>
             </>
           )}
@@ -164,10 +166,18 @@ export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollI
               </span>
             ))}
           </div>
-          {(isDM || myTurn) && (
+          {monsterActing ? (
+            <span className="init-acting">{currentToken.label} is acting…</span>
+          ) : (isDM || myTurn) && (
             <button className="small-btn primary-btn" onClick={onNext}>
-              {myTurn && !isDM ? 'End my turn' : 'Next turn'} <ChevronRight size={12} />
+              {myTurn ? 'End my turn' : 'Next turn'} <ChevronRight size={12} />
             </button>
+          )}
+          {myTurn && <span className="init-yours">Your turn</span>}
+          {isDM && state.mode !== 'guided' && (
+            <label className="init-auto" title="Monsters walk up and attack on their own turn">
+              <input type="checkbox" checked={!!state.autoMonsters} onChange={(e) => onAutoMonsters?.(e.target.checked)} /> Monsters act on their own
+            </label>
           )}
           {isDM && <button className="small-btn ghost-btn" onClick={onEnd}>End combat</button>}
         </>
@@ -179,6 +189,18 @@ export function InitiativeBar({ state, isDM, userId, myToken, myInitMod, onRollI
 // ---------------- Chat / log panel ----------------
 
 export function ChatPanel({ chat, log, members, userId, isDM, onSend, onRollFormula, collapsed, onToggle }) {
+  // Closed, it counts what you haven't read and shows the newest line for a moment.
+  const seen = useRef(chat.length);
+  const [peek, setPeek] = useState(null);
+  useEffect(() => {
+    if (!collapsed) { seen.current = chat.length; return undefined; }
+    const last = chat[chat.length - 1];
+    if (!last || chat.length <= seen.current || last.userId === userId) return undefined;
+    setPeek(last);
+    const t = setTimeout(() => setPeek(null), 6000);
+    return () => clearTimeout(t);
+  }, [chat.length, collapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const unread = collapsed ? Math.max(0, chat.length - seen.current) : 0;
   const [tab, setTab] = useState('chat');
   const [text, setText] = useState('');
   const [whisper, setWhisper] = useState('');
@@ -203,9 +225,17 @@ export function ChatPanel({ chat, log, members, userId, isDM, onSend, onRollForm
 
   if (collapsed) {
     return (
-      <button className="chat-collapsed" onClick={onToggle} title="Open chat & log">
-        <ChatIcon size={18} />
-      </button>
+      <div className="chat-collapsed-wrap">
+        {peek && (
+          <button className="chat-peek panel" onClick={onToggle}>
+            <b>{peek.kind === 'narration' ? 'Narration' : peek.username}</b> {String(peek.text || '').slice(0, 140)}{String(peek.text || '').length > 140 ? '…' : ''}
+          </button>
+        )}
+        <button className="chat-collapsed" onClick={onToggle} title="Open chat & log">
+          <ChatIcon size={18} />
+          {unread > 0 && <span className="chat-unread">{unread > 9 ? '9+' : unread}</span>}
+        </button>
+      </div>
     );
   }
 
@@ -289,8 +319,9 @@ export function DiceTray({ onRoll, characterName }) {
   const [mode, setMode] = useState('normal');
   const [secret, setSecret] = useState(false);
   const [formula, setFormula] = useState('');
-  // On a phone the tray starts closed - the tool bar owns the bottom edge.
-  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.innerWidth > 820);
+  // Closed until you want it (attacks and checks roll themselves); remembered.
+  const [open, setOpenRaw] = useState(() => { try { return localStorage.getItem('dnd_diceOpen') === '1'; } catch { return false; } });
+  const setOpen = (v) => { setOpenRaw(v); try { localStorage.setItem('dnd_diceOpen', v ? '1' : '0'); } catch { /* private mode */ } };
 
   const poolEntries = Object.entries(pool).filter(([, n]) => n > 0);
   const poolFormula = () => {
@@ -314,22 +345,22 @@ export function DiceTray({ onRoll, characterName }) {
     }
   };
 
-  if (!open) {
-    return (
-      <div className="dice-dock">
-        <button
-          className="dice-collapsed"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-          title="Open dice tray"
-        >
-          <D20Icon size={20} /> <span className="dice-collapsed-label">Dice</span>
-        </button>
-      </div>
-    );
-  }
-
+  // One toggle in one place: it opens the tray above itself and closes it
+  // again, so open and close are always under the same finger.
+  const toggle = (
+    <button
+      className={`dice-toggle ${open ? 'on' : ''}`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+      title={open ? 'Hide the dice' : 'Roll dice'}
+      aria-expanded={open}
+    >
+      {open ? <XIcon size={18} /> : <D20Icon size={18} />} <span>Dice</span>
+    </button>
+  );
+  if (!open) return <div className="dice-wrap">{toggle}</div>;
   return (
+    <div className="dice-wrap">
     <div className="dice-tray panel">
       <div className="dice-row">
         {DICE.map((d) => (
@@ -360,7 +391,7 @@ export function DiceTray({ onRoll, characterName }) {
 
         <input
           className="dice-formula"
-          placeholder="or type: 2d6+3 ⏎"
+          placeholder="or type: 2d6+3"
           value={formula}
           onChange={(e) => setFormula(e.target.value)}
           onKeyDown={(e) => {
@@ -370,9 +401,6 @@ export function DiceTray({ onRoll, characterName }) {
             }
           }}
         />
-        <button className="close-btn" onClick={() => setOpen(false)} title="Collapse the dice tray" aria-label="Collapse the dice tray">
-          <ChevronDown />
-        </button>
       </div>
 
       {poolEntries.length > 0 && (
@@ -390,6 +418,8 @@ export function DiceTray({ onRoll, characterName }) {
           <button className="small-btn ghost-btn" onClick={() => setPool({})}>Clear</button>
         </div>
       )}
+    </div>
+      {toggle}
     </div>
   );
 }

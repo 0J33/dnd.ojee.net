@@ -59,7 +59,7 @@ export const PREGENS = [
         flaws: 'I obey the law, even when it causes misery.',
       },
       backstory: 'Twenty years in the Iron Legion taught Brenna two things: hold the line, and never trust a quiet tunnel.',
-      portrait: { color: '#c2803e', icon: 'shield' },
+      portrait: { color: '#c2803e', icon: 'shield', look: { body: 'feminine' } },
     },
   },
   {
@@ -99,7 +99,7 @@ export const PREGENS = [
         flaws: "When I see something valuable, I can't think about anything else.",
       },
       backstory: 'Piper "borrowed" one ring too many from the wrong noble and left town in a hay cart. Adventure pays better anyway.',
-      portrait: { color: '#7fb069', icon: 'dagger' },
+      portrait: { color: '#7fb069', icon: 'dagger', look: { body: 'neutral' } },
     },
   },
   {
@@ -142,7 +142,7 @@ export const PREGENS = [
         flaws: 'I trust members of my faith blindly.',
       },
       backstory: 'Ansel tended the lamplight shrine of a sleepy village until the dreams started. Now he walks where the light is needed.',
-      portrait: { color: '#e0c060', icon: 'sun' },
+      portrait: { color: '#e0c060', icon: 'sun', look: { body: 'masculine' } },
     },
   },
   {
@@ -188,7 +188,7 @@ export const PREGENS = [
         flaws: "I'm easily distracted by the promise of information.",
       },
       backstory: 'Two hundred years of reading about fireballs. Sylvara decided it was finally time to cast one.',
-      portrait: { color: '#8f7fd4', icon: 'wand' },
+      portrait: { color: '#8f7fd4', icon: 'wand', look: { body: 'feminine' } },
     },
   },
   {
@@ -228,7 +228,7 @@ export const PREGENS = [
         flaws: 'I have a hard time backing down from any challenge.',
       },
       backstory: 'Korgan won his freedom in the fighting pits of the coast. He keeps the first chain he broke as a trophy.',
-      portrait: { color: '#c2542e', icon: 'axe' },
+      portrait: { color: '#c2542e', icon: 'axe', look: { body: 'masculine' } },
     },
   },
   {
@@ -265,7 +265,7 @@ export const PREGENS = [
         flaws: 'I run when things look truly dangerous - or I used to.',
       },
       backstory: 'Elowen poached the baron\'s deer for years. When goblins took the baron\'s daughter, she was the only one who could follow the trail.',
-      portrait: { color: '#5fb0a5', icon: 'bow' },
+      portrait: { color: '#5fb0a5', icon: 'bow', look: { body: 'feminine' } },
     },
   },
 ];

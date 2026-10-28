@@ -70,6 +70,8 @@ function createScene({
     revealed: [], // ['x,y']
     strokes: [],
     tokens: [],
+    objects: [], // traps, secrets, chests, levers, notes, exits (server/socket/dmTools.js)
+    mood: { time: 'auto', weather: 'none', light: 1 },
   };
 }
 
@@ -161,7 +163,8 @@ function viewForUser(room, userId) {
   const scenes = room.scenes.map((scene) => ({
     ...scene,
     notes: seesPrep ? scene.notes || '' : '',
-    tokens: scene.tokens.filter((t) => seesPrep || !t.hidden),
+    tokens: scene.tokens.filter((t) => seesPrep || !t.hidden).map((t) => (seesPrep || !t.patrol ? t : { ...t, patrol: undefined })),
+    objects: seesPrep ? scene.objects || [] : require('./dmTools').publicObjects(scene),
   }));
   const story = seesPrep ? room.story || { beats: [], activeBeatId: null } : { beats: [], activeBeatId: null };
   return { ...base, scenes, story, viewerIsDM: seesPrep };
@@ -176,6 +179,7 @@ function migrateRoom(room) {
     if (typeof scene.notes !== 'string') scene.notes = '';
     if (!scene.grid) scene.grid = { w: 26, h: 18 };
     scene.cells = normaliseCells(scene.cells, scene.grid, scene.bg && scene.bg.floor);
+    if (!Array.isArray(scene.objects)) scene.objects = [];
     for (const token of scene.tokens || []) {
       if (token.art === undefined) token.art = null;
       if (token.note === undefined) token.note = '';

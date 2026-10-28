@@ -1,6 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Avatar, resolveLook, lookOptions, safePortraitImage } from './Portrait';
+import React, { Suspense, lazy, useRef, useState } from 'react';
+import { Avatar, resolveLook, lookOptions, safePortraitImage, randomLook } from './Portrait';
 import { D20Icon, UploadIcon, TrashIcon } from './Icons';
+
+// The 3D figure is drawn with three.js, which loads only when it's shown.
+export const FigureStage = lazy(() => import('../world/FigureStage'));
 
 export const PORTRAIT_COLORS = ['#d4a94f', '#c2542e', '#7fb069', '#5f87a8', '#8f7fd4', '#c94f6d', '#5fb0a5', '#b8b8b8', '#e0c060', '#b06ab0'];
 
@@ -33,7 +36,10 @@ function squarePicture(file) {
   });
 }
 
-function Swatches({ label, colors, value, onPick }) {
+// custom: also offer a free colour picker (its swatch shows a colour that
+// isn't one of the presets).
+function Swatches({ label, colors, value, onPick, custom = false }) {
+  const own = custom && value && !colors.includes(value);
   return (
     <div className="pe-row">
       <span className="pe-label">{label}</span>
@@ -49,6 +55,12 @@ function Swatches({ label, colors, value, onPick }) {
             onClick={() => onPick(c)}
           />
         ))}
+        {custom && (
+          <label className={`pe-swatch pe-swatch-custom ${own ? 'on' : ''}`} style={own ? { background: value } : undefined} title={`Any ${label.toLowerCase()}`}>
+            <input type="color" aria-label={`Pick any ${label.toLowerCase()}`} value={/^#[0-9a-f]{6}$/i.test(value || '') ? value : '#888888'} onChange={(e) => onPick(e.target.value)} />
+            {!own && <span aria-hidden="true">+</span>}
+          </label>
+        )}
       </div>
     </div>
   );
@@ -93,7 +105,7 @@ function Faces({ label, options, value, onPick, faceFor, color, note }) {
  * picture. `sheet` supplies race, class and name; `portrait` is the
  * sheet.portrait being edited.
  */
-export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
+export default function PortraitEditor({ sheet, portrait = {}, onChange, showFigure = true }) {
   const fileRef = useRef(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -108,7 +120,11 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
   // Pinning the seed with the first choice keeps every other trait where it
   // is, even if the hero is renamed afterwards.
   const set = (patch) => onChange({ ...portrait, look: { ...look, seed: look.seed || cur.seed, ...patch } });
-  const reroll = () => onChange({ ...portrait, look: { seed: Math.random().toString(36).slice(2, 10) } });
+  // Everything at random (but the body you chose), or back to what the race
+  // and class would give this hero.
+  const keepBody = look.body ? { body: look.body } : {};
+  const randomize = () => onChange({ ...portrait, image: null, look: randomLook(preview, keepBody) });
+  const defaults = () => onChange({ ...portrait, look: { ...keepBody } });
   const faceWith = (patch) => ({ ...preview, portrait: { ...portrait, image: null, look: { ...look, seed: cur.seed, ...patch } } });
 
   const pickFile = async (e) => {
@@ -132,16 +148,26 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
   return (
     <div className="pe">
       <div className="pe-stage">
-        <Avatar sheet={preview} color={color} size={132} />
+        <div className="pe-pair">
+          <Avatar sheet={preview} color={color} size={132} />
+          {showFigure && (
+            <Suspense fallback={<div className="figure-stage" style={{ height: 200 }} />}>
+              <FigureStage sheet={preview} height={200} className="pe-figure" />
+            </Suspense>
+          )}
+        </div>
         <div className="pe-token">
           <Avatar sheet={preview} color={color} size={34} />
           <span>on the battle map</span>
         </div>
-        {!picture && (
-          <button type="button" className="pe-roll" onClick={reroll}>
-            <D20Icon size={16} /> Roll a new face
+        <div className="pe-actions">
+          <button type="button" className="pe-roll" onClick={randomize}>
+            <D20Icon size={16} /> Randomize
           </button>
-        )}
+          <button type="button" className="pe-link" onClick={defaults} disabled={!Object.keys(look).some((k) => k !== 'body' && k !== 'seed')}>
+            Defaults
+          </button>
+        </div>
         <button type="button" className="pe-upload" onClick={() => fileRef.current && fileRef.current.click()} disabled={busy}>
           <UploadIcon size={17} /> {busy ? 'Reading…' : picture ? 'Change picture' : 'Use my own picture'}
         </button>
@@ -160,7 +186,8 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
           <p className="pe-note">Your picture is used in the lobby, on your sheet and on the battle map. The colour above rings your token.</p>
         ) : (
           <>
-            <Swatches label={opts.skinLabel} colors={opts.skins} value={cur.skin} onPick={(c) => set({ skin: c })} />
+            {opts.bodies && <Chips label="Body" options={opts.bodies} value={cur.body || ''} onPick={(k) => set({ body: k })} />}
+            <Swatches label={opts.skinLabel} colors={opts.skins} value={cur.skin} onPick={(c) => set({ skin: c })} custom />
             {opts.hairStyles && (
               <Faces
                 label="Hair"
@@ -173,7 +200,7 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
                 faceFor={(k) => faceWith({ hairStyle: k, headwear: 'off' })}
               />
             )}
-            {opts.hairColors && <Swatches label="Hair colour" colors={opts.hairColors} value={cur.hair} onPick={(c) => set({ hair: c })} />}
+            {opts.hairColors && <Swatches label="Hair colour" colors={opts.hairColors} value={cur.hair} onPick={(c) => set({ hair: c })} custom />}
             {opts.headwear && (
               <Chips label="Headwear" options={{ on: opts.headwear, off: 'Nothing' }} value={cur.headwear ? 'on' : 'off'} onPick={(k) => set({ headwear: k })} />
             )}
@@ -193,6 +220,11 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange }) {
               <Chips label="Expression" options={opts.moods} value={cur.mood} onPick={(k) => set({ mood: k })} note={masked ? 'The face mask hides the mouth; the brows still show it.' : null} />
             )}
             {opts.marks && <Chips label="Marks" options={opts.marks} value={cur.mark} onPick={(k) => set({ mark: k })} />}
+            {opts.robotHeads && <Chips label="Head" options={opts.robotHeads} value={cur.robotHead} onPick={(k) => set({ robotHead: k })} />}
+            {opts.frames && <Chips label="Frame" options={opts.frames} value={cur.frame} onPick={(k) => set({ frame: k })} />}
+            {opts.finishes && <Chips label="Finish" options={opts.finishes} value={cur.finish} onPick={(k) => set({ finish: k })} />}
+            {opts.garbs && <Swatches label="Clothes" colors={opts.garbs} value={cur.cls.garb} onPick={(c) => set({ garb: c })} custom />}
+            <Swatches label={opts.trimLabel} colors={opts.trims} value={cur.cls.trim} onPick={(c) => set({ trim: c })} custom />
           </>
         )}
       </div>

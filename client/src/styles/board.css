@@ -326,3 +326,12 @@
   .roll-toasts { right: 14px; bottom: 84px; }
   .board-topbar { overflow-x: auto; }
 }
+
+/* turn state: who's acting, your turn, auto monsters */
+.init-acting { font-size: 0.82em; color: var(--text-mid); font-style: italic; animation: init-pulse 1.2s ease-in-out infinite; }
+@keyframes init-pulse { 50% { opacity: 0.5; } }
+.init-yours {
+  font: 700 0.75em var(--font-display); letter-spacing: 1px; text-transform: uppercase; color: var(--bg-deep);
+  background: var(--gold-bright); border-radius: 10px; padding: 2px 8px;
+}
+.init-auto { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78em; color: var(--text-dim); cursor: pointer; white-space: nowrap; }

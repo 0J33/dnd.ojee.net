@@ -1,0 +1,4 @@
+Sound effects in this folder are from the Superpowers Asset Packs by Pixel-boy / Sparklin Labs,
+released under CC0 1.0 (see LICENSE-CC0.txt): https://github.com/sparklinlabs/superpowers-asset-packs
+whoosh-1/2, growl-1/2, ring, forest: medieval-fantasy pack. impact: ninja-adventure pack.
+Music and every other sound are generated live in the browser (client/src/audio).

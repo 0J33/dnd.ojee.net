@@ -1,0 +1,376 @@
+/* ================= The Tavern Table =================
+   The whole app is a table in the Gilded Flagon. Three materials:
+     oak   - the table and every board that holds controls (menus, bars,
+             dialogs, the HUD). The default scope.
+     paper - documents you read and write on: the character sheet, the
+             builder, the guide, the story note, handouts, quest notices.
+     slate - the chalk board by the door (a friend's code).
+   Brass is what you press; red wax is what destroys. Loaded last, so it
+   re-points the tokens every other stylesheet already uses. */
+
+@import '@fontsource/im-fell-english-sc/400.css';
+@import '@fontsource/im-fell-english/400.css';
+@import '@fontsource/im-fell-english/400-italic.css';
+@import '@fontsource/alegreya/400.css';
+@import '@fontsource/alegreya/400-italic.css';
+@import '@fontsource/alegreya/500.css';
+@import '@fontsource/alegreya/700.css';
+@import '@fontsource/alegreya-sans-sc/500.css';
+@import '@fontsource/alegreya-sans-sc/700.css';
+
+:root {
+  /* oak, from the dark under the table up to a lit board */
+  --bg-deep: #0b0604;
+  --bg-base: #120b07;
+  --bg-panel: #1a100a;
+  --bg-panel-2: #21150d;
+  --bg-elev: #2b1b11;
+  --bg-hover: #382416;
+
+  --border-soft: #34231a;
+  --border: #4a3222;
+  --border-strong: #6a4a2e;
+
+  --text: #f2e6cc;
+  --text-mid: #cdb894;
+  --text-dim: #a68f6a;
+  --text-faint: #806b4e;
+
+  /* brass */
+  --gold: #cfa75b;
+  --gold-bright: #ebcb88;
+  --gold-dim: #8f703f;
+  --gold-glow: rgba(235, 190, 110, 0.32);
+
+  /* wax and flame */
+  --ember: #b8372a;
+  --ember-bright: #dd5a43;
+  --danger: #a8322a;
+  --danger-bright: #e0624e;
+  --success: #7da35f;
+  --info: #6a93b0;
+  --magic: #9a88df;
+
+  --font-display: 'IM Fell English SC', 'IM Fell English', Georgia, serif;
+  --font-script: 'IM Fell English', Georgia, serif;
+  --font-body: 'Alegreya', Georgia, serif;
+  --font-label: 'Alegreya Sans SC', 'Alegreya', sans-serif;
+
+  --radius: 5px;
+  --radius-sm: 4px;
+
+  --tex-oak: url('/tex/oak.webp');
+  --tex-paper: url('/tex/paper.webp');
+  --tex-slate: url('/tex/slate.webp');
+  --tex-brass: url('/tex/brass.webp');
+
+  /* a board: oak, darkened to hold text, with a lit top edge */
+  --board:
+    linear-gradient(180deg, rgba(16, 9, 5, 0.46), rgba(12, 7, 4, 0.6)),
+    var(--tex-oak) 0 0 / 640px auto;
+  --shadow-panel: 0 10px 28px -6px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 214, 160, 0.07), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 34px 80px -10px rgba(0, 0, 0, 0.92), inset 0 1px 0 rgba(255, 214, 160, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 16px 40px -6px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 214, 160, 0.07);
+  --shadow-paper: 0 2px 3px rgba(20, 10, 4, 0.35), 0 18px 34px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* ---------- the room ---------- */
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse 70% 60% at 50% 42%, rgba(255, 170, 80, 0.10), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.78) 100%),
+    linear-gradient(180deg, rgba(10, 6, 3, 0.35), rgba(10, 6, 3, 0.55)),
+    var(--tex-oak);
+  background-size: auto, auto, auto, 900px auto;
+  font-synthesis: none;
+}
+::selection { background: rgba(235, 190, 110, 0.34); color: #fff6e4; }
+* { caret-color: var(--gold-bright); }
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; }
+h4 { font-family: var(--font-label); font-weight: 700; letter-spacing: 0.08em; text-transform: none; }
+.muted { font-style: italic; }
+kbd { font-family: var(--font-label); font-weight: 700; background: var(--bg-elev); border-color: var(--border-strong); }
+
+/* scrollbars: a brass rail in a dark groove */
+* { scrollbar-color: var(--gold-dim) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-color: transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); background-clip: padding-box; }
+
+/* ---------- buttons ----------
+   default: a wooden peg board button; primary: a brass plate; danger: red wax */
+button {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 0.86em;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--text);
+  background: linear-gradient(180deg, #3a2617, #26180e);
+  border: 1px solid #5a3d25;
+  box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.10), 0 2px 4px -1px rgba(0, 0, 0, 0.6);
+}
+button:hover:not(:disabled) {
+  border-color: var(--gold-dim);
+  background: linear-gradient(180deg, #4a301c, #301e11);
+  box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.14), 0 3px 10px -2px rgba(0, 0, 0, 0.7), 0 0 14px -4px var(--gold-glow);
+  color: var(--gold-bright);
+}
+button:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5); }
+
+.primary-btn {
+  color: #2a1906;
+  text-shadow: 0 1px 0 rgba(255, 236, 190, 0.5);
+  /* a brushed brass plate, lit from above */
+  background:
+    linear-gradient(180deg, rgba(255, 244, 210, 0.38), rgba(255, 244, 210, 0) 42%, rgba(70, 40, 8, 0.28)),
+    var(--tex-brass) 0 0 / 260px auto, #c99d52;
+  border: 1px solid #6e4f22;
+  box-shadow: inset 0 1px 0 rgba(255, 246, 214, 0.6), inset 0 -1px 0 rgba(70, 40, 8, 0.35), 0 3px 8px -2px rgba(0, 0, 0, 0.7);
+}
+.primary-btn:hover:not(:disabled) {
+  color: #24150a;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 220, 0.5), rgba(255, 244, 210, 0.06) 42%, rgba(70, 40, 8, 0.2)),
+    var(--tex-brass) 0 0 / 260px auto, #d4a95c;
+  border-color: #7c5a27;
+  box-shadow: inset 0 1px 0 rgba(255, 246, 214, 0.7), inset 0 -1px 0 rgba(70, 40, 8, 0.3), 0 4px 14px -3px rgba(0, 0, 0, 0.7), 0 0 20px -4px var(--gold-glow);
+}
+
+.danger-btn {
+  color: #fbe3d8;
+  background: linear-gradient(180deg, #b8402f, #8a2519);
+  border-color: #5e170f;
+  text-shadow: 0 1px 0 rgba(60, 8, 2, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 190, 170, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.6);
+}
+.danger-btn:hover:not(:disabled) { color: #fff0e8; border-color: #6e1d13; background: linear-gradient(180deg, #c84a37, #96291c); box-shadow: inset 0 1px 0 rgba(255, 190, 170, 0.4), 0 3px 10px -2px rgba(0, 0, 0, 0.7); }
+
+.ghost-btn { background: transparent; border-color: var(--border); color: var(--text-mid); box-shadow: none; }
+.ghost-btn:hover:not(:disabled) { background: rgba(235, 190, 110, 0.07); }
+
+.link-btn { font-family: var(--font-body); font-style: italic; text-decoration: underline; text-decoration-color: rgba(207, 167, 91, 0.45); text-underline-offset: 3px; }
+
+.close-btn { background: none; border: none; box-shadow: none; color: var(--text-dim); }
+.close-btn:hover:not(:disabled) { background: none; box-shadow: none; color: var(--gold-bright); }
+
+/* ---------- fields: dark inlay in the oak ---------- */
+input, select, textarea {
+  font-family: var(--font-body);
+  background: #0e0805;
+  border-color: var(--border);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 214, 160, 0.05);
+}
+input:focus, select:focus, textarea:focus { border-color: var(--gold); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(207, 167, 91, 0.18); }
+/* (the shorthand above resets the select's chevron: put it back, once, not tiled) */
+select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23b3a992' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+label.field-label { font-family: var(--font-label); font-weight: 700; font-size: 0.82em; letter-spacing: 0.08em; text-transform: none; color: var(--text-mid); }
+input[type='checkbox'] { border-color: var(--gold-dim); background: #0e0805; }
+input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b48641); border-color: #6e4f22; }
+
+/* ---------- boards: panels, dialogs, menus ---------- */
+.panel, .modal, .context-menu {
+  background: var(--board);
+  border: 1px solid #4a3020;
+  box-shadow: var(--shadow-panel);
+  --text-dim: #ae976f;
+  --text-faint: #8d7756;
+}
+.modal { border-color: #5a3b25; box-shadow: var(--shadow-modal); }
+.context-menu { box-shadow: var(--shadow-pop); }
+.modal-overlay { background: rgba(6, 3, 1, 0.72); backdrop-filter: blur(2px); }
+.panel-header, .modal-header { border-bottom-color: rgba(207, 167, 91, 0.18); }
+.modal-actions { border-top-color: rgba(207, 167, 91, 0.18); }
+.panel-header h3, .modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 1.12em;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--gold-bright);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.ctx-item { font-family: var(--font-body); }
+.ctx-header { font-family: var(--font-label); font-weight: 700; font-size: 0.78em; letter-spacing: 0.08em; text-transform: none; }
+.ornament-line { background: linear-gradient(90deg, transparent, rgba(207, 167, 91, 0.55), transparent); }
+
+.tab-row { border-bottom-color: rgba(207, 167, 91, 0.2); }
+.tab-row button { font-family: var(--font-label); background: none; border: none; border-bottom: 2px solid transparent; box-shadow: none; color: var(--text-dim); }
+.tab-row button:hover:not(:disabled) { background: none; box-shadow: none; color: var(--text); }
+.tab-row button.active { color: var(--gold-bright); border-bottom-color: var(--gold); }
+
+.chip { font-family: var(--font-label); font-weight: 500; background: rgba(0, 0, 0, 0.28); border-color: var(--border-strong); }
+
+/* ---------- paper: documents on the table ---------- */
+.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout {
+  --bg-deep: rgba(110, 78, 40, 0.09);
+  --bg-base: rgba(110, 78, 40, 0.06);
+  --bg-panel: #eadcbc;
+  --bg-panel-2: #efe3c7;
+  --bg-elev: rgba(110, 78, 40, 0.10);
+  --bg-hover: rgba(110, 78, 40, 0.17);
+  --border-soft: rgba(96, 66, 32, 0.20);
+  --border: rgba(96, 66, 32, 0.34);
+  --border-strong: rgba(96, 66, 32, 0.52);
+  --text: #2a1b0f;
+  --text-mid: #4b3520;
+  --text-dim: #6a5034;
+  --text-faint: #806546;
+  --gold: #8c5418;
+  --gold-bright: #7a3f0c;
+  --gold-dim: #a07a45;
+  --gold-glow: rgba(140, 84, 24, 0.22);
+  --ember-bright: #a3301f;
+  --danger-bright: #a52a1c;
+  --magic: #5a45a8;
+  --success: #4c7330;
+  --info: #39607e;
+  color: var(--text);
+  color-scheme: light;
+  background:
+    radial-gradient(ellipse 120% 100% at 50% 40%, transparent 62%, rgba(120, 78, 30, 0.22) 100%),
+    var(--tex-paper) 0 0 / 512px auto,
+    #e9dcbc;
+  border: 1px solid #b89a68;
+  box-shadow: var(--shadow-paper), inset 0 0 0 1px rgba(255, 250, 235, 0.35);
+}
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) ::selection { background: rgba(140, 84, 24, 0.25); color: #1a0f06; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) * { scrollbar-color: rgba(96, 66, 32, 0.45) transparent; caret-color: #7a3f0c; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(h1, h2, h3, .modal-header h3, .panel-header h3) { color: #7a2a14; text-shadow: none; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(.panel-header, .modal-header) { border-bottom-color: rgba(96, 66, 32, 0.28); }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) .modal-actions { border-top-color: rgba(96, 66, 32, 0.28); }
+
+/* on paper, a plain button is an inked outline; brass and wax stay what they are */
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) button:not(.primary-btn):not(.danger-btn):not(.close-btn):not(.link-btn) {
+  color: var(--text);
+  background: rgba(255, 248, 230, 0.35);
+  border-color: rgba(96, 66, 32, 0.45);
+  box-shadow: 0 1px 0 rgba(255, 250, 235, 0.6), 0 1px 2px rgba(60, 36, 12, 0.18);
+  text-shadow: none;
+}
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) button:not(.primary-btn):not(.danger-btn):not(.close-btn):not(.link-btn):hover:not(:disabled) {
+  color: #5c2c08;
+  background: rgba(255, 248, 230, 0.6);
+  border-color: rgba(140, 84, 24, 0.7);
+  box-shadow: 0 1px 0 rgba(255, 250, 235, 0.7), 0 2px 6px rgba(60, 36, 12, 0.22);
+}
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(.tab-row button, .ghost-btn) { background: transparent !important; box-shadow: none !important; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) .tab-row button { border: none !important; border-bottom: 2px solid transparent !important; color: var(--text-dim) !important; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) .tab-row button.active { color: #7a2a14 !important; border-bottom-color: #8c5418 !important; }
+
+/* fields on paper: written on a ruled line, not sunk into wood */
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(input, select, textarea) {
+  color: var(--text);
+  background-color: rgba(255, 250, 236, 0.45);
+  border: 1px solid rgba(96, 66, 32, 0.32);
+  box-shadow: inset 0 1px 2px rgba(60, 36, 12, 0.16);
+}
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(input, select, textarea):focus { border-color: #8c5418; box-shadow: inset 0 1px 2px rgba(60, 36, 12, 0.16), 0 0 0 3px rgba(140, 84, 24, 0.16); }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236a5034' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) select option { background: #efe3c7; color: #2a1b0f; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) input::placeholder { color: #8c7455; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) input[type='checkbox'] { background: rgba(255, 250, 236, 0.6); border-color: rgba(96, 66, 32, 0.55); }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) .chip { background: rgba(255, 250, 236, 0.4); border-color: rgba(96, 66, 32, 0.35); color: var(--text-mid); }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) .chip.gold { color: #7a3f0c; border-color: rgba(140, 84, 24, 0.55); background: rgba(207, 167, 91, 0.18); }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) a { color: #7a3f0c; text-decoration: underline; text-decoration-color: rgba(122, 63, 12, 0.4); text-underline-offset: 3px; }
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :focus-visible { outline-color: #8c5418; }
+
+/* ---------- motion ---------- */
+@keyframes tvn-settle { from { opacity: 0; transform: translateY(14px) rotate(var(--tilt, 0deg)) scale(0.985); } to { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0deg)); } }
+.modal, .builder { animation: tvn-settle 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+.link-btn, .link-btn:hover:not(:disabled) { background: none; border: none; box-shadow: none; padding: 0; min-height: 0; font-weight: 400; letter-spacing: 0; }
+
+/* buttons that are really cards (choices, pregens, packs) read in the body face */
+.mode-card, .pack-card, .pregen-card, .choice-card, .option-card { font-family: var(--font-body); font-weight: 400; letter-spacing: 0; text-transform: none; text-align: left; }
+.mode-card :is(p, span), .pack-card :is(p, span) { font-weight: 400; }
+.mode-card h4, .pack-card strong { font-family: var(--font-display); font-weight: 400; font-size: 1.05rem; letter-spacing: 0.02em; color: var(--gold-bright); }
+.mode-card.selected, .pack-card.selected { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold-dim), 0 0 18px -6px var(--gold-glow); }
+
+/* ---------- the table HUD: every bar that floats over the map is a board ---------- */
+.topbar, .board-topbar,
+.hud-hero, .hud-party-chip, .hud-pill, .hud-more-menu,
+.tool-dock-main, .dice-toggle, .dice-tray, .chat-panel,
+.w3-view button, .w3-switch, .w3-toast, .w3-hint {
+  background: var(--board);
+  border-color: #4a3020;
+  backdrop-filter: none !important; /* solid boards: no blur, which would be redone every frame over the moving board */
+}
+.topbar, .board-topbar { border-bottom: 1px solid #3e2819; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 214, 160, 0.05); }
+.topbar-title { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.03em; color: var(--gold-bright); }
+.hud-hero, .tool-dock-main, .dice-tray, .chat-panel, .hud-more-menu { box-shadow: var(--shadow-pop); }
+.hud-hero { border-radius: 8px; }
+.hud-hero.my-turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 24px -2px var(--gold-glow), var(--shadow-pop); }
+.hud-party-chip { border-radius: 8px; }
+.hud-pill, .w3-toast, .w3-hint { border-radius: 6px; }
+.w3-view button, .w3-switch { font-family: var(--font-label); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em; box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.08), 0 3px 8px -2px rgba(0, 0, 0, 0.7); }
+.dice-toggle { color: var(--gold-bright); border-color: var(--gold-dim); box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.1), var(--shadow-pop); }
+.hud-pill b { font-family: var(--font-label); }
+
+/* the story note: rules are a ruled box in brown ink, your move is underlined in red */
+.tut-panel .tut-rule { border: 1px solid rgba(96, 66, 32, 0.4); background: rgba(255, 250, 236, 0.35); box-shadow: inset 0 0 0 3px rgba(255, 250, 236, 0.25); }
+.tut-panel .tut-rule h4 { color: #5a3c1e; font-family: var(--font-display); font-weight: 400; font-size: 1rem; letter-spacing: 0.02em; }
+.tut-panel .tut-rule ul { color: var(--text-mid); font-size: 0.95em; }
+.tut-panel .tut-instruction { background: rgba(140, 84, 24, 0.08); border: 1px solid rgba(140, 84, 24, 0.45); color: var(--text); }
+.tut-panel .tut-instruction strong { color: #7a2a14; }
+.tut-panel .tut-narration p:first-child::first-letter { font-family: var(--font-display); font-weight: 400; color: #7a2a14; margin-right: 2px; }
+.tut-panel .tut-step-num { font-family: var(--font-label); font-weight: 700; letter-spacing: 0.08em; text-transform: none; }
+.tut-panel .tut-head h3 { color: #7a2a14; font-size: 1.12em; }
+.tut-collapsed { background: var(--board); border-color: #4a3020; }
+
+/* dice in the tray are bone dice with red-inked faces, like the ones on the table */
+.die-btn .die-shape g { fill: #eadcbc; stroke: #7a2a14; }
+.die-btn .die-shape text { fill: #7a2a14; }
+.die-btn { background: rgba(0, 0, 0, 0.25); border-color: #4a3020; box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45); }
+.die-btn:hover:not(:disabled) .die-shape { transform: rotate(-8deg) scale(1.06); }
+.die-btn .die-shape { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); filter: drop-shadow(-2px 2px 2px rgba(0, 0, 0, 0.5)); }
+
+/* with the dice tray open, the story note ends above it instead of under it */
+.game-board:not(.is-mobile):has(.dice-wrap .dice-tray) .tut-panel { max-height: calc(100% - 62px - var(--hero-h, 62px) - 210px); }
+.game-board:not(.is-mobile) .topbar-title-sm { max-width: min(440px, 34vw); }
+.topbar-title-sm { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.03em; color: var(--gold-bright); }
+/* the guide's pager shows which page you're on */
+.guide-dots button.active, .guide-dots button[aria-current='true'], .guide-dots .on { background: #8c5418 !important; border-color: #7a2a14 !important; }
+.tut-sc { font-family: var(--font-display); font-size: 1.04em; letter-spacing: 0.02em; color: #5a2210; }
+.tut-instruction strong svg, .choice-playstyle svg { vertical-align: -1px; }
+
+/* the instruction is what the player has to do: it never scrolls out of the story note */
+.tut-panel .tut-instruction { position: sticky; bottom: -14px; margin-bottom: -14px; z-index: 1; background: #eee2c4; box-shadow: 0 -10px 14px -6px rgba(233, 220, 188, 0.95); }
+
+/* the look editor's two actions sit side by side as a pair */
+.pe-actions .pe-link { padding: 9px 10px; font-size: 0.95rem; }
+/* a picked chip on paper reads as picked: inked, not just outlined */
+:is(.paper, .sheet, .builder, .guide-modal, .tut-panel, .dm-handout) :is(.pe-chip.on, .pe-face.on) {
+  background: rgba(122, 42, 20, 0.12); border-color: #7a2a14; color: #7a2a14; box-shadow: inset 0 0 0 1px #7a2a14;
+}
+
+/* ---------- picked, at a glance (on paper the gold glow vanishes) ---------- */
+:is(.paper, .sheet, .builder, .guide-modal) :is(.choice-card, .mode-card, .pack-card, .pregen-card).selected {
+  position: relative;
+  border: 2px solid #7a2a14;
+  background: linear-gradient(180deg, rgba(122, 42, 20, 0.1), rgba(122, 42, 20, 0.04));
+  box-shadow: 0 2px 10px -4px rgba(122, 42, 20, 0.45);
+}
+:is(.paper, .sheet, .builder, .guide-modal) :is(.choice-card, .mode-card, .pack-card, .pregen-card).selected::after {
+  content: '✓'; position: absolute; top: -9px; right: -9px; width: 26px; height: 26px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c0442a, #7a2a14 70%);
+  color: #f6ead0; font: 700 14px/1 var(--font-body); box-shadow: 0 2px 4px rgba(40, 10, 4, 0.45);
+}
+:is(.paper, .sheet, .builder, .guide-modal) :is(.choice-card, .mode-card).selected h4 { color: #7a2a14; }
+:is(.paper, .sheet, .builder, .guide-modal) :is(.skill-pick, .spell-pick).on {
+  border-color: #7a2a14; background: #7a2a14; color: #f6ead0;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 190, 0.18);
+}
+:is(.paper, .sheet, .builder, .guide-modal) :is(.skill-pick, .spell-pick).on :is(.spell-pick-name, .muted, span) { color: #f6ead0 !important; }
+:is(.paper, .sheet, .builder, .guide-modal) .skill-pick.on::before,
+:is(.paper, .sheet, .builder, .guide-modal) .spell-pick.on .spell-pick-name::before { content: '✓ '; font-weight: 700; }
+.builder .tab-row button.active { background: rgba(122, 42, 20, 0.1) !important; box-shadow: inset 0 -3px 0 #7a2a14; }

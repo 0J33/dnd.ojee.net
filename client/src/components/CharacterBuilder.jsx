@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { characters as charsApi, srd } from '../api';
 import { useDialog } from '../utils';
@@ -11,8 +11,8 @@ import {
 import { resolveRace, needsSubrace, choicePool, racialBonuses as sumRacialBonuses, choicesComplete } from '../rules/race';
 import { PREGENS } from '../data/pregens';
 import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon, XIcon } from './Icons';
-import { Avatar } from './Portrait';
-import PortraitEditor, { PORTRAIT_COLORS } from './PortraitEditor';
+import { Avatar, BODIES, lookOptions } from './Portrait';
+import PortraitEditor, { PORTRAIT_COLORS, FigureStage } from './PortraitEditor';
 import { useSources, SourceChip, SourceHead, SubclassPicker, useSubclass, subclassFeaturesBetween, pressable, groupBySource } from './ContentChoices';
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
@@ -69,7 +69,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     srd.race(race).then((d) => {
       if (!d || d.error) return;
       setRaceDetail(d);
-      // a race with exactly one subrace (Hill Dwarf, High Elf...) just has it
+      // a race with exactly one subrace (Hill Dwarf, High Elf…) just has it
       if (d.subrace_required && d.subraces.length === 1) setSubrace(d.subraces[0].index);
     });
   }, [race]);
@@ -337,6 +337,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     };
   }, [embedded]);
 
+  const lookSheet = { name: name || 'Hero', race, subrace, classIndex, raceName: resolved && resolved.name, className: meta && meta.name, portrait };
   const body = (
     <div ref={rootRef} tabIndex={-1} role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-label="Create a hero" className={`builder ${embedded ? 'builder-embedded' : ''}`}>
       <div className="builder-head">
@@ -351,15 +352,16 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
         {!embedded && <button className="close-btn" onClick={onClose} aria-label="Close the hero builder"><XIcon size={16} /></button>}
       </div>
 
+      <div className="builder-mid">
       <div className="builder-body" ref={bodyRef}>
         {STEPS[step] === 'Start' && (
           <div>
             <p className="builder-intro">
               Every adventurer is defined by a <strong>race</strong> (ancestry), a <strong>class</strong> (profession),
               a <strong>background</strong> (past life), and six <strong>ability scores</strong>. The builder walks you
-              through each choice - nothing to memorize. Or grab a ready-made hero and start playing now.
+              through each choice – nothing to memorize. Or grab a ready-made hero and start playing now.
             </p>
-            <h4 className="mt">Quick start - pick a ready-made hero</h4>
+            <h4 className="mt">Quick start – pick a ready-made hero</h4>
             <div className="pregen-grid">
               {PREGENS.map((p) => (
                 <div key={p.id} className="pregen-card" {...pressable(() => pickPregen(p))}>
@@ -380,6 +382,23 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
         {STEPS[step] === 'Race' && (
           <div>
+            {/* Body first: it sets the hero's build, face and hair defaults
+                from the very first preview (and stays editable under Details). */}
+            {(!race || lookOptions(lookSheet).bodies) && (
+              <div className="builder-body-pick" role="group" aria-label="Body">
+                <span className="pe-label">Body</span>
+                {Object.entries(BODIES).map(([k, label]) => (
+                  <button
+                    key={k} type="button"
+                    className={`pe-chip ${portrait.look?.body === k ? 'on' : ''}`}
+                    aria-pressed={portrait.look?.body === k}
+                    onClick={() => setPortrait({ ...portrait, look: { ...(portrait.look || {}), body: k } })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="builder-intro">
               Your race shapes what you are: size, speed, senses, and natural talents. There is no wrong pick. The core
               races come first; the rest are from open-licensed expansion books.
@@ -415,7 +434,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 <div key={idx} className={`choice-card ${classIndex === idx ? 'selected' : ''}`} aria-pressed={classIndex === idx} {...pressable(() => setClassIndex(idx))}>
                   <h4>{c.name} {c.caster && <span className="chip magic">magic</span>}</h4>
                   <p>{c.blurb}</p>
-                  <p className="choice-playstyle">▸ {c.playstyle}</p>
+                  <p className="choice-playstyle"><ChevronRight size={12} /> {c.playstyle}</p>
                   <div className="choice-tags">
                     <span className="chip">d{c.hitDie} hit die</span>
                     <span className="chip gold">{c.primary.map((a) => a.toUpperCase()).join(' & ')}</span>
@@ -539,7 +558,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
         {STEPS[step] === 'Background' && meta && (
           <div>
-            <p className="builder-intro">Your background is who you were before adventuring - it grants two skills and a story hook.</p>
+            <p className="builder-intro">Your background is who you were before adventuring – it grants two skills and a story hook.</p>
             <div className="choice-grid">
               {backgrounds.map((b) => (
                 <div key={b.index} className={`choice-card ${background === b.index ? 'selected' : ''}`} aria-pressed={background === b.index} {...pressable(() => {
@@ -563,7 +582,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
             {background && (
               <div className="mt">
-                <h4>Class skills - pick {meta.skillChoices.n} ({classSkills.length}/{meta.skillChoices.n})</h4>
+                <h4>Class skills – pick {meta.skillChoices.n} ({classSkills.length}/{meta.skillChoices.n})</h4>
                 <p className="muted small">
                   You're already proficient in {bgSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')} from your background
                   {racialSkills.length > 0 && <> and {racialSkills.map((s) => SKILL_BY_INDEX[s].name).join(', ')} from your race</>}.
@@ -609,7 +628,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 )}
                 {meta.expertiseAtCreate && (
                   <div className="mt">
-                    <h4>Expertise - double your bonus in {meta.expertiseAtCreate} skills ({expertisePicks.length}/{meta.expertiseAtCreate})</h4>
+                    <h4>Expertise – double your bonus in {meta.expertiseAtCreate} skills ({expertisePicks.length}/{meta.expertiseAtCreate})</h4>
                     <div className="skill-pick-grid">
                       {uniq([...bgSkills, ...racialSkills, ...classSkills, ...swapSkills]).map((s) => {
                         const on = expertisePicks.includes(s);
@@ -634,9 +653,9 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
           <div>
             <p className="builder-intro">
               <strong>Cantrips</strong> are minor spells you can cast forever, at will. <strong>Leveled spells</strong> use
-              up spell slots (you get them back on a long rest). We pre-picked a solid beginner set - change anything you like.
+              up spell slots (you get them back on a long rest). We pre-picked a solid beginner set – change anything you like.
             </p>
-            <h4>Cantrips - pick {cantripsNeeded} ({cantrips.length}/{cantripsNeeded})</h4>
+            <h4>Cantrips – pick {cantripsNeeded} ({cantrips.length}/{cantripsNeeded})</h4>
             <div className="spell-pick-list">
               {spellList.cantrips.map((s) => (
                 <SpellPickRow key={s.index} spell={s} on={cantrips.includes(s.index)} toggle={() => {
@@ -670,6 +689,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
               sheet={{ name: name || 'Hero', race, subrace, classIndex, raceName: resolved && resolved.name, className: meta && meta.name }}
               portrait={portrait}
               onChange={setPortrait}
+              showFigure={false}
             />
             <label className="field-label" htmlFor="hero-alignment">
               Alignment <span className="field-hint">your moral compass, just a roleplay guide</span>
@@ -708,6 +728,21 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
           />
         )}
       </div>
+      {step > 0 && race && (
+        // The hero as they'll look, beside every step: it changes as you
+        // pick race, class and looks.
+        <aside className="builder-figure" aria-label="Your hero so far">
+          <Avatar sheet={lookSheet} name={name || 'Hero'} color={portrait.color} size={88} />
+          <Suspense fallback={<div className="figure-stage builder-figure-stage" />}>
+            <FigureStage sheet={lookSheet} height="100%" className="builder-figure-stage" />
+          </Suspense>
+          <p className="builder-figure-cap">
+            <strong>{name || 'Your hero'}</strong>
+            <span>{[resolved && resolved.name, meta && meta.name].filter(Boolean).join(' ') || 'Choose a race'}</span>
+          </p>
+        </aside>
+      )}
+      </div>
 
       <div className="builder-foot">
         <button onClick={step === 0 ? onClose : back}>
@@ -716,7 +751,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
         <div className="grow" />
         {STEPS[step] === 'Review' ? (
           <button className="primary-btn big-btn" onClick={save} disabled={saving}>
-            {saving ? 'Saving...' : 'Forge this hero'}
+            {saving ? 'Saving…' : 'Forge this hero'}
           </button>
         ) : step > 0 ? (
           <button className="primary-btn" onClick={next} disabled={!canNext()}>
@@ -749,7 +784,7 @@ function RaceCard({ r, sources, selected, onPick }) {
 }
 
 // Everything left to decide once a race is picked: subrace, floating ability
-// increases, skill picks - plus the full trait list, so nothing is a surprise.
+// increases, skill picks – plus the full trait list, so nothing is a surprise.
 function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, setAbilityPicks, raceSkillPicks, setRaceSkillPicks }) {
   const ref = useRef(null);
   useEffect(() => {

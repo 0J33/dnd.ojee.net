@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { characters as charsApi, srd } from '../api';
 import { useDialog, ModalOverlay } from '../utils';
 import {
@@ -8,7 +8,7 @@ import {
 } from '../rules/engine';
 import { SubclassPicker, useSubclass, subclassFeaturesBetween } from './ContentChoices';
 import { Avatar } from './Portrait';
-import PortraitEditor from './PortraitEditor';
+import PortraitEditor, { FigureStage } from './PortraitEditor';
 import { HeartIcon, ShieldIcon, D20Icon, CampfireIcon, SparkleIcon, SkullIcon, PlusIcon, BookIcon, ChevronUp, XIcon, ConditionIcon } from './Icons';
 
 // The interactive 5e character sheet.
@@ -90,10 +90,14 @@ export default function CharacterSheet({
         {readOnly ? (
           <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} />
         ) : (
-          <button type="button" className="sheet-portrait-btn" onClick={() => setShowPortrait(true)} title="Change your portrait">
-            <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} title="Change your portrait" />
+          <button type="button" className="sheet-portrait-btn" onClick={() => setShowPortrait(true)} title="Change your look">
+            <Avatar sheet={sheet} name={sheet.name} color={sheet.portrait?.color || 'var(--gold)'} size={56} title="Change your look" />
           </button>
         )}
+        {/* the figure that walks the map, turnable */}
+        <Suspense fallback={<div className="figure-stage sheet-figure" />}>
+          <FigureStage sheet={sheet} height={84} className="sheet-figure" />
+        </Suspense>
         <div className="sheet-title">
           <div className="row">
             <input
@@ -355,7 +359,7 @@ function PortraitModal({ sheet, onClose, change }) {
     <ModalOverlay onClose={onClose}>
       <div className="modal portrait-modal">
         <div className="modal-header">
-          <h3>{sheet.name ? `${sheet.name}'s portrait` : 'Portrait'}</h3>
+          <h3>{sheet.name ? `${sheet.name}'s look` : 'Look'}</h3>
           <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={16} /></button>
         </div>
         <div className="modal-body">
@@ -363,7 +367,7 @@ function PortraitModal({ sheet, onClose, change }) {
         </div>
         <div className="modal-actions">
           <button onClick={onClose}>Cancel</button>
-          <button className="primary-btn" onClick={() => { change({ portrait: draft }); onClose(); }}>Save portrait</button>
+          <button className="primary-btn" onClick={() => { change({ portrait: draft }); onClose(); }}>Save look</button>
         </div>
       </div>
     </ModalOverlay>
@@ -1041,7 +1045,7 @@ async function shortRest({ sheet, derived, change, dialog, onAnnounce }) {
   change({ currentHp, hitDiceRemaining: available - n });
   // report what was restored, not the raw roll - you can't heal past your maximum
   const restored = currentHp - sheet.currentHp;
-  if (onAnnounce) onAnnounce(`⏳ ${sheet.name} takes a short rest: spends ${n} hit ${n === 1 ? 'die' : 'dice'}, heals ${restored} HP${restored < healed ? ` (rolled ${healed}, back to full)` : ''}.`);
+  if (onAnnounce) onAnnounce(`${sheet.name} takes a short rest: spends ${n} hit ${n === 1 ? 'die' : 'dice'}, heals ${restored} HP${restored < healed ? ` (rolled ${healed}, back to full)` : ''}.`);
 }
 
 async function longRest({ sheet, change, dialog, onAnnounce }) {
@@ -1065,7 +1069,7 @@ const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const modStr = (m) => (m >= 0 ? `+${m}` : `${m}`);
 const nameFromIndex = (i) => (i || '').split('-').map(cap).join(' ');
 
-function spellDice(spell, slotLvl, charLevel) {
+export function spellDice(spell, slotLvl, charLevel) {
   if (spell.damage) {
     if (spell.damage.damage_at_slot_level) {
       const keys = Object.keys(spell.damage.damage_at_slot_level).map(Number).sort((a, b) => a - b);

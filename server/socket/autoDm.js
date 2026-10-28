@@ -17,6 +17,45 @@ function isWall(scene, x, y) {
   return ch === '#' || ch === '_';
 }
 
+// What a creature can walk through, and where it can stop (the same rules
+// as the 3D board: walls, water and big props block; furniture can be
+// squeezed past but not stood in; difficult ground costs double).
+const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo'.split(''));
+const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));
+const DIFFICULT = new Set('ri~mY(7'.split(''));
+const chAt = (scene, x, y) => (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h ? '#' : ((scene.cells?.[y] || '')[x] || '.'));
+const passable = (scene, x, y) => !BLOCKS.has(chAt(scene, x, y));
+
+// Cheapest route to a square from which `target` is in reach (Chebyshev 1),
+// stopping on a free floor square. Returns the squares to walk, or null.
+function routeToward(scene, token, target, ignoreId) {
+  const W = scene.grid.w, key = (x, y) => y * W + x;
+  const cost = new Map([[key(token.x, token.y), 0]]), prev = new Map();
+  const q = [[token.x, token.y, 0]];
+  let goal = null;
+  while (q.length) {
+    q.sort((a, b) => a[2] - b[2]);
+    const [x, y, c] = q.shift();
+    if (c > (cost.get(key(x, y)) ?? Infinity)) continue;
+    const here = !(x === token.x && y === token.y);
+    if (here && cheb({ x, y }, target) <= 1 && !BULKY.has(chAt(scene, x, y)) && !occupied(scene, x, y, ignoreId)) { goal = [x, y]; break; }
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (!passable(scene, nx, ny)) continue;
+      if (dx && dy && (!passable(scene, x + dx, y) || !passable(scene, x, y + dy))) continue;
+      const nc = c + (DIFFICULT.has(chAt(scene, nx, ny)) ? 2 : 1);
+      if (nc > 60) continue;
+      if (nc < (cost.get(key(nx, ny)) ?? Infinity)) { cost.set(key(nx, ny), nc); prev.set(key(nx, ny), key(x, y)); q.push([nx, ny, nc]); }
+    }
+  }
+  if (!goal) return null;
+  const pts = [];
+  let k = key(goal[0], goal[1]);
+  while (k !== key(token.x, token.y)) { pts.unshift({ x: k % W, y: Math.floor(k / W), c: cost.get(k) }); k = prev.get(k); }
+  return pts;
+}
+
 function occupied(scene, x, y, ignoreId) {
   return scene.tokens.some((t) => t.id !== ignoreId && !t.dead && t.x === x && t.y === y);
 }
@@ -92,24 +131,20 @@ function runMonsterTurn(room, scene, tokenId) {
     }
   }
 
-  // Move toward target until adjacent (Chebyshev 1) or out of speed.
-  let steps = getSpeedCells(token);
+  // Walk the real route toward the target as far as speed allows, stopping
+  // on the last square along it where a creature may stand.
+  const steps = getSpeedCells(token);
   let moved = false;
-  let guard = 0;
-  while (cheb(token, target) > 1 && steps > 0 && guard++ < 30) {
-    const dx = Math.sign(target.x - token.x);
-    const dy = Math.sign(target.y - token.y);
-    const options = [
-      { x: token.x + dx, y: token.y + dy },
-      { x: token.x + dx, y: token.y },
-      { x: token.x, y: token.y + dy },
-    ];
-    const step = options.find((o) => (o.x !== token.x || o.y !== token.y) && !isWall(scene, o.x, o.y) && !occupied(scene, o.x, o.y, token.id));
-    if (!step) break;
-    token.x = step.x;
-    token.y = step.y;
-    steps -= 1;
-    moved = true;
+  if (cheb(token, target) > 1) {
+    const route = routeToward(scene, token, target, token.id);
+    if (route) {
+      let stop = null;
+      for (const p of route) {
+        if (p.c > steps) break;
+        if (!BULKY.has(chAt(scene, p.x, p.y)) && !occupied(scene, p.x, p.y, token.id)) stop = p;
+      }
+      if (stop) { token.x = stop.x; token.y = stop.y; moved = true; }
+    }
   }
 
   if (cheb(token, target) > 1) {

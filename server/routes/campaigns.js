@@ -24,6 +24,7 @@ router.get('/', async (req, res) => {
         members: state.members.map((m) => m.username),
         online: live ? live.members.filter((m) => m.socketId).length : 0,
         tutorialActive: state.tutorial && state.tutorial.active,
+        adventureKey: (state.tutorial && state.tutorial.adventure) || state.adventureKey || null,
         lastActivity: d.lastActivity,
       };
     })

@@ -141,12 +141,35 @@ def('s', 'Sand', 'floor', { group: 'Ground' }, (c, x, y, s, r) => {
   c.stroke();
 });
 def('k', 'Cobblestone', 'floor', { group: 'Ground' }, (c, x, y, s, r) => {
-  rect(c, x, y, s, s, '#4e4b46');
-  for (let i = 0; i < 4; i++) {
-    const cx = x + (i % 2) * s * 0.5 + s * 0.06;
-    const cy = y + Math.floor(i / 2) * s * 0.5 + s * 0.06;
-    rect(c, cx, cy, s * 0.38, s * 0.38, r(i + 12) > 0.5 ? '#615d57' : '#57534e');
+  // Rounded setts of different sizes in loose rows, so a street of them
+  // doesn't read as a grid of squares.
+  rect(c, x, y, s, s, '#46433e');
+  const rows = 3;
+  for (let j = 0; j < rows; j++) {
+    const off = (j % 2) * 0.17;
+    for (let i = -1; i < 3; i++) {
+      const k = j * 4 + i + 1;
+      const w = s * (0.27 + r(k + 20) * 0.08), hh = s * (0.24 + r(k + 40) * 0.06);
+      const cx = x + s * (0.2 + off + i * 0.33 + (r(k + 60) - 0.5) * 0.06), cy = y + s * (0.17 + j * 0.33 + (r(k + 80) - 0.5) * 0.06);
+      if (cx + w / 2 < x || cx - w / 2 > x + s) continue;
+      const tone = 0x55 + Math.floor(r(k + 100) * 22);
+      c.fillStyle = `rgb(${tone + 6},${tone + 2},${tone - 4})`;
+      c.beginPath();
+      c.ellipse(Math.max(x + w * 0.3, Math.min(x + s - w * 0.3, cx)), cy, w / 2, hh / 2, (r(k + 120) - 0.5) * 0.4, 0, Math.PI * 2);
+      c.fill();
+    }
   }
+});
+// Heights: a raised stone dais (walk up onto it) and a pit (a drop nobody walks into).
+def('^', 'Raised dais', 'floor', { group: 'Ground' }, (c, x, y, s, r) => {
+  rect(c, x, y, s, s, r(11) > 0.5 ? '#8a8378' : '#7f786e');
+  c.strokeStyle = 'rgba(255,240,210,0.18)'; c.lineWidth = Math.max(1, s * 0.04);
+  c.strokeRect(x + s * 0.06, y + s * 0.06, s * 0.88, s * 0.88);
+});
+def('o', 'Pit', 'floor', { group: 'Ground', blocked: true }, (c, x, y, s) => {
+  rect(c, x, y, s, s, '#0c0a08');
+  c.strokeStyle = '#3a342c'; c.lineWidth = Math.max(1, s * 0.06);
+  c.strokeRect(x + s * 0.04, y + s * 0.04, s * 0.92, s * 0.92);
 });
 def('p', 'Polished tile', 'floor', { group: 'Ground' }, (c, x, y, s, r) => {
   rect(c, x, y, s, s, r(13) > 0.5 ? '#8d8a95' : '#7e7b87');
@@ -166,15 +189,18 @@ def('i', 'Ice', 'floor', { group: 'Ground', difficult: true }, (c, x, y, s, r) =
 // little mats.
 def('e', 'Carpet', 'floor', { group: 'Ground' }, (c, x, y, s, r) => {
   rect(c, x, y, s, s, r(40) > 0.5 ? '#77363b' : '#6d3035');
-  c.strokeStyle = 'rgba(201,160,90,0.28)';
+  // A woven diamond and a thin gold edge (no cross shapes).
+  c.strokeStyle = 'rgba(201,160,90,0.3)';
   c.lineWidth = Math.max(1, s * 0.025);
   c.beginPath();
-  c.moveTo(x, y + s * 0.5);
-  c.lineTo(x + s, y + s * 0.5);
-  c.moveTo(x + s * 0.5, y);
-  c.lineTo(x + s * 0.5, y + s);
+  c.moveTo(x + s * 0.5, y + s * 0.2);
+  c.lineTo(x + s * 0.8, y + s * 0.5);
+  c.lineTo(x + s * 0.5, y + s * 0.8);
+  c.lineTo(x + s * 0.2, y + s * 0.5);
+  c.closePath();
   c.stroke();
-  circle(c, x + s * 0.5, y + s * 0.5, s * 0.13, null, 'rgba(201,160,90,0.35)', Math.max(1, s * 0.025));
+  c.strokeStyle = 'rgba(201,160,90,0.18)';
+  c.strokeRect(x + s * 0.06, y + s * 0.06, s * 0.88, s * 0.88);
 });
 def('z', 'Bone-strewn floor', 'floor', { group: 'Ground' }, (c, x, y, s, r, th) => {
   ground(c, x, y, s, r, th.base, th.dark);
@@ -579,8 +605,7 @@ def('A', 'Altar', 'prop', { group: 'Shrine', blocked: true }, (c, x, y, s, r, th
   c.lineWidth = Math.max(1, s * 0.045);
   c.strokeRect(x + s * 0.12, y + s * 0.24, s * 0.76, s * 0.56);
   rect(c, x + s * 0.06, y + s * 0.18, s * 0.88, s * 0.12, '#a5a2ad');
-  rect(c, x + s * 0.46, y + s * 0.36, s * 0.08, s * 0.34, '#d4a94f');
-  rect(c, x + s * 0.34, y + s * 0.44, s * 0.32, s * 0.08, '#d4a94f');
+  circle(c, x + s * 0.5, y + s * 0.52, s * 0.12, '#d4a94f', '#8a6a2a', Math.max(1, s * 0.03)); // offering bowl
 });
 def('U', 'Statue', 'prop', { group: 'Shrine', blocked: true }, (c, x, y, s, r, th) => {
   ground(c, x, y, s, r, th.base, th.dark);
@@ -621,8 +646,7 @@ def('M', 'Gravestone', 'prop', { group: 'Shrine' }, (c, x, y, s, r, th) => {
   c.strokeStyle = '#3f3d45';
   c.lineWidth = Math.max(1, s * 0.04);
   c.stroke();
-  rect(c, x + s * 0.46, y + s * 0.4, s * 0.08, s * 0.28, '#4d4b53');
-  rect(c, x + s * 0.36, y + s * 0.48, s * 0.28, s * 0.08, '#4d4b53');
+  for (const ly of [0.48, 0.58, 0.68]) rect(c, x + s * 0.38, y + s * ly, s * 0.24, s * 0.04, '#4d4b53'); // worn inscription
 });
 def('W', 'Well', 'prop', { group: 'Shrine', blocked: true }, (c, x, y, s, r, th) => {
   ground(c, x, y, s, r, th.base, th.dark);
