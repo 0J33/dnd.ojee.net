@@ -244,7 +244,7 @@ export const ADVENTURES = [
     buildScenes: () => [
       S('sewer', 'gw-sewer', { entry: { x: 2, y: 4 } }),
       S('corridors', 'gw-halls', { entry: { x: 10, y: 11 }, name: 'The Varrow Cellars' }),
-      S('crypt', 'gw-vault', { entry: { x: 10, y: 9 }, name: 'The Varrow Vault' }),
+      S('crypt', 'gw-vault', { entry: { x: 10, y: 8 }, name: 'The Varrow Vault' }),
     ],
     steps: GREYWATER_STEPS,
   },

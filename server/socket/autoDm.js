@@ -20,7 +20,7 @@ function isWall(scene, x, y) {
 // What a creature can walk through, and where it can stop (the same rules
 // as the 3D board: walls, water and big props block; furniture can be
 // squeezed past but not stood in; difficult ground costs double).
-const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo'.split(''));
+const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo~'.split(''));
 const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));
 const DIFFICULT = new Set('ri~mY(7'.split(''));
 const chAt = (scene, x, y) => (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h ? '#' : ((scene.cells?.[y] || '')[x] || '.'));

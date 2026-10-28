@@ -187,7 +187,7 @@ export const TUTORIAL_STEPS = [
     },
     instruction: 'Continue, then "Begin!" to start the fight. Take the goblins down, then Continue.',
     effectsOnEnter: [
-      { type: 'spawn', sceneId: 'tut-warren', tokens: [GOBLIN(1, 7, 4), GOBLIN(2, 11, 5)] },
+      { type: 'spawn', sceneId: 'tut-warren', tokens: [GOBLIN(1, 7, 4), GOBLIN(2, 11, 6)] },
       { type: 'startCombat' },
       { type: 'rollMonsters' },
     ],

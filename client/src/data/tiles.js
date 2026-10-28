@@ -217,7 +217,7 @@ def('z', 'Bone-strewn floor', 'floor', { group: 'Ground' }, (c, x, y, s, r, th) 
 
 /* --- liquids and hazards --- */
 
-def('~', 'Shallow water', 'floor', { group: 'Water', difficult: true }, (c, x, y, s, r) => {
+def('~', 'Shallow water', 'floor', { group: 'Water', blocked: true }, (c, x, y, s, r) => {
   ground(c, x, y, s, r, '#3d6579', '#33566b', 'rgba(255,255,255,0.05)');
   c.strokeStyle = 'rgba(190,225,240,0.3)';
   c.lineWidth = Math.max(1, s * 0.03);
@@ -226,7 +226,7 @@ def('~', 'Shallow water', 'floor', { group: 'Water', difficult: true }, (c, x, y
   c.quadraticCurveTo(x + s * 0.5, y + s * (0.2 + r(17) * 0.3), x + s * 0.9, y + s * (0.35 + r(18) * 0.3));
   c.stroke();
 });
-def('q', 'Deep water', 'floor', { group: 'Water', difficult: true }, (c, x, y, s, r) => {
+def('q', 'Deep water', 'floor', { group: 'Water', blocked: true }, (c, x, y, s, r) => {
   ground(c, x, y, s, r, '#1e3a4d', '#183043', 'rgba(255,255,255,0.04)');
   c.strokeStyle = 'rgba(150,195,215,0.18)';
   c.lineWidth = Math.max(1, s * 0.03);

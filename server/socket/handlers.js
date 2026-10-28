@@ -1375,7 +1375,7 @@ function isEntryDead(room, entry) {
 // First open floor cell near the middle-bottom of a scene.
 // Tiles nothing can stand on (walls, deep water, lava, chasms, big props) -
 // mirrors the blocked tiles in client/src/data/tiles.js.
-const BLOCKING = new Set('346lx#%wvh_LF[TOAUPQWSqo'.split(''));
+const BLOCKING = new Set('346lx#%wvh_LF[TOAUPQWSqo~'.split(''));
 // Furniture nobody should be placed standing in (mirrors BULKY in
 // client/src/world/WorldView.js).
 const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));

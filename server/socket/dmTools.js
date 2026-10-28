@@ -81,7 +81,7 @@ function heroesOn(room, scene) {
 }
 
 function freeNear(scene, x, y) {
-  const BLOCK = new Set('346lx#%wvh_LF[TOAUPQWSqot21ERJ)BbC!cGKMN?}$'.split(''));
+  const BLOCK = new Set('346lx#%wvh_LF[TOAUPQWSqo~t21ERJ)BbC!cGKMN?}$'.split(''));
   for (let r = 0; r < 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     const cx = x + dx, cy = y + dy;
     if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || cx < 0 || cy < 0 || cx >= scene.grid.w || cy >= scene.grid.h) continue;
@@ -233,7 +233,7 @@ function search(room, scene, token, api) {
 
 /* ---------------- patrols ---------------- */
 
-const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo'.split(''));
+const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo~'.split(''));
 function stepToward(scene, t, goal) {
   // one square along the cheapest route (8-way BFS)
   const W = scene.grid.w, key = (x, y) => y * W + x;

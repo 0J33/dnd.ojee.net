@@ -30,6 +30,15 @@ export default function App() {
   const dialog = useDialog();
   gameRef.current = game;
 
+  // Once you're in, fetch the table's 3D code and the hero preview in the
+  // background, so opening a game or the builder doesn't wait on a download.
+  useEffect(() => {
+    if (!user) return undefined;
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    const id = idle(() => { import('./components/Map3D'); import('./world/FigureStage'); });
+    return () => (window.cancelIdleCallback || clearTimeout)(id);
+  }, [user]);
+
   // ---- auth bootstrap ----
   useEffect(() => {
     auth.me().then((res) => {

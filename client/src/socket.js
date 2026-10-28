@@ -7,6 +7,10 @@ export const SERVER_URL = RAW === '/' ? window.location.origin : RAW || 'http://
 export const socket = io(SERVER_URL, {
   autoConnect: false,
   withCredentials: true,
+  // Straight to a websocket (one handshake) instead of long-polling first and
+  // upgrading (several round trips on a slow line); polling only if that fails.
+  transports: ['websocket', 'polling'],
+  tryAllTransports: true,
 });
 
 if (typeof window !== 'undefined') window.__socket = socket;
