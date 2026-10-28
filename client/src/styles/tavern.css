@@ -367,7 +367,9 @@ input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b
 }
 :is(.paper, .sheet, .builder, .guide-modal) :is(.choice-card, .mode-card).selected h4 { color: #7a2a14; }
 :is(.paper, .sheet, .builder, .guide-modal) :is(.skill-pick, .spell-pick).on {
-  border-color: #7a2a14; background: #7a2a14; color: #f6ead0;
+  /* !important: the paper button rule is more specific and kept painting it pale,
+     which left the light text invisible on a picked spell */
+  border-color: #7a2a14 !important; background: #7a2a14 !important; color: #f6ead0 !important;
   box-shadow: inset 0 1px 0 rgba(255, 220, 190, 0.18);
 }
 :is(.paper, .sheet, .builder, .guide-modal) :is(.skill-pick, .spell-pick).on :is(.spell-pick-name, .muted, span) { color: #f6ead0 !important; }

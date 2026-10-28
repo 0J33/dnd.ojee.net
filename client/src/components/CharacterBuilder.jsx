@@ -66,12 +66,16 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   useEffect(() => {
     setSubrace(null);
     if (!race) return setRaceDetail(null);
+    // Switching races quickly: only the race still picked may land (an
+    // earlier answer arriving last used to overwrite it, leaving Next off).
+    let live = true;
     srd.race(race).then((d) => {
-      if (!d || d.error) return;
+      if (!live || !d || d.error) return;
       setRaceDetail(d);
       // a race with exactly one subrace (Hill Dwarf, High Elf…) just has it
       if (d.subrace_required && d.subraces.length === 1) setSubrace(d.subraces[0].index);
     });
+    return () => { live = false; };
   }, [race]);
 
   // picks belong to one race + subrace combination
@@ -110,10 +114,12 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   // load spell options when reaching the spells step
   useEffect(() => {
     if (!meta || !meta.caster || !classIndex) return;
+    let live = true;
     Promise.all([
       srd.spells(`?class=${classIndex}&level=0`),
       srd.spells(`?class=${classIndex}&level=1`),
     ]).then(([c, s]) => {
+      if (!live) return;
       const cList = Array.isArray(c) ? c : [];
       const sList = Array.isArray(s) ? s : [];
       setSpellList({ cantrips: cList, level1: sList });
@@ -124,6 +130,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
       setCantrips((prev) => prev.filter((i) => cValid.has(i)));
       setSpells((prev) => prev.filter((i) => sValid.has(i)));
     });
+    return () => { live = false; };
   }, [classIndex, meta]);
 
   // preselect recommended spells when class changes

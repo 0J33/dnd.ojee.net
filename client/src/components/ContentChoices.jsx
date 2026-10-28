@@ -102,7 +102,9 @@ export function useSubclass(index) {
   useEffect(() => {
     setDetail(null);
     if (!index) return;
-    srd.subclass(index).then((d) => d && !d.error && setDetail(d));
+    let live = true; // a quick change of subclass: only the current one may land
+    srd.subclass(index).then((d) => live && d && !d.error && setDetail(d));
+    return () => { live = false; };
   }, [index]);
   return detail && detail.index === index ? detail : null;
 }
