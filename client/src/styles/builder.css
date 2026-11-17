@@ -23,7 +23,7 @@
 .builder-head h2 { display: flex; align-items: center; gap: 9px; color: var(--gold); font-size: 1.05em; }
 .builder-steps { display: flex; gap: 4px; flex-wrap: wrap; }
 .builder-step-dot {
-  font-family: var(--font-display); font-size: 0.62em; letter-spacing: 1.5px; text-transform: uppercase;
+  font-family: var(--font-label); font-weight: 700; font-size: 0.76em; letter-spacing: 0.04em; line-height: 1.3;
   padding: 3px 9px; border-radius: 9px; border: 1px solid var(--border-soft); color: var(--text-dim);
 }
 .builder-step-dot.active { color: var(--gold-bright); border-color: var(--gold-dim); background: rgba(212, 169, 79, 0.08); }
@@ -142,7 +142,7 @@
   border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elev);
   padding: 8px 14px; display: flex; flex-direction: column; align-items: center; min-width: 76px;
 }
-.review-stat span { font-family: var(--font-display); font-size: 0.62em; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+.review-stat span { font-family: var(--font-label); font-weight: 700; font-size: 0.76em; letter-spacing: 0.06em; color: var(--text-dim); }
 .review-stat strong { font-size: 1.15em; }
 /* body, picked first */
 .builder-body-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }

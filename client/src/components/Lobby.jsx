@@ -6,12 +6,18 @@ import { CLASS_META, deriveSheet } from '../rules/engine';
 import { STARTER_PACKS, sceneFromBuiltin, previewScene } from '../data/scenes';
 import { Avatar } from './Portrait';
 import { SceneThumb } from './ScenePrep';
-import CharacterBuilder from './CharacterBuilder';
-import CharacterSheet from './CharacterSheet';
+// Loaded when first opened (and fetched in the background once signed in).
+const CharacterBuilder = React.lazy(() => import('./CharacterBuilder'));
+const CharacterSheet = React.lazy(() => import('./CharacterSheet'));
 import Guide from './Guide';
+import { Handbook } from './Training';
+import { sandboxPayload } from '../training/practice';
 import { DragonLogo, D20Icon, MapIcon, UsersIcon, BookIcon, PlusIcon, SparkleIcon, SwordIcon, CrownIcon, ShieldIcon, HeartIcon, XIcon, TrashIcon, ScrollIcon, EyeIcon, PlayIcon, LogoutIcon, PenIcon } from './Icons';
 import { VERSION } from '../version';
-import { ADVENTURES, adventureBeats } from '../data/adventures';
+import { ADVENTURES, GUIDED_ADVENTURES, adventureBeats } from '../data/adventures';
+import { QUICK_CAMPAIGNS } from '../data/presets';
+import { QuickCampaignPicker, applyQuickCampaign, buildQuickCampaign } from './QuickCampaign';
+import { restoreUi, useUiContext } from '../uiContext';
 
 // The first quest's seal: poured wax with an uneven rim and a d20 pressed
 // into it. Drawn, not a gradient disc, so it reads as wax and not a button.
@@ -125,9 +131,13 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
   const [charList, setCharList] = useState(null);
   const [joinCode, setJoinCode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [showBuilder, setShowBuilder] = useState(false);
+  // The builder or a hero's sheet open before an update's reload opens again (uiContext.js).
+  const [was] = useState(() => restoreUi('lobby') || {});
+  const [showBuilder, setShowBuilder] = useState(!!was.builder);
   const [editChar, setEditChar] = useState(null);
+  useUiContext('lobby', () => ({ builder: showBuilder, hero: editChar?.id || null }));
   const [showGuide, setShowGuide] = useState(false);
+  const [showHandbook, setShowHandbook] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -142,6 +152,12 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
     refreshCampaigns();
     refreshChars();
   }, [refreshCampaigns, refreshChars]);
+  useEffect(() => {
+    if (!was.hero || !charList) return;
+    const hero = charList.find((c) => c.id === was.hero);
+    was.hero = null;
+    if (hero) setEditChar(hero);
+  }, [charList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // mode 'dm' | 'guided'; packKey = a set of starter maps; adventureKey = a
   // premade (guided: the app runs it; dm: its scenes + story beats are set up).
@@ -161,15 +177,34 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
       const adv = mode === 'dm' && adventureKey && ADVENTURES.find((a) => a.key === adventureKey);
       if (adv) {
         const built = adv.buildScenes();
-        const scenes = built.map((sc) => ({ name: sc.name, floor: sc.bg.floor, cells: sc.cells, w: sc.grid.w, h: sc.grid.h, entry: sc.entry, tokens: sc.tokens, fogEnabled: true }));
-        socket.emit('addScenes', { scenes }, (added) => {
-          const ids = added?.sceneIds || [];
+        const scenes = built.map((sc) => ({ name: sc.name, floor: sc.bg.floor, cells: sc.cells, w: sc.grid.w, h: sc.grid.h, entry: sc.entry, tokens: sc.tokens, notes: sc.notes || '', fogEnabled: true }));
+        if (adv.leveling) socket.emit('updateSettings', { leveling: adv.leveling });
+        // The server takes at most 12 scenes a message: send them in batches, in order.
+        const ids = [];
+        const sendBatch = (from) => {
+          if (from >= scenes.length) return finish();
+          socket.emit('addScenes', { scenes: scenes.slice(from, from + 12) }, (added) => {
+            ids.push(...(added?.sceneIds || []));
+            sendBatch(from + 12);
+          });
+        };
+        const finish = () => {
           if (!ids.length) return;
           const idFor = (localId) => ids[built.findIndex((sc) => sc.id === localId)] || null;
+          // chests, traps, secrets and notes that come with the places
+          built.forEach((sc, i) => { if (ids[i]) for (const object of sc.objects || []) socket.emit('placeObject', { sceneId: ids[i], object }); });
           for (const beat of adventureBeats(adv, idFor)) socket.emit('addBeat', beat);
           socket.emit('switchScene', { sceneId: ids[0] });
           if (blankSceneId) socket.emit('deleteScene', { sceneId: blankSceneId });
-        });
+        };
+        sendBatch(0);
+        return;
+      }
+
+      // A quick campaign: four generated scenes with beats and balanced fights.
+      const quick = mode === 'dm' && /^quick:/.test(packKey || '') && packKey.split(':');
+      if (quick) {
+        applyQuickCampaign(buildQuickCampaign(quick[1], { level: Number(quick[2]) || 1, size: 4 }), { replaceSceneId: blankSceneId });
         return;
       }
 
@@ -223,7 +258,22 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
     .filter((c) => c.mode === 'guided' && (c.adventureKey || 'flagon') === adv.key)
     .sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0))[0];
   const runs = new Set(ADVENTURES.map(runOf).filter(Boolean));
-  const others = (campaignList || []).filter((c) => !runs.has(c));
+  const others = (campaignList || []).filter((c) => !runs.has(c) && !c.training);
+  // The DM training ground: one sandbox table per DM, made the first time
+  // (Training.jsx coaches it, server/socket/training.js runs it).
+  const trainingRun = (campaignList || []).find((c) => c.training === 'dm' && c.isHost);
+  const startTraining = () => {
+    setShowHandbook(false);
+    if (trainingRun) return joinCampaign(trainingRun.code);
+    if (busy) return;
+    setBusy(true);
+    socket.emit('createCampaign', { name: 'DM training ground', mode: 'dm' }, (res) => {
+      setBusy(false);
+      if (!res || !res.state) return dialog.alert((res && res.error) || 'Could not open the training ground');
+      onEnterGame({ code: res.code, state: res.state });
+      socket.emit('trainingSetup', sandboxPayload());
+    });
+  };
   const playAdventure = async (adv, fresh) => {
     if (fresh) {
       const ok = await dialog.confirm(
@@ -262,6 +312,7 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
         </div>
         <div className="th-sign-gap" />
         <button className="th-peg" onClick={() => setShowGuide(true)}><BookIcon size={15} /> <span>Guide</span></button>
+        <button className="th-peg" onClick={() => setShowHandbook(true)}><CrownIcon size={15} /> <span>DM handbook</span></button>
         <span className="th-me">
           <span className={`th-conn ${connected ? 'is-on' : ''}`} title={connected ? 'Connected' : 'Connecting…'} />
           <span className="th-me-name">{user.username}</span>
@@ -327,7 +378,11 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
                   <p className="th-notice-line">{adv.tutorial ? 'Your first quest. The app tells the story, runs the monsters and teaches the rules as you go.' : adv.tagline}</p>
                   <p className="th-notice-meta">{adv.levels} · {adv.length}{adv.tutorial ? ' · ready-made heroes' : ''}</p>
                   <div className="th-notice-actions">
-                    {run ? (
+                    {adv.dmOnly ? (
+                      <button className="primary-btn" onClick={() => runAdventure(adv)} disabled={!connected || busy} title="You narrate: every place, person, fight and choice is set up for you in Prep">
+                        <CrownIcon size={14} /> Run it as DM
+                      </button>
+                    ) : run ? (
                       <>
                         <button className="primary-btn" onClick={() => joinCampaign(run.code)} disabled={!connected || busy}><PlayIcon size={14} /> Continue</button>
                         <button className="link-btn" onClick={() => playAdventure(adv, true)} disabled={!connected || busy}>Start fresh</button>
@@ -338,7 +393,7 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
                         <D20Icon size={14} /> {adv.tutorial ? 'Begin the first quest' : 'Play, no DM needed'}
                       </button>
                     )}
-                    {adv.tutorial
+                    {adv.dmOnly ? null : adv.tutorial
                       ? (!run && <button className="link-btn" onClick={() => setShowGuide(true)}>Player's guide</button>)
                       : <button className="link-btn" onClick={() => runAdventure(adv)} disabled={!connected || busy} title="You narrate: maps, read-aloud text and encounters are set up in Prep"><CrownIcon size={13} /> Run it as DM</button>}
                   </div>
@@ -374,6 +429,11 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
                 </span>
               </div>
             ))}
+            <button className="th-plaque is-new is-training" onClick={startTraining} disabled={!connected || busy}>
+              <CrownIcon size={18} />
+              <span className="th-plaque-name">{trainingRun ? 'DM training ground' : 'Learn to DM'}</span>
+              <span className="th-plaque-who">{trainingRun ? 'Back to your practice table' : 'Every DM tool in ten minutes'}</span>
+            </button>
             <button className="th-plaque is-new" onClick={() => setShowCreate(true)} disabled={!connected}>
               <PlusIcon size={18} />
               <span className="th-plaque-name">New campaign</span>
@@ -419,30 +479,42 @@ export default function Lobby({ user, connected, onEnterGame, onLogout }) {
       )}
 
       {showBuilder && (
-        <CharacterBuilder
-          onClose={() => setShowBuilder(false)}
-          onSaved={() => {
-            setShowBuilder(false);
-            refreshChars();
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <CharacterBuilder
+            onClose={() => setShowBuilder(false)}
+            onSaved={() => {
+              setShowBuilder(false);
+              refreshChars();
+            }}
+          />
+        </React.Suspense>
       )}
 
       {editChar && (
         <ModalOverlay onClose={() => setEditChar(null)} className="sheet-overlay">
-          <CharacterSheet
-            characterId={editChar.id}
-            initialSheet={editChar.sheet}
-            mode="lobby"
-            onClose={() => {
-              setEditChar(null);
-              refreshChars();
-            }}
-          />
+          <React.Suspense fallback={null}>
+            <CharacterSheet
+              characterId={editChar.id}
+              initialSheet={editChar.sheet}
+              updatedAt={editChar.updatedAt || null}
+              mode="lobby"
+              onClose={() => {
+                setEditChar(null);
+                refreshChars();
+              }}
+            />
+          </React.Suspense>
         </ModalOverlay>
       )}
 
       {showGuide && <Guide onClose={() => setShowGuide(false)} />}
+      {showHandbook && (
+        <Handbook
+          onClose={() => setShowHandbook(false)}
+          onTraining={connected ? startTraining : null}
+          onSolo={connected ? () => { setShowHandbook(false); const first = ADVENTURES.find((a) => a.tutorial); const run = first && runOf(first); if (run) joinCampaign(run.code); else if (first) playAdventure(first, false); } : null}
+        />
+      )}
       {showCredits && <CreditsModal onClose={() => setShowCredits(false)} />}
     </div>
   );
@@ -453,6 +525,9 @@ function CreateCampaignModal({ onClose, onCreate }) {
   const [mode, setMode] = useState('dm');
   const [pack, setPack] = useState('tavern');
   const [advKey, setAdvKey] = useState('flagon');
+  const [start, setStart] = useState('maps'); // DM: 'maps' (a starter pack) | 'quick' (a quick campaign)
+  const [quickKey, setQuickKey] = useState(QUICK_CAMPAIGNS[0].key);
+  const [quickLevel, setQuickLevel] = useState(1);
 
   return (
     <ModalOverlay onClose={onClose}>
@@ -499,7 +574,7 @@ function CreateCampaignModal({ onClose, onCreate }) {
             <>
               <label className="field-label mt" id="campaign-adv-label">Adventure</label>
               <div className="pack-pick" role="group" aria-labelledby="campaign-adv-label">
-                {ADVENTURES.map((a) => (
+                {GUIDED_ADVENTURES.map((a) => (
                   <button type="button" key={a.key} className={`pack-card ${advKey === a.key ? 'selected' : ''}`} aria-pressed={advKey === a.key} onClick={() => setAdvKey(a.key)}>
                     <strong>{a.name}</strong>
                     <span className="muted small">{a.levels} · {a.length}. {a.tutorial ? 'Teaches the rules as you play.' : a.tagline}</span>
@@ -510,6 +585,20 @@ function CreateCampaignModal({ onClose, onCreate }) {
           )}
 
           {mode === 'dm' && (
+            <div className="seg mt" role="group" aria-label="Start with">
+              <button type="button" className={start === 'maps' ? 'on' : ''} aria-pressed={start === 'maps'} onClick={() => setStart('maps')}>A set of maps</button>
+              <button type="button" className={start === 'quick' ? 'on' : ''} aria-pressed={start === 'quick'} onClick={() => setStart('quick')}>A quick campaign</button>
+            </div>
+          )}
+
+          {mode === 'dm' && start === 'quick' && (
+            <>
+              <label className="field-label mt">Story <span className="field-hint">built for you: scenes, people, fights and what to read aloud</span></label>
+              <QuickCampaignPicker value={quickKey} level={quickLevel} onPick={setQuickKey} onLevel={setQuickLevel} />
+            </>
+          )}
+
+          {mode === 'dm' && start === 'maps' && (
             <>
               <label className="field-label mt" id="campaign-pack-label">
                 Starting scenes <span className="field-hint">a set of maps ready to go; you can add, edit and build more any time</span>
@@ -540,7 +629,11 @@ function CreateCampaignModal({ onClose, onCreate }) {
         </div>
         <div className="modal-actions">
           <button className="ghost-btn" onClick={onClose}>Cancel</button>
-          <button className="primary-btn" onClick={() => onCreate(name.trim() || (mode === 'guided' ? ADVENTURES.find((a) => a.key === advKey).name : 'New Campaign'), mode, mode === 'dm' ? pack : 'blank', mode === 'guided' ? advKey : null)}>
+          <button className="primary-btn" onClick={() => {
+            const quick = mode === 'dm' && start === 'quick';
+            const fallback = mode === 'guided' ? ADVENTURES.find((a) => a.key === advKey).name : quick ? QUICK_CAMPAIGNS.find((c) => c.key === quickKey).name : 'New Campaign';
+            onCreate(name.trim() || fallback, mode, mode !== 'dm' ? 'blank' : quick ? `quick:${quickKey}:${quickLevel}` : pack, mode === 'guided' ? advKey : null);
+          }}>
             Create campaign
           </button>
         </div>

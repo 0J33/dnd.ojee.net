@@ -64,6 +64,8 @@ function clean(md) {
   // cross-references to other Kobold Press books this app doesn't carry
   s = s.replace(/\s*\(see [^)]*(?:Handbook|Tome of Beasts|Creature Codex|Deep Magic|Midgard)[^)]*\)/g, '');
   s = s.replace(/\b(don|can|isn|aren|doesn|won|wouldn|couldn|shouldn|hasn|haven|didn|wasn|weren)-t\b/g, "$1't");
+  // words the source broke across lines
+  s = s.replace(/\bfleshand- blood\b/g, 'flesh-and-blood').replace(/\baddi- tional\b/g, 'additional').replace(/\bmain- tain\b/g, 'maintain').replace(/\bthieves- tools\b/g, "thieves' tools");
   s = s.replace(/[ \t]+/g, ' ');
   s = s.replace(/ *\n */g, '\n');
   s = s.replace(/\n{3,}/g, '\n\n');

@@ -124,7 +124,7 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange, showFig
   // and class would give this hero.
   const keepBody = look.body ? { body: look.body } : {};
   const randomize = () => onChange({ ...portrait, image: null, look: randomLook(preview, keepBody) });
-  const defaults = () => onChange({ ...portrait, look: { ...keepBody } });
+  const defaults = () => onChange({ ...portrait, look: { ...keepBody, seed: cur.seed } }); // same seed: the defaults don't jump with the name
   const faceWith = (patch) => ({ ...preview, portrait: { ...portrait, image: null, look: { ...look, seed: cur.seed, ...patch } } });
 
   const pickFile = async (e) => {

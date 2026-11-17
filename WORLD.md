@@ -139,3 +139,132 @@ The rule: the common things are one click, and the app does the maths.
   tavern, sneak, tension, battle, boss, rest + stings), effects (CC0 samples
   in `client/public/sounds`, the rest synthesized), ambience per place and
   weather; music / effects / ambience each with volume and mute.
+
+## Running it fast (DM quick tools, undo, templates)
+
+- **Undo / redo** (`client/src/editHistory.js`): every edit the DM sends for a
+  scene (painting, stamps, generated maps, placing / moving / hurting / hiding /
+  removing creatures, doors, fog, secrets, drawings, mood, a reset) is
+  remembered as the parts of the scene it can touch, per scene. Ctrl+Z,
+  Ctrl+Shift+Z (or Ctrl+Y), and the arrows at the foot of the tool rail and in
+  the build panel. Terrain goes back as a painted delta, the rest in one
+  `restoreScene` message; heroes are never touched.
+- **Prepared state and reset** (`server/socket/sceneTools.js`): a scene
+  remembers how it was when the party first arrived (switch, a story beat, or
+  the first fight there), or whenever the DM presses *Save as prepared*. *Reset*
+  puts back creatures (HP, places, the fallen), doors, fog and chests / traps;
+  anything built since stays built and heroes stay where they are. The
+  snapshot never leaves the server (the DM sees only `prepAt`).
+- **The DM pills** (top left, beside the party): *Scenes* (every scene, one
+  click to go, new from a template), *Creatures* (HP −/+, conditions, hide,
+  run a turn; an overlay that never pushes the map), *Quick* (`QuickDm.jsx`):
+  a balanced fight by theme and party level (`data/encounters.js`, SRD 5.1
+  creatures, the SRD 5.2 XP budget), one-click people with names and SRD
+  stats, loot / traps / secrets scaled to the party, an ambush square, room
+  stamps, new scenes from ten generated templates, clear a layer, fog
+  shortcuts, duplicate / save / reset the scene. Right-click a square for a
+  fight, a person or loot *there*; right-click a creature for HP and
+  conditions in one small board, or another one like it.
+- **Templates and quick campaigns** (`data/presets.js`, `data/mapKit.js`):
+  tavern, crypt, forest clearing, cave, road ambush, throne room, dungeon
+  corridor, dungeon, raider camp, ruins, each different every time, with their
+  people, mood and read-aloud. A quick campaign (five stories) builds four
+  scenes, a story beat each with its fight balanced for the party and a chest
+  at the end, from *New campaign → A quick campaign* or Prep. Story beats can
+  fill their fight in one click, and a beat's creatures now wait on the far
+  side of the map from where the party comes in.
+- **Layout rule**: a tool's options open as a flyout beside its button, the
+  build panel lies over the map instead of shrinking it, and the DM's panels
+  open under the pills beside the tool rail, so opening anything never moves
+  anything else.
+
+## Nothing is lost (auto-save, restarts, updates)
+
+- **Everything saves itself.** Scene names and notes, every part of a story
+  beat, the campaign name, a secret's name and its monsters, a hero's sheet,
+  look and spells save a moment after you stop typing (`autosave.jsx`
+  `useAutoSave`; at once on blur, close, leaving the table and page hide).
+  The editors say *Saving… / Saved / Offline: your changes are kept*; their
+  Save buttons became *Done* (the look keeps a *Revert*). Unsent text also sits
+  in localStorage as a draft against the value it was typed over, and comes
+  back if the page died first and nobody changed that field since. The
+  builder keeps a half-made hero (*Start over* drops it); the DM's unsent
+  narration and handout stay put; lobby sheets keep a draft against the
+  server's `updatedAt`.
+- **Edits wait until written** (`sync.js` outbox, in localStorage per tab id;
+  the id rides the socket handshake and survives a reload but not a
+  duplicated tab). The server remembers per room which of each tab's edits it
+  has applied (`syncSeen`, saved in the same write as the edits), skips a
+  resend it already has, and tells the tab `saved { seq }` after each write.
+  Edits made while disconnected, or before the rejoin's full state, are only
+  predicted and kept; after the rejoin whatever the server lacks is sent
+  again in order, so each lands exactly once, also after a crash that lost
+  what it had applied but not saved. Chat and rolls sent while away wait for
+  the rejoin too. A full state carries the sync version (`_p`); a page that
+  doesn't know it takes full states instead of patches and asks for the
+  update banner.
+- **The server saves a room 1.5 s after a change** (dirty-only, one write at
+  a time per room; the 30 s timer stays as a backstop). SIGTERM/SIGINT write
+  every room and then die by that signal (a clean stop for systemd); SIGUSR2
+  writes every room and exits 75, which `Restart=on-failure` restarts.
+  `deploy.sh` without root sends SIGUSR2 and waits up to 20 s for the exit
+  before falling back to `kill -9`.
+- **Updates.** The banner never reloads by itself. Its *Reload* sends every
+  waiting field, waits up to 4 s for the server to write what's in flight
+  (the rest goes again from the outbox), notes where you were
+  (`uiContext.js`: open panels, prep tab, the scene or beat being edited,
+  scroll, sheet tab, 3D camera, the builder or a hero's sheet in the lobby)
+  and comes back there. A dropped connection shows *Reconnecting… your
+  changes are kept*.
+
+## Weak hardware
+
+- **Quality tiers** (`world/engine.js` `TIERS`): high, good, fair, low, lowest.
+  The engine compares each frame's interval with what it asked for (60 a
+  second while something moves, 30 idle, 12 behind a dialog) and steps down
+  when two seconds run ~45% over; it steps back up only after several busy
+  windows at full speed, and a step up that doesn't hold doubles the wait.
+  Each step drops what shows least first: pixel density on hi-dpi screens,
+  bloom resolution and shadow-map size, then bloom, render scale, the weakest
+  point lights, shadows. The tier is remembered per browser
+  (`localStorage['dnd.w3.tier']`). Without bloom the scene draws straight to
+  the canvas (no composer copy).
+- **Figure detail**: every figure has a second build at half the segments
+  (`kit.js` `DETAIL`, used by the Kit shapes and anatomy shells), made the
+  first time the figure stands under ~80 px tall on screen and swapped in by
+  `WorldView._lod`; distant idle figures are posed every other frame. Spell
+  lights are two pooled lights (adding a light recompiles every material).
+- **Hero previews** (`world/FigureStage.jsx`) share one offscreen WebGL
+  context and hand each stage its frame (`transferToImageBitmap`), so the
+  builder's two previews and the sheet's cost one context and one shader
+  compile; a look change rebuilds the figure after the next frame.
+- 2D: the battle map repaints its terrain only when the cells change; scene
+  thumbnails cache their terrain; portraits redraw only when the look
+  changes; dialogs don't blur what's behind them. The board, builder and
+  sheet are separate downloads, fetched in the background after sign-in.
+
+## Learning the table (DM training, practice round, handbook)
+
+- **DM training ground** (lobby: *Learn to DM*; `client/src/training/dmCourse.js`,
+  `components/Training.jsx`, `server/socket/training.js`): a sandbox campaign of
+  its own (`room.training`), a blank workshop and a tavern, and two practice
+  heroes sitting at it as members (`bot:1`, `bot:2`) who take their own turns in
+  a fight. Four chapters, 21 one-line steps, about ten minutes, any order: build,
+  fill, run a fight, tell the story. The coach rings the real button to press
+  (the first of a step's selectors on screen, so a path of clicks leads itself),
+  ticks the step when the server sees the DM do it (one socket middleware maps
+  messages to steps, nothing else changed), and keeps out of the way of open
+  panels. Skip, Again, Reset; *View as a player* shows the board as a practice
+  hero's player gets it and lets the DM play that hero.
+- **Practice round** (in a game: menu, *DM handbook & practice round*): a
+  practice yard is added and the party taken there; each player gets one prompt
+  at a time, only when it's relevant (walk, talk, roll, door, search, then in
+  the sparring fight attack and a power, then the chest), with the button in the
+  prompt itself where the flat map or a phone has none. The DM sees who has
+  tried what and springs the fight. Ending it removes the scene, goes back, and
+  puts every hero sheet back as it was (`practiceSnap`, server-only). Everyone
+  gets a *Ready to play* summary.
+- **DM handbook**: short searchable cards per tool and for a first session
+  (session zero, pacing, the XP budget, premades), from the lobby and in game.
+- State travels in the room view like everything else (`training`, `practice`,
+  both small); the snapshot never leaves the server.

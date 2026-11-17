@@ -40,7 +40,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, app: 'dnd', ts: Date.n
 // nginx serving the client.
 if (process.env.SERVE_CLIENT) {
   const path = require('path');
-  const dist = path.join(__dirname, '..', 'client', 'dist');
+  const dist = process.env.CLIENT_DIST || path.join(__dirname, '..', 'client', 'dist'); // a build elsewhere (tests)
   app.use(express.static(dist, { index: false, maxAge: '1h' }));
   app.get(/^\/(?!api\/|socket\.io\/).*/, (req, res) => {
     res.set('Cache-Control', 'no-cache');
@@ -56,7 +56,39 @@ mongoose
     process.exit(1);
   });
 
-registerSocketHandlers(io);
+const tables = registerSocketHandlers(io);
+
+// Going down without losing anything: every room is written first (rooms are
+// otherwise saved a second or two after each change, socket/roomState.js).
+//   SIGTERM, SIGINT  systemctl stop / restart, Ctrl+C. After the save the
+//                    process dies by the same signal, so systemd sees the
+//                    clean stop it asked for.
+//   SIGUSR2          deploy.sh's restart, which has no root to ask systemd
+//                    with: save, then exit non-zero, so Restart=on-failure
+//                    starts the new code. (A process from before this existed
+//                    dies of SIGUSR2's default action: also a restart.)
+// Writes that fail are retried for a few seconds; past that it goes anyway.
+let stopping = false;
+async function stop(signal) {
+  if (stopping) return;
+  stopping = true;
+  const t0 = Date.now();
+  let res = { rooms: 0, failed: 0 };
+  try {
+    res = await tables.shutdown();
+    while (res.failed && Date.now() - t0 < 8000) {
+      await new Promise((r) => setTimeout(r, 500));
+      res = await tables.saveAll();
+    }
+  } catch (err) {
+    console.error('saving rooms on the way down failed:', err.message);
+  }
+  console.log(`${signal}: saved ${res.rooms - res.failed}/${res.rooms} rooms in ${Date.now() - t0} ms; exiting`);
+  if (signal === 'SIGUSR2') process.exit(75);
+  process.removeAllListeners(signal);
+  process.kill(process.pid, signal);
+}
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGUSR2']) process.on(sig, () => stop(sig));
 
 server.listen(PORT, () => {
   console.log(`dnd.ojee.net server listening on :${PORT} (client: ${CLIENT_URL})`);

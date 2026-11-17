@@ -1,5 +1,6 @@
 const srd = require('../srd/store');
 const { executeRoll } = require('./dice');
+const { walkRows } = require('./layers');
 
 // Things the 3D world asks of the server: a hero's attack resolved fairly
 // (to-hit vs AC or a saving throw, damage, crits), what heroes can see (fog
@@ -11,7 +12,7 @@ const OPAQUE = new Set(['#', '%', 'w', 'v', 'h', '_', 'D', 'L', 'S']);
 
 const charAt = (scene, x, y) => {
   if (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h) return '#';
-  return (scene.cells?.[y] || '')[x] || '.';
+  return (walkRows(scene)[y] || '')[x] || '.'; // the top level everyone sees, else the base
 };
 
 // Cells a creature at (x, y) can see: every cell in range whose straight
@@ -56,6 +57,43 @@ function revealForHeroes(room, scene) {
   return true;
 }
 
+/* ---------------- movement ---------------- */
+
+// What a step costs, as the client's reach() in client/src/world/WorldView.js
+// works it out (keep the two in step): 8-way, each square 5 ft, difficult
+// ground double, no cutting a wall corner; creatures can be passed through.
+const WALK_BLOCKED = new Set('346A#%[_~FhlLoOPqQTUvwWx'.split(''));
+const DIFFICULT = new Set('7(imrY'.split(''));
+const blockedAt = (scene, x, y) => x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h || WALK_BLOCKED.has((walkRows(scene)[y] || '')[x]);
+
+/** The cheapest walk from `from` to `to` in squares, or null if it is more than `budget`. */
+function moveCost(scene, from, to, budget) {
+  if (from.x === to.x && from.y === to.y) return 0;
+  if (blockedAt(scene, to.x, to.y)) return null;
+  const W = scene.grid.w;
+  const best = new Map([[from.y * W + from.x, 0]]);
+  const buckets = [[from.y * W + from.x]];
+  for (let c = 0; c <= budget; c++) {
+    for (const k of buckets[c] || []) {
+      if (best.get(k) !== c) continue;
+      const x = k % W, y = (k - x) / W;
+      if (x === to.x && y === to.y) return c;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (blockedAt(scene, nx, ny)) continue;
+        if (dx && dy && (blockedAt(scene, x + dx, y) || blockedAt(scene, x, y + dy))) continue;
+        const nc = c + (DIFFICULT.has((walkRows(scene)[ny] || '')[nx]) ? 2 : 1);
+        const nk = ny * W + nx;
+        if (nc > budget || (best.has(nk) && best.get(nk) <= nc)) continue;
+        best.set(nk, nc);
+        (buckets[nc] ||= []).push(nk);
+      }
+    }
+  }
+  return null;
+}
+
 /* ---------------- attacks ---------------- */
 
 const abilityMod = (score) => Math.floor(((score || 10) - 10) / 2);
@@ -88,11 +126,15 @@ function critFormula(f) {
   return String(f).replace(/(\d*)d(\d+)/g, (_, n, d) => `${(parseInt(n || '1', 10) || 1) * 2}d${d}`);
 }
 
-function applyDamage(room, token, amount) {
+// A raging barbarian shrugs off half of any blow, stab or cut.
+const RAGE_RESISTS = new Set(['bludgeoning', 'piercing', 'slashing']);
+const resisted = (sheet, amount, damageType) => (sheet?.raging && RAGE_RESISTS.has(String(damageType || '').toLowerCase()) ? Math.floor(amount / 2) : amount);
+
+function applyDamage(room, token, amount, damageType = null) {
   if (token.kind === 'pc' && token.characterId) {
     const sheet = room.charSheets[token.characterId];
     if (!sheet) return null;
-    let rem = amount;
+    let rem = resisted(sheet, amount, damageType);
     if (sheet.tempHp > 0) { const a = Math.min(sheet.tempHp, rem); sheet.tempHp -= a; rem -= a; }
     sheet.currentHp = Math.max(0, (sheet.currentHp ?? 0) - rem);
     return { hp: sheet.currentHp, max: sheet.maxHp, down: sheet.currentHp === 0 };
@@ -101,6 +143,23 @@ function applyDamage(room, token, amount) {
   token.hp = Math.max(0, token.hp - amount);
   if (token.hp === 0) token.dead = true;
   return { hp: token.hp, max: token.maxHp, down: token.dead };
+}
+
+/** Hit points back, never past the maximum; a hero at 0 is back on their feet. */
+function applyHealing(room, token, amount) {
+  if (token.kind === 'pc' && token.characterId) {
+    const sheet = room.charSheets[token.characterId];
+    if (!sheet) return null;
+    const before = sheet.currentHp ?? 0;
+    sheet.currentHp = Math.min(sheet.maxHp ?? before + amount, before + amount);
+    if (sheet.currentHp > 0) { sheet.deathSaves = { s: 0, f: 0 }; token.dead = false; }
+    return { hp: sheet.currentHp, max: sheet.maxHp, healed: sheet.currentHp - before };
+  }
+  if (token.hp == null) return null;
+  const before = token.hp;
+  token.hp = Math.min(token.maxHp ?? before + amount, before + amount);
+  if (token.hp > 0) token.dead = false;
+  return { hp: token.hp, max: token.maxHp, healed: token.hp - before };
 }
 
 /**
@@ -124,14 +183,31 @@ function resolveAttack(room, attacker, target, a) {
     const dmg = executeRoll(formula, 'normal');
     dealt = saved ? (a.save.half ? Math.floor(dmg.total / 2) : 0) : dmg.total;
     Object.assign(ev, { save: { ability, dc, total: save.total, natural: save.natural, saved }, hit: dealt > 0, damage: dealt, damageRoll: dmg });
-    text = `${attacker.label} casts ${name} on ${target.label}: ${ability.toUpperCase()} save ${save.total} vs DC ${dc} - ${saved ? (dealt ? `half damage, ${dealt}` : 'saved!') : `failed, ${dealt} ${damageType} damage`}.`;
+    text = `${attacker.label} casts ${name} on ${target.label}: ${ability.toUpperCase()} save ${save.total} vs DC ${dc} - ${saved ? (dealt ? `half damage, ${dealt}` : 'saved') : `failed, ${dealt} ${damageType} damage`}.`;
+  } else if (a.autoHit) {
+    // magic missile: the darts always strike
+    const dmg = executeRoll(formula, 'normal');
+    dealt = Math.max(1, dmg.total);
+    Object.assign(ev, { hit: true, damage: dealt, damageRoll: dmg });
+    text = `${attacker.label} casts ${name} at ${target.label}: it never misses, ${dealt} ${damageType} damage.`;
   } else {
     const bonus = Math.max(-5, Math.min(30, parseInt(a.bonus, 10) || 0));
     const mode = ['advantage', 'disadvantage'].includes(a.mode) ? a.mode : 'normal';
     const roll = executeRoll(`1d20${bonus >= 0 ? `+${bonus}` : bonus}`, mode);
     const ac = targetAc(room, target);
     const crit = roll.natural === 20;
-    const hit = crit || (roll.natural !== 1 && roll.total >= ac);
+    let hit = crit || (roll.natural !== 1 && roll.total >= ac);
+    // A Bardic Inspiration die goes on the first attack it would turn into a hit.
+    const mySheet = attacker.kind === 'pc' && attacker.characterId ? room.charSheets[attacker.characterId] : null;
+    let inspired = '';
+    if (!hit && roll.natural !== 1 && mySheet?.bardicDie && roll.total + mySheet.bardicDie >= ac) {
+      const die = executeRoll(`1d${mySheet.bardicDie}`, 'normal');
+      inspired = ` (${roll.total} +${die.total} inspiration)`;
+      ev.inspiration = die.total;
+      roll.total += die.total;
+      mySheet.bardicDie = null;
+      hit = roll.total >= ac;
+    }
     Object.assign(ev, { roll, ac, hit, crit });
     if (hit) {
       const dmg = executeRoll(crit ? critFormula(formula) : formula, 'normal');
@@ -140,11 +216,11 @@ function resolveAttack(room, attacker, target, a) {
     }
     ev.damage = dealt;
     text = hit
-      ? `${attacker.label} ${crit ? 'CRITS' : 'hits'} ${target.label} with ${name} (${roll.total} vs AC ${ac}): ${dealt} ${damageType} damage.`
-      : `${attacker.label} attacks ${target.label} with ${name}: ${roll.total} vs AC ${ac} - miss.`;
+      ? `${attacker.label} ${crit ? 'CRITS' : 'hits'} ${target.label} with ${name} (${roll.total}${inspired} vs AC ${ac}): ${dealt} ${damageType} damage.`
+      : `${attacker.label} attacks ${target.label} with ${name}: ${roll.total}${inspired} vs AC ${ac} - miss.`;
   }
   if (dealt > 0) {
-    const after = applyDamage(room, target, dealt);
+    const after = applyDamage(room, target, dealt, damageType);
     if (after) {
       Object.assign(ev, { targetHp: after.hp, targetMaxHp: after.max, down: after.down });
       if (after.down) text += target.kind === 'pc' ? ` ${target.label} falls unconscious!` : ` ${target.label} is defeated!`;
@@ -158,7 +234,7 @@ function resolveAttack(room, attacker, target, a) {
 const DOOR_TOGGLE = { D: 'd', d: 'D' };
 
 function toggleDoor(scene, x, y) {
-  const ch = charAt(scene, x, y);
+  const ch = (scene.cells[y] || '')[x]; // doors live on the base map
   const to = DOOR_TOGGLE[ch];
   if (!to) return null;
   const row = scene.cells[y];
@@ -166,4 +242,4 @@ function toggleDoor(scene, x, y) {
   return to;
 }
 
-module.exports = { visibleFrom, revealForHeroes, resolveAttack, toggleDoor, targetAc, saveBonus, applyDamage };
+module.exports = { moveCost, lineClear, visibleFrom, revealForHeroes, resolveAttack, toggleDoor, targetAc, saveBonus, applyDamage, applyHealing, resisted };

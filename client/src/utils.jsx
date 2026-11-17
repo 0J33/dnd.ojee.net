@@ -120,6 +120,8 @@ export function ModalOverlay({ children, onClose, className = '' }) {
 // ---------- Dialog (alert / confirm / prompt) ----------
 
 const DialogContext = createContext(null);
+// Brass presses, wax destroys: a confirm whose button deletes or retires something is red wax.
+const DESTRUCTIVE = /^(Delete|Remove|Retire|Clear)\b/;
 
 export function DialogProvider({ children }) {
   const [dialog, setDialog] = useState(null);
@@ -173,7 +175,7 @@ export function DialogProvider({ children }) {
                 <button onClick={() => close(dialog.kind === 'prompt' ? null : false)}>Cancel</button>
               )}
               <button
-                className="primary-btn"
+                className={DESTRUCTIVE.test(dialog.okLabel || '') ? 'danger-btn' : 'primary-btn'}
                 autoFocus={dialog.kind !== 'prompt'}
                 onClick={() => close(dialog.kind === 'prompt' ? (inputRef.current ? inputRef.current.value : '') : true)}
               >

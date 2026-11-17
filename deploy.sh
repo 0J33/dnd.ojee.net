@@ -82,11 +82,27 @@ before=$(systemctl show "$unit" -p MainPID --value)
 # looks finished while the old code is still serving. The unit is
 # Restart=on-failure, so killing our own process is a restart and needs no
 # privilege at all. Same pattern as teg.ojee.net's deploy.
+#
+# Either way the server writes every campaign before it goes (server/index.js):
+# systemctl's SIGTERM, or SIGUSR2 here, which means "save everything, then exit
+# non-zero". Its exit is the confirmation; kill -9 is only the fallback for a
+# server that hasn't gone after 20 s.
 if sudo -n systemctl restart "$unit" 2>/dev/null; then
   echo "  restarted via sudo"
 else
-  echo "  no sudo for $unit; killing pid $before — Restart=on-failure brings it back"
-  [ -n "$before" ] && [ "$before" != "0" ] && kill -9 "$before" 2>/dev/null
+  echo "  no sudo for $unit; asking pid $before to save and exit — Restart=on-failure brings it back"
+  if [ -n "$before" ] && [ "$before" != "0" ] && kill -USR2 "$before" 2>/dev/null; then
+    for _ in $(seq 1 40); do
+      kill -0 "$before" 2>/dev/null || break
+      sleep 0.5
+    done
+    if kill -0 "$before" 2>/dev/null; then
+      echo "  pid $before still up after 20 s; killing it"
+      kill -9 "$before" 2>/dev/null
+    else
+      echo "  pid $before saved and exited"
+    fi
+  fi
 fi
 
 for _ in $(seq 1 25); do

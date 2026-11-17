@@ -7,15 +7,25 @@ import { FLOOR_MATERIALS } from '../data/tiles';
 import { drawThumbnail } from '../render/sceneRender';
 import { tokenFromMonster, numberedLabel } from '../rules/tokens';
 import { artKeyForMonster } from './Portrait';
+import { SCENE_TEMPLATES, sceneFromTemplate, entryOf, farPoint } from '../data/presets';
+import { ENCOUNTER_THEMES, DIFFICULTIES, buildEncounter, partyOf } from '../data/encounters';
+import { QuickCampaignPicker, applyQuickCampaign, buildQuickCampaign } from './QuickCampaign';
+import { useAutoSave, SaveStatus } from '../autosave';
+import { restoreUi, useUiContext } from '../uiContext';
 import {
   MapIcon, PlusIcon, XIcon, PencilIcon, TrashIcon, DuplicateIcon, PlayIcon, SearchIcon,
-  ScrollIcon, SkullIcon, ChevronUp, ChevronDown, CheckIcon, InfoIcon,
+  ScrollIcon, SkullIcon, ChevronUp, ChevronDown, CheckIcon, InfoIcon, RestartIcon, WandIcon, SparkleIcon,
 } from './Icons';
 
 // ================= Campaign prep =================
 // Everything a DM sets up before (or between) sessions lives here: the scene
 // library with real previews, and a story outline whose beats open a scene,
 // place the creatures and read the narration in one click.
+//
+// Nothing here has a Save button: scene names and notes and every part of a
+// beat save themselves as you type (autosave.jsx), and the modal remembers
+// its tab, the scene or beat you had open and how far you'd scrolled across
+// an update's reload (uiContext.js).
 
 /* ---------------- shared thumbnail ---------------- */
 
@@ -30,7 +40,16 @@ export function SceneThumb({ scene, w = 168, h = 104, className = '' }) {
 /* ---------------- the modal ---------------- */
 
 export default function ScenePrep({ state, dialog, onClose, initialTab = 'scenes' }) {
-  const [tab, setTab] = useState(initialTab);
+  const [was] = useState(() => restoreUi('prep') || {});
+  const [tab, setTab] = useState(was.tab || initialTab);
+  const [editScene, setEditScene] = useState(was.scene || null); // sceneId
+  const [editBeat, setEditBeat] = useState(was.beat || null); // beatId
+  const bodyRef = useRef(null);
+  useUiContext('prep', () => ({ tab, scene: editScene, beat: editBeat, scroll: bodyRef.current?.scrollTop || 0 }));
+  useEffect(() => {
+    if (!was.scroll) return;
+    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = was.scroll; });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ModalOverlay onClose={onClose} className="prep-overlay">
@@ -45,12 +64,15 @@ export default function ScenePrep({ state, dialog, onClose, initialTab = 'scenes
               <ScrollIcon size={13} /> Story <span className="chip">{state.story?.beats?.length || 0}</span>
             </button>
           </div>
+          <SaveStatus className="prep-save" />
           <button className="close-btn" aria-label="Close prep" onClick={onClose}>
             <XIcon size={16} />
           </button>
         </div>
-        <div className="modal-body prep-body">
-          {tab === 'scenes' ? <ScenesTab state={state} dialog={dialog} onClose={onClose} /> : <StoryTab state={state} dialog={dialog} />}
+        <div className="modal-body prep-body" ref={bodyRef}>
+          {tab === 'scenes'
+            ? <ScenesTab state={state} dialog={dialog} onClose={onClose} editing={editScene} setEditing={setEditScene} />
+            : <StoryTab state={state} dialog={dialog} editing={editBeat} setEditing={setEditBeat} />}
         </div>
       </div>
     </ModalOverlay>
@@ -59,9 +81,9 @@ export default function ScenePrep({ state, dialog, onClose, initialTab = 'scenes
 
 /* ================= Scenes ================= */
 
-function ScenesTab({ state, dialog, onClose }) {
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState(null); // sceneId
+function ScenesTab({ state, dialog, onClose, editing, setEditing }) {
+  const [adding, setAdding] = useState(false); // false | a source for AddScene
+  const [quick, setQuick] = useState(null); // { key, level } while picking a quick campaign
 
   const move = (id, dir) => {
     const order = state.scenes.map((s) => s.id);
@@ -72,10 +94,30 @@ function ScenesTab({ state, dialog, onClose }) {
     socket.emit('reorderScenes', { order });
   };
 
-  if (adding) return <AddScene state={state} onDone={() => setAdding(false)} onClose={onClose} />;
+  if (adding) return <AddScene state={state} initialSource={adding === true ? 'library' : adding} onDone={() => setAdding(false)} onClose={onClose} />;
+  if (quick) {
+    const party = partyOf(Object.values(state.charSheets || {}));
+    return (
+      <>
+        <div className="prep-toolbar">
+          <button className="small-btn ghost-btn" onClick={() => setQuick(null)}>Back to my scenes</button>
+        </div>
+        <p className="muted small">Adds four scenes and their story beats after the ones you have. Fights are balanced for {party.size} hero{party.size === 1 ? '' : 'es'}.</p>
+        <QuickCampaignPicker value={quick.key} level={quick.level} onPick={(key) => setQuick({ ...quick, key })} onLevel={(level) => setQuick({ ...quick, level })} />
+        <div className="add-footer">
+          <span className="grow" />
+          <button className="ghost-btn" onClick={() => setQuick(null)}>Cancel</button>
+          <button className="primary-btn" disabled={state.scenes.length > 56} onClick={() => {
+            applyQuickCampaign(buildQuickCampaign(quick.key, { level: quick.level, size: party.size }), { go: false });
+            setQuick(null);
+          }}><WandIcon size={13} /> Add the campaign</button>
+        </div>
+      </>
+    );
+  }
 
   const editScene = editing ? state.scenes.find((s) => s.id === editing) : null;
-  if (editScene) return <EditScene scene={editScene} onDone={() => setEditing(null)} />;
+  if (editScene) return <EditScene scene={editScene} code={state.code} onDone={() => setEditing(null)} />;
 
   return (
     <>
@@ -83,6 +125,12 @@ function ScenesTab({ state, dialog, onClose }) {
         <p className="muted small grow">
           Build your scenes ahead of time - switch the table to any of them instantly during play.
         </p>
+        <button className="small-btn" onClick={() => setQuick({ key: 'goblin-trouble', level: partyOf(Object.values(state.charSheets || {})).level })} title="Four scenes with beats and fights, from a theme">
+          <WandIcon size={12} /> Quick campaign
+        </button>
+        <button className="small-btn" onClick={() => setAdding('template')} title="A generated tavern, crypt, cave, camp...">
+          <SparkleIcon size={12} /> From a template
+        </button>
         <button className="primary-btn small-btn" onClick={() => setAdding(true)}>
           <PlusIcon size={12} /> Add scene
         </button>
@@ -123,6 +171,19 @@ function ScenesTab({ state, dialog, onClose }) {
                 >
                   <DuplicateIcon size={14} />
                 </button>
+                {s.prepAt && (
+                  <button
+                    className="icon-btn ghost-btn"
+                    title="Reset to its prepared state (creatures, doors, fog, chests)"
+                    aria-label={`Reset ${s.name}`}
+                    onClick={async () => {
+                      const ok = await dialog.confirm(`Reset "${s.name}" to how it was prepared? Creatures, doors, fog and chests go back; heroes and anything built stay.`, 'Reset scene', 'Reset');
+                      if (ok) socket.emit('resetScene', { sceneId: s.id });
+                    }}
+                  >
+                    <RestartIcon size={14} />
+                  </button>
+                )}
                 <button className="icon-btn ghost-btn" title="Move earlier" aria-label="Move earlier" disabled={i === 0} onClick={() => move(s.id, -1)}>
                   <ChevronUp size={14} />
                 </button>
@@ -159,8 +220,10 @@ function ScenesTab({ state, dialog, onClose }) {
 
 /* ---------------- add a scene ---------------- */
 
-function AddScene({ state, onDone, onClose }) {
-  const [source, setSource] = useState('library'); // library | blank | image
+function AddScene({ state, onDone, onClose, initialSource = 'library' }) {
+  const [source, setSource] = useState(initialSource); // library | template | blank | image
+  const [tpl, setTpl] = useState(null); // template key
+  const [seed, setSeed] = useState(() => Date.now());
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState(null); // builtin key
   const [name, setName] = useState('');
@@ -180,7 +243,13 @@ function AddScene({ state, onDone, onClose }) {
 
   const create = () => {
     let payload = { name: name.trim(), fogEnabled: fog };
-    if (source === 'library') {
+    let mood = null;
+    if (source === 'template') {
+      if (!tpl) return;
+      const { mood: m, ...sc } = sceneFromTemplate(tpl, { seed });
+      mood = m;
+      payload = { ...sc, name: payload.name || sc.name, fogEnabled: fog || sc.fogEnabled };
+    } else if (source === 'library') {
       if (!picked) return;
       const b = sceneFromBuiltin(picked);
       payload = { ...payload, name: payload.name || b.name, floor: b.floor, cells: b.cells, w: b.w, h: b.h };
@@ -190,6 +259,7 @@ function AddScene({ state, onDone, onClose }) {
       payload = { ...payload, name: payload.name || 'Battle map', bgUrl: url.trim(), w: Number(w) || 26, h: Number(h) || 18 };
     }
     socket.emit('addScene', payload, (res) => {
+      if (res && res.sceneId && mood) socket.emit('updateScene', { sceneId: res.sceneId, patch: { mood } });
       if (res && res.sceneId && goThere) socket.emit('switchScene', { sceneId: res.sceneId });
     });
     onDone();
@@ -206,7 +276,11 @@ function AddScene({ state, onDone, onClose }) {
   };
 
   const preview = source === 'library' && picked ? previewScene(picked) : null;
-  const canCreate = source === 'library' ? !!picked : source === 'image' ? !!url.trim() : true;
+  const canCreate = source === 'library' ? !!picked : source === 'template' ? !!tpl : source === 'image' ? !!url.trim() : true;
+  const tplPreviews = useMemo(() => SCENE_TEMPLATES.map((t) => {
+    const sc = sceneFromTemplate(t, { seed });
+    return { t, preview: { grid: { w: sc.w, h: sc.h }, cells: sc.cells, bg: { floor: sc.floor }, tokens: sc.tokens } };
+  }), [seed]);
 
   return (
     <>
@@ -216,6 +290,7 @@ function AddScene({ state, onDone, onClose }) {
         <div className="seg" role="group" aria-label="Scene source">
           {[
             ['library', 'Map library'],
+            ['template', 'Template'],
             ['blank', 'Blank grid'],
             ['image', 'Image URL'],
           ].map(([k, label]) => (
@@ -253,7 +328,7 @@ function AddScene({ state, onDone, onClose }) {
                     key={m.key}
                     className={`map-option ${picked === m.key ? 'on' : ''}`}
                     aria-pressed={picked === m.key}
-                    onClick={() => setPicked(m.key)}
+                    onClick={() => setPicked(picked === m.key ? null : m.key)}
                   >
                     <SceneThumb scene={previewScene(m.key)} w={150} h={92} />
                     <span className="map-option-name">{m.name}</span>
@@ -264,6 +339,24 @@ function AddScene({ state, onDone, onClose }) {
             </section>
           ))}
           {!groups.length && <p className="muted center" style={{ padding: 24 }}>No maps match that search.</p>}
+        </>
+      )}
+
+      {source === 'template' && (
+        <>
+          <div className="pack-row">
+            <span className="muted small grow">A new layout every time, with its people, mood and a note on what fits there.</span>
+            <button className="small-btn ghost-btn" onClick={() => setSeed((n) => n + 17)}><SparkleIcon size={11} /> Shuffle</button>
+          </div>
+          <div className="map-grid">
+            {tplPreviews.map(({ t, preview: pv }) => (
+              <button key={t.key} className={`map-option ${tpl === t.key ? 'on' : ''}`} aria-pressed={tpl === t.key} onClick={() => setTpl(tpl === t.key ? null : t.key)}>
+                <SceneThumb scene={pv} w={150} h={92} />
+                <span className="map-option-name">{t.name}</span>
+                <span className="map-option-blurb">{t.blurb}</span>
+              </button>
+            ))}
+          </div>
         </>
       )}
 
@@ -301,7 +394,7 @@ function AddScene({ state, onDone, onClose }) {
             id="scene-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={preview ? BUILTIN_SCENES.find((b) => b.key === picked)?.name : 'e.g. The Bridge'}
+            placeholder={preview ? BUILTIN_SCENES.find((b) => b.key === picked)?.name : source === 'template' && tpl ? SCENE_TEMPLATES.find((t) => t.key === tpl)?.name : 'e.g. The Bridge'}
             maxLength={60}
           />
         </div>
@@ -337,14 +430,11 @@ function SizeFields({ w, h, setW, setH }) {
 
 /* ---------------- edit an existing scene ---------------- */
 
-function EditScene({ scene, onDone }) {
-  const [name, setName] = useState(scene.name);
-  const [notes, setNotes] = useState(scene.notes || '');
-
-  const save = () => {
-    socket.emit('updateScene', { sceneId: scene.id, patch: { name: name.trim() || scene.name, notes } });
-    onDone();
-  };
+function EditScene({ scene, code, onDone }) {
+  const send = (patch) => socket.emit('updateScene', { sceneId: scene.id, patch });
+  // An emptied name isn't sent (the scene keeps its old one until you type another).
+  const [name, setName, flushName] = useAutoSave({ key: `${code}:scene:${scene.id}:name`, value: scene.name, save: (v) => v.trim() && send({ name: v }) });
+  const [notes, setNotes, flushNotes] = useAutoSave({ key: `${code}:scene:${scene.id}:notes`, value: scene.notes || '', save: (v) => send({ notes: v }) });
 
   return (
     <div className="edit-scene">
@@ -356,7 +446,7 @@ function EditScene({ scene, onDone }) {
         <div className="grow col">
           <div>
             <label className="field-label" htmlFor="edit-name">Scene name</label>
-            <input id="edit-name" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} style={{ width: '100%' }} />
+            <input id="edit-name" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} onBlur={flushName} style={{ width: '100%' }} />
           </div>
           <div>
             <label className="field-label" htmlFor="edit-notes">
@@ -366,6 +456,8 @@ function EditScene({ scene, onDone }) {
               id="edit-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              onBlur={flushNotes}
+              maxLength={4000}
               rows={7}
               placeholder="What happens here, who the players meet, what they find..."
               style={{ width: '100%' }}
@@ -383,8 +475,7 @@ function EditScene({ scene, onDone }) {
       </div>
       <div className="add-footer">
         <span className="grow" />
-        <button className="ghost-btn" onClick={onDone}>Cancel</button>
-        <button className="primary-btn" onClick={save}>Save scene</button>
+        <button className="primary-btn" onClick={onDone}>Done</button>
       </div>
     </div>
   );
@@ -392,9 +483,8 @@ function EditScene({ scene, onDone }) {
 
 /* ================= Story ================= */
 
-function StoryTab({ state, dialog }) {
+function StoryTab({ state, dialog, editing, setEditing }) {
   const beats = state.story?.beats || [];
-  const [editing, setEditing] = useState(null);
   const [running, setRunning] = useState(null);
 
   const move = (id, dir) => {
@@ -499,13 +589,25 @@ function StoryTab({ state, dialog }) {
 /* ---------------- beat editor ---------------- */
 
 function BeatEditor({ beat, state, onDone }) {
-  const [title, setTitle] = useState(beat.title);
-  const [sceneId, setSceneId] = useState(beat.sceneId || '');
-  const [readAloud, setReadAloud] = useState(beat.readAloud || '');
-  const [notes, setNotes] = useState(beat.notes || '');
-  const [encounter, setEncounter] = useState(beat.encounter || []);
+  // Every field saves itself: text a moment after you stop typing, choices at once.
+  const at = `${state.code}:beat:${beat.id}`;
+  const send = (patch) => socket.emit('updateBeat', { beatId: beat.id, patch });
+  const [title, setTitle, flushTitle] = useAutoSave({ key: `${at}:title`, value: beat.title, save: (v) => v.trim() && send({ title: v }) });
+  const [readAloud, setReadAloud, flushRead] = useAutoSave({ key: `${at}:readAloud`, value: beat.readAloud || '', save: (v) => send({ readAloud: v }) });
+  const [notes, setNotes, flushNotes] = useAutoSave({ key: `${at}:notes`, value: beat.notes || '', save: (v) => send({ notes: v }) });
+  const [sceneId, setSceneDraft, flushScene] = useAutoSave({ value: beat.sceneId || '', save: (v) => send({ sceneId: v || null }) });
+  const [encounter, setEncounterDraft, flushEncounter] = useAutoSave({ key: `${at}:encounter`, value: beat.encounter || [], save: (v) => send({ encounter: v }) });
+  const setSceneId = (v) => { setSceneDraft(v); flushScene(); };
+  const setEncounter = (v) => { setEncounterDraft(v); flushEncounter(); };
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
+  const [fightTheme, setFightTheme] = useState('goblins');
+  const [fightDiff, setFightDiff] = useState('moderate');
+  const party = partyOf(Object.values(state.charSheets || {}));
+  const suggest = () => {
+    const enc = buildEncounter(fightTheme, { ...party, difficulty: fightDiff, seed: Date.now() });
+    setEncounter(enc.groups.map((g) => ({ monsterIndex: g.index, name: g.name, count: g.count })));
+  };
 
   useEffect(() => {
     if (!search.trim()) return setResults([]);
@@ -517,11 +619,6 @@ function BeatEditor({ beat, state, onDone }) {
       live = false;
     };
   }, [search]);
-
-  const save = () => {
-    socket.emit('updateBeat', { beatId: beat.id, patch: { title: title.trim() || beat.title, sceneId: sceneId || null, readAloud, notes, encounter } });
-    onDone();
-  };
 
   const addMonster = (m) => {
     setEncounter((prev) => {
@@ -544,7 +641,7 @@ function BeatEditor({ beat, state, onDone }) {
         <div className="col">
           <div>
             <label className="field-label" htmlFor="beat-title">What happens</label>
-            <input id="beat-title" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Ambush at the bridge" style={{ width: '100%' }} />
+            <input id="beat-title" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} onBlur={flushTitle} placeholder="e.g. Ambush at the bridge" style={{ width: '100%' }} />
           </div>
 
           <div>
@@ -566,6 +663,8 @@ function BeatEditor({ beat, state, onDone }) {
               id="beat-read"
               value={readAloud}
               onChange={(e) => setReadAloud(e.target.value)}
+              onBlur={flushRead}
+              maxLength={2000}
               rows={4}
               placeholder="The planks groan under your boots. Somewhere below, something moves against the current..."
               style={{ width: '100%' }}
@@ -574,7 +673,7 @@ function BeatEditor({ beat, state, onDone }) {
 
           <div>
             <label className="field-label" htmlFor="beat-notes">Your notes <span className="muted small" style={{ textTransform: 'none', letterSpacing: 0 }}>- private</span></label>
-            <textarea id="beat-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder="DC 13 Perception spots the tripwire. If they retreat, the goblins follow." style={{ width: '100%' }} />
+            <textarea id="beat-notes" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={flushNotes} maxLength={4000} rows={4} placeholder="DC 13 Perception spots the tripwire. If they retreat, the goblins follow." style={{ width: '100%' }} />
           </div>
         </div>
 
@@ -615,6 +714,21 @@ function BeatEditor({ beat, state, onDone }) {
           </div>
 
           <div>
+            <label className="field-label" htmlFor="beat-fight-theme">A ready-made fight <span className="field-hint">balanced for {party.size} level {party.level} hero{party.size === 1 ? '' : 'es'}</span></label>
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              <select id="beat-fight-theme" value={fightTheme} onChange={(e) => setFightTheme(e.target.value)}>
+                {ENCOUNTER_THEMES.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+              </select>
+              <div className="seg" role="group" aria-label="How hard">
+                {DIFFICULTIES.map((d) => (
+                  <button key={d.key} className={fightDiff === d.key ? 'on' : ''} aria-pressed={fightDiff === d.key} title={d.hint} onClick={() => setFightDiff(d.key)}>{d.name}</button>
+                ))}
+              </div>
+              <button className="small-btn" onClick={suggest} title="Replace the creatures above with a balanced group (press again for another)"><SparkleIcon size={12} /> {encounter.length ? 'Another' : 'Fill'}</button>
+            </div>
+          </div>
+
+          <div>
             <label className="field-label" htmlFor="beat-monster-search">Add a creature</label>
             <div className="build-search">
               <SearchIcon size={14} />
@@ -637,8 +751,7 @@ function BeatEditor({ beat, state, onDone }) {
 
       <div className="add-footer">
         <span className="grow" />
-        <button className="ghost-btn" onClick={onDone}>Cancel</button>
-        <button className="primary-btn" onClick={save}>Save beat</button>
+        <button className="primary-btn" onClick={onDone}>Done</button>
       </div>
     </div>
   );
@@ -657,6 +770,9 @@ function RunBeat({ beat, state, onClose }) {
   const run = async () => {
     setBusy(true);
     let monsters = [];
+    // They wait on the far side of the scene from where the party comes in.
+    const where = scene || state.scenes.find((s) => s.id === state.activeSceneId);
+    const lair = where?.cells ? farPoint(where.cells, where.entry || entryOf(where.cells)) : null;
     if (spawn && beat.encounter.length) {
       // Resolve every stat block first so the server gets ready-made tokens.
       const blocks = await Promise.all(beat.encounter.map((e) => srd.monster(e.monsterIndex)));
@@ -664,7 +780,9 @@ function RunBeat({ beat, state, onClose }) {
         const m = blocks[i];
         if (!m || m.error) return;
         for (let n = 0; n < e.count; n++) {
-          monsters.push({ ...tokenFromMonster(m, { label: numberedLabel(m.name, n, e.count), hidden }) });
+          // a named foe (e.g. a boss on an SRD stat block) keeps its own name
+          const base = e.name && e.name.length > 0 && !e.name.toLowerCase().startsWith(m.name.toLowerCase()) ? e.name : m.name;
+          monsters.push({ ...tokenFromMonster(m, { label: numberedLabel(base, n, e.count), hidden }), ...(lair || {}) });
         }
       });
     }

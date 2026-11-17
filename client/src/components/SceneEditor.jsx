@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TILES, TILE_GROUPS, tilesInGroup, FLOOR_MATERIALS } from '../data/tiles';
 import { drawTileSwatch } from '../render/sceneRender';
-import { BrushIcon, SquareIcon, RoomIcon, BucketIcon, ChevronDown, XIcon, ResizeIcon, SearchIcon, CopyIcon, LayersIcon, SparkleIcon } from './Icons';
+import { BrushIcon, SquareIcon, RoomIcon, BucketIcon, ChevronDown, XIcon, ResizeIcon, SearchIcon, CopyIcon, LayersIcon, SparkleIcon, UndoIcon, RedoIcon, TrashIcon, EraserIcon, EyeIcon, EyeOffIcon, UsersIcon, LockIcon, PlusIcon, PencilIcon } from './Icons';
 import { STAMPS, GENERATORS, generateMap } from '../data/mapKit';
 import { drawTerrain } from '../render/sceneRender';
+import { ERASE, MAX_LEVELS, newLevelId } from '../data/layers';
+import { socket } from '../socket';
 
 // ================= Build palette =================
 // The DM paints the map directly: pick a tile, pick a shape, drag on the board.
@@ -49,7 +51,7 @@ function TileSwatch({ ch, floor, size = 34 }) {
   return <canvas ref={ref} style={{ width: size, height: size }} className="tile-swatch-canvas" />;
 }
 
-export default function SceneEditor({ scene, build, onBuildChange, onClose, onReshape, onSceneUpdate, dialog }) {
+export default function SceneEditor({ scene, build, onBuildChange, onClose, onReshape, onSceneUpdate, onPaint, history, dialog }) {
   const [group, setGroup] = useState('Ground');
   const [query, setQuery] = useState('');
   const [showResize, setShowResize] = useState(false);
@@ -60,14 +62,27 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
     : tilesInGroup(group);
 
   const set = (patch) => onBuildChange({ ...build, ...patch });
-  const current = TILES[build.ch];
+  const erasing = build.ch === ERASE;
+  const current = erasing ? null : TILES[build.ch];
+  const levels = scene?.levels || [];
+  const onLevel = levels.find((l) => l.id === build.level) || null;
 
   return (
     <aside className="build-panel panel" aria-label="Map builder">
       <div className="build-head">
         <h4 className="side-title">Build</h4>
         <span className="grow" />
-        <button className="icon-btn ghost-btn" title="Map size & material" aria-label="Map size and material" onClick={() => setShowResize((v) => !v)}>
+        {history && (
+          <>
+            <button className="icon-btn ghost-btn" disabled={!history.canUndo} title={history.canUndo ? `Undo ${history.undoLabel} (Ctrl+Z)` : 'Nothing to undo'} aria-label="Undo" onClick={history.onUndo}>
+              <UndoIcon size={15} />
+            </button>
+            <button className="icon-btn ghost-btn" disabled={!history.canRedo} title={history.canRedo ? `Redo ${history.redoLabel} (Ctrl+Shift+Z)` : 'Nothing to redo'} aria-label="Redo" onClick={history.onRedo}>
+              <RedoIcon size={15} />
+            </button>
+          </>
+        )}
+        <button className={`icon-btn ghost-btn ${showResize ? 'tool-on' : ''}`} title="Map size, material, generate, clear" aria-label="Map size, material, generate and clear" aria-expanded={showResize} onClick={() => setShowResize((v) => !v)}>
           <ResizeIcon size={15} />
         </button>
         <button className="icon-btn ghost-btn" title="Close the builder" aria-label="Close the builder" onClick={onClose}>
@@ -76,19 +91,32 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
       </div>
 
       {showResize && (
-        <ResizePanel scene={scene} onReshape={onReshape} onSceneUpdate={onSceneUpdate} dialog={dialog} onDone={() => setShowResize(false)} />
+        <ResizePanel scene={scene} onReshape={onReshape} onSceneUpdate={onSceneUpdate} onPaint={onPaint} dialog={dialog} onDone={() => setShowResize(false)} />
       )}
 
       {/* what you're painting with */}
       <div className="build-current">
-        <TileSwatch ch={build.ch} floor={floor} size={40} />
+        {erasing ? <span className="build-eraser-swatch"><EraserIcon size={22} /></span> : <TileSwatch ch={build.ch} floor={floor} size={40} />}
         <div className="build-current-info">
-          <strong>{current?.name || 'Tile'}</strong>
+          <strong>{erasing ? 'Eraser' : current?.name || 'Tile'}</strong>
           <span className="muted small">
-            {current?.blocked ? 'Blocks movement' : current?.difficult ? 'Difficult terrain' : 'Walkable'}
+            {erasing
+              ? onLevel ? `Clears ${onLevel.name}` : 'Shows the floor again'
+              : current?.cat === 'floor' && !onLevel ? 'Goes under walls and things' : current?.blocked ? 'Blocks movement' : current?.difficult ? 'Difficult terrain' : 'Walkable'}
           </span>
         </div>
+        <span className="grow" />
+        <button
+          className={`small-btn ${erasing ? 'primary-btn' : 'ghost-btn'}`}
+          aria-pressed={erasing}
+          title="Eraser: take walls, doors and furniture away (on a level: clear its squares)"
+          onClick={() => (erasing ? set({ ch: build.lastCh && build.lastCh !== ERASE ? build.lastCh : '#' }) : set({ ch: ERASE, lastCh: build.ch, ...(build.shape === 'stamp' || build.shape === 'copy' ? { shape: 'brush' } : {}) }))}
+        >
+          <EraserIcon size={13} /> Erase
+        </button>
       </div>
+
+      <LevelPicker scene={scene} levels={levels} active={onLevel} onPick={(id) => set({ level: id })} dialog={dialog} />
 
       {/* how you're painting */}
       <div className="build-shapes" role="group" aria-label="Brush shape">
@@ -181,15 +209,82 @@ export default function SceneEditor({ scene, build, onBuildChange, onClose, onRe
       </div>
 
       <p className="build-hint muted small">
-        Drag on the map to build. Ctrl+Z undoes. Right-click a square to drop a creature, NPC or marker there.
+        Drag on the map to build. Ctrl+Z undoes, Ctrl+Shift+Z redoes. Right-click a square to drop a fight, a person or loot there.
       </p>
     </aside>
   );
 }
 
+/* ---------------- levels ---------------- */
+// Where the brush paints: the ground, or one of the levels on top of it (a
+// platform, a balcony, an upper floor: data/layers.js). Each level can be
+// hidden, or kept from the players.
+
+function LevelPicker({ scene, levels, active, onPick, dialog }) {
+  const emit = (event, payload) => socket.emit(event, { sceneId: scene.id, ...payload });
+  const add = () => {
+    const id = newLevelId();
+    emit('addLevel', { id, name: `Level ${levels.length + 1}` });
+    onPick(id);
+  };
+  const rename = async (l) => {
+    const name = await dialog.prompt('Name this level', l.name, 'Rename level');
+    if (name && name.trim()) emit('updateLevel', { levelId: l.id, patch: { name: name.trim() } });
+  };
+  const remove = async (l) => {
+    const ok = await dialog.confirm(`Remove ${l.name} and everything painted on it? (Ctrl+Z brings it back.)`, 'Remove level', 'Remove');
+    if (!ok) return;
+    emit('removeLevel', { levelId: l.id });
+    if (active?.id === l.id) onPick(null);
+  };
+  return (
+    <div className="build-levels" role="radiogroup" aria-label="Paint on">
+      <div className="build-levels-head">
+        <span className="muted small">Paint on</span>
+        <span className="grow" />
+        {levels.length < MAX_LEVELS && (
+          <button className="small-btn ghost-btn" title="A new level on top: a platform, a balcony, an upper floor" onClick={add}>
+            <PlusIcon size={12} /> Level
+          </button>
+        )}
+      </div>
+      <div className={`build-level ${!active ? 'on' : ''}`}>
+        <button className="build-level-pick" role="radio" aria-checked={!active} onClick={() => onPick(null)}>Ground</button>
+      </div>
+      {levels.map((l) => (
+        <div key={l.id} className={`build-level ${active?.id === l.id ? 'on' : ''} ${l.hidden ? 'is-hidden' : ''}`}>
+          <button className="build-level-pick" role="radio" aria-checked={active?.id === l.id} onClick={() => onPick(l.id)} onDoubleClick={() => rename(l)} title="Paint on this level (double-click to rename)">
+            {l.name}
+          </button>
+          <button className="icon-btn ghost-btn" title={l.hidden ? 'Hidden from everyone: show it' : 'Shown: hide it from everyone'} aria-label={l.hidden ? `Show ${l.name}` : `Hide ${l.name}`} aria-pressed={!l.hidden}
+            onClick={() => emit('updateLevel', { levelId: l.id, patch: { hidden: !l.hidden } })}>
+            {l.hidden ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
+          </button>
+          <button className="icon-btn ghost-btn" title={l.players === false ? 'Only you see it: let the players see it' : 'Players see it: keep it to yourself'} aria-label={l.players === false ? `Let players see ${l.name}` : `Keep ${l.name} from players`} aria-pressed={l.players !== false}
+            onClick={() => emit('updateLevel', { levelId: l.id, patch: { players: l.players === false } })}>
+            {l.players === false ? <LockIcon size={14} /> : <UsersIcon size={14} />}
+          </button>
+          <button className="icon-btn ghost-btn" title="Rename" aria-label={`Rename ${l.name}`} onClick={() => rename(l)}><PencilIcon size={13} /></button>
+          <button className="icon-btn ghost-btn" title="Remove this level" aria-label={`Remove ${l.name}`} onClick={() => remove(l)}><TrashIcon size={13} /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---------------- resize / re-material ---------------- */
 
-function ResizePanel({ scene, onReshape, onSceneUpdate, dialog, onDone }) {
+// Clearing a layer of the terrain: everything goes through paint, so Ctrl+Z
+// brings it back.
+const PROP_GROUPS = new Set(['Furniture', 'Objects', 'Light', 'Nature', 'Shrine']);
+const padFor = (floor) => (floor === 'grass' ? ',' : floor === 'sand' ? 's' : floor === 'snow' ? 'n' : floor === 'marble' ? 'p' : floor === 'wood' ? '=' : '.');
+const TERRAIN_CLEAR = [
+  { key: 'props', name: 'Furniture & things', keep: (t) => !PROP_GROUPS.has(t?.group) },
+  { key: 'walls', name: 'Walls & doors', keep: (t) => t?.group !== 'Walls' && t?.group !== 'Doors' },
+  { key: 'all', name: 'Everything', keep: () => false },
+];
+
+function ResizePanel({ scene, onReshape, onSceneUpdate, onPaint, dialog, onDone }) {
   const [w, setW] = useState(scene.grid.w);
   const [h, setH] = useState(scene.grid.h);
   const [floor, setFloor] = useState(scene.bg?.floor || 'stone');
@@ -224,7 +319,7 @@ function ResizePanel({ scene, onReshape, onSceneUpdate, dialog, onDone }) {
       <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
         {Object.entries(GENERATORS).map(([k, g]) => (
           <button key={k} className="small-btn" onClick={async () => {
-            const ok = await dialog.confirm(`Replace this whole map with a new ${g.name.toLowerCase()}? (Undo can't bring the old one back.)`, 'Generate a map', 'Generate');
+            const ok = await dialog.confirm(`Replace this whole map with a new ${g.name.toLowerCase()}? (Ctrl+Z brings the old one back.)`, 'Generate a map', 'Generate');
             if (!ok) return;
             const nw = Math.max(8, Math.min(80, Number(w) || scene.grid.w)), nh = Math.max(8, Math.min(60, Number(h) || scene.grid.h));
             const { cells, floor: f } = generateMap(k, nw, nh, Math.floor(Math.random() * 1e9));
@@ -233,6 +328,25 @@ function ResizePanel({ scene, onReshape, onSceneUpdate, dialog, onDone }) {
           }}><SparkleIcon size={12} /> {g.name}</button>
         ))}
       </div>
+      {onPaint && (
+        <>
+          <label className="field-label mt">Clear from the map</label>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+            {TERRAIN_CLEAR.map((c) => (
+              <button key={c.key} className="small-btn ghost-btn" onClick={() => {
+                // walls and things are erased (the floor under them shows);
+                // Everything also lays the plain base floor everywhere
+                const pad = padFor(scene.bg?.floor);
+                const cells = [];
+                scene.cells.forEach((row, y) => row.split('').forEach((ch, x) => {
+                  if (c.key === 'all') { if (ch !== pad) cells.push({ x, y, ch: pad }); } else if (!c.keep(TILES[ch]) && TILES[ch]?.cat !== 'floor') cells.push({ x, y, ch: ERASE });
+                }));
+                if (cells.length) onPaint(cells, { level: null, replace: c.key === 'all' });
+              }}><TrashIcon size={12} /> {c.name}</button>
+            ))}
+          </div>
+        </>
+      )}
       <div className="row mt" style={{ justifyContent: 'flex-end' }}>
         <button className="small-btn ghost-btn" onClick={onDone}>Cancel</button>
         <button className="small-btn primary-btn" onClick={apply}>Apply</button>

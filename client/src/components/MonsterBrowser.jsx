@@ -4,7 +4,18 @@ import { ModalOverlay } from '../utils';
 import { formatCr, mod, fmtMod, ENCOUNTER_BUDGET } from '../rules/engine';
 import { tokenFromMonster } from '../rules/tokens';
 import { Avatar, artKeyForMonster } from './Portrait';
-import { SwordIcon, PlusIcon, XIcon, SearchIcon } from './Icons';
+import { SwordIcon, PlusIcon, XIcon, SearchIcon, HandIcon } from './Icons';
+import { startPlacing, DRAG_MIME } from '../mapSelection';
+import { keyLabel } from '../keybinds';
+
+// Dragging a monster out of the list: the dialog fades and lets the map
+// under it take the drop (styles/controls.css), then comes back.
+const dragMonster = (e, index) => {
+  e.dataTransfer.setData(DRAG_MIME, index);
+  e.dataTransfer.effectAllowed = 'copy';
+  setTimeout(() => document.body.classList.add('mc-dragging'), 0); // not during dragstart: that cancels the drag
+};
+const dragDone = () => document.body.classList.remove('mc-dragging');
 
 export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonsters }) {
   const [search, setSearch] = useState('');
@@ -82,18 +93,28 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
                 </p>
               )}
               {status !== 'error' && list.map((m) => (
-                <button key={m.index} className={`monster-row ${selected === m.index ? 'on' : ''}`} onClick={() => setSelected(m.index)}>
+                <div key={m.index} className="monster-row-wrap">
+                <button
+                  className={`monster-row ${selected === m.index ? 'on' : ''}`}
+                  onClick={() => setSelected(m.index)}
+                  draggable={!!onAddToken}
+                  onDragStart={(e) => dragMonster(e, m.index)}
+                  onDragEnd={dragDone}
+                  title={onAddToken ? 'Click for its stat block, or drag it onto the map' : undefined}
+                >
                   <Avatar art={artKeyForMonster(m)} name={m.name} color="#8a3d3d" size={26} shape="square" ring={false} />
                   <span className="grow">{m.name}</span>
                   <span className="chip">CR {formatCr(m.cr)}</span>
                   <span className="muted small">{m.hp} hp</span>
                 </button>
+                {onAddToken && <QuickAdd index={m.index} name={m.name} onAddToken={onAddToken} />}
+                </div>
               ))}
             </div>
           </div>
           <div className="monster-detail-col">
             {selected ? (
-              <StatBlock index={selected} onAddToken={onAddToken} onRoll={onRoll} />
+              <StatBlock index={selected} onAddToken={onAddToken} onRoll={onRoll} onPlaceMany={onAddToken ? (tok) => { startPlacing(tok); onClose(); } : null} />
             ) : (
               <p className="muted center" style={{ padding: 40 }}>Select a monster to view its stat block.</p>
             )}
@@ -104,7 +125,25 @@ export function MonsterBrowser({ onClose, onAddToken, onRoll, party, sceneMonste
   );
 }
 
-export function StatBlock({ index, onAddToken, onRoll }) {
+// One click: this monster goes on the map near the party (GameBoard picks the square).
+function QuickAdd({ index, name, onAddToken }) {
+  const [n, setN] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const add = async () => {
+    setBusy(true);
+    try {
+      const m = await srd.monster(index);
+      if (m && !m.error) { onAddToken(tokenFromMonster(m)); setN((x) => x + 1); }
+    } finally { setBusy(false); }
+  };
+  return (
+    <button className="monster-add small-btn" disabled={busy} onClick={add} title={`Add a ${name} to the map, near the party`} aria-label={`Add a ${name} to the map`}>
+      <PlusIcon size={12} />{n > 0 && <b>{n}</b>}
+    </button>
+  );
+}
+
+export function StatBlock({ index, onAddToken, onRoll, onPlaceMany }) {
   const [m, setM] = useState(null);
   const [failed, setFailed] = useState(false);
   const [added, setAdded] = useState(0);
@@ -145,6 +184,7 @@ export function StatBlock({ index, onAddToken, onRoll }) {
           <div className="row" style={{ gap: 8 }}>
             {added > 0 && <span className="chip gold" role="status">{added === 1 ? 'Added' : `Added ${added}`}</span>}
             <button className="primary-btn small-btn" onClick={addToMap}><PlusIcon size={12} /> {added ? 'Add another' : 'Add to map'}</button>
+            {onPlaceMany && <button className="small-btn" onClick={() => onPlaceMany(tokenFromMonster(m))} title={`Close this and click squares on the map to drop one on each; ${keyLabel('sel.cancel')} to stop`}><HandIcon size={12} /> Place on map...</button>}
           </div>
         )}
       </div>

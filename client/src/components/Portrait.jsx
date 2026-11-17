@@ -209,7 +209,7 @@ export function resolveLook(sheet) {
   // its head, its trim is the accent metal or light on the seams.
   const skinC = look.skin || pick(race.skins, h('skin'));
   const dyed = race.robot
-    ? { ...cls, garb: shade(skinC, 0.12), trim: look.trim || ROBOT_ACCENTS[0], trimDyed: true, outfit: 'plate' }
+    ? { ...cls, garb: shade(skinC, 0.12), trim: look.trim || ROBOT_ACCENTS[0], trimDyed: true, outfit: 'chassis' }
     : look.garb || look.trim ? { ...cls, garb: look.garb || cls.garb, trim: look.trim || cls.trim, trimDyed: !!look.trim } : cls;
   return {
     race,
@@ -797,7 +797,7 @@ function HeroBust({ sheet }) {
   const L = resolveLook(sheet);
   const { race, cls, classKey, skin, hair, hairStyle, beard, eyes, mood, mark } = L;
   const showHeadwear = L.headwear;
-  const b = race.build * (L.frame === 'heavy' ? 1.1 : L.frame === 'slim' ? 0.9 : 1);
+  const b = race.build * (L.frame === 'heavy' ? 1.14 : L.frame === 'slim' ? 0.86 : 1);
   const hb = 1 + (b - 1) * 0.5; // the head grows with the body, but less
 
   // Head geometry. Everything else is positioned relative to these, so a
@@ -854,6 +854,15 @@ function HeroBust({ sheet }) {
           <stop offset="0" stopColor={light(cls.trim, 0.3)} />
           <stop offset="1" stopColor={shade(cls.trim, 0.3)} />
         </linearGradient>
+        {/* rust on a rusted gearforged: a noise pattern over the plating (the
+            3D figure's material paints the same), not spots */}
+        {race.robot && L.finish === 'rusted' && (
+          <filter id={`r${uid}`} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.17" numOctaves="3" seed={Math.floor(hashString(L.seed) * 97)} />
+            <feColorMatrix type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.17  0 0 0 0 0.06  10 0 0 0 -5.3" />
+            <feComposite in2="SourceAlpha" operator="in" />
+          </filter>
+        )}
       </defs>
 
       {/* ---- a ranger's arrows over the shoulder ---- */}
@@ -884,17 +893,24 @@ function HeroBust({ sheet }) {
 
       {/* hedgehog spines fan out behind the head */}
       {race.spines && (
-        <path
-          d={Array.from({ length: 9 }, (_, i) => {
-            const a = Math.PI * (1.05 + (i / 8) * 0.9);
-            const tip = (r) => `${cx + Math.cos(a) * (rx + r)} ${cy + Math.sin(a) * (ry + r)}`;
-            const side = (d, r) => `${cx + Math.cos(a + d) * (rx + r)} ${cy + Math.sin(a + d) * (ry + r)}`;
-            return `M${side(-0.17, -1)} L${tip(10)} L${side(0.17, -1)}Z`;
-          }).join(' ')}
-          fill="#8a6a48"
-          stroke="#d8c4a0"
-          strokeWidth="0.5"
-        />
+        /* hedgehog quills: a spiky mass over the crown and down the back of
+           the head, each quill leaning out and down (the way they lie) */
+        <g>
+          <ellipse cx={cx} cy={cy - 2} rx={rx + 2.6} ry={ry + 1.6} fill="#5a4028" />
+          <path
+            d={Array.from({ length: 17 }, (_, i) => {
+              const a = Math.PI * (0.94 + (i / 16) * 1.12);
+              const lean = Math.cos(a) * 0.5;
+              const len = 3 + ((i * 5) % 3) * 1.1;
+              const p = (d, r) => `${cx + Math.cos(a + d) * (rx + r)} ${cy - 2 + Math.sin(a + d) * (ry + r)}`;
+              return `M${p(-0.16, 0)} L${p(lean, len)} L${p(0.16, 0)}Z`;
+            }).join(' ')}
+            fill="#6a4e30"
+            stroke="#d8c4a0"
+            strokeWidth="0.45"
+            strokeLinejoin="round"
+          />
+        </g>
       )}
 
       {/* ---- shoulders and what the class wears on them ---- */}
@@ -924,6 +940,27 @@ function HeroBust({ sheet }) {
           <path d={`M${cx - 7.5} ${nb - 1} Q${cx} ${nb + 4} ${cx + 7.5} ${nb - 1} L${cx + 8} ${nb + 3.5} Q${cx} ${nb + 8.5} ${cx - 8} ${nb + 3.5}Z`} fill={shade(cls.trim, 0.2)} />
         </>
       )}
+      {cls.outfit === 'chassis' && (
+        /* a gearforged's chest: shoulder joints, a plate over the frame with
+           its top edge and seams in the accent colour, rivets down the sides */
+        <>
+          {[-1, 1].map((d) => (
+            <g key={d}>
+              <circle cx={cx + d * (sw - 4.5)} cy={nb + 8.5} r={5.4 * b} fill={shade(skin, 0.45)} />
+              <circle cx={cx + d * (sw - 4.5)} cy={nb + 8.5} r={3.4 * b} fill={`url(#f${uid})`} />
+            </g>
+          ))}
+          <path d={`M${cx - sw + 9} ${nb + 4} Q${cx} ${nb + 1.5} ${cx + sw - 9} ${nb + 4} L${cx + sw * 0.56} 68 H${cx - sw * 0.56}Z`} fill={`url(#f${uid})`} />
+          {L.finish === 'rusted' && <path d={`M${cx - sw + 9} ${nb + 4} Q${cx} ${nb + 1.5} ${cx + sw - 9} ${nb + 4} L${cx + sw * 0.56} 68 H${cx - sw * 0.56}Z`} filter={`url(#r${uid})`} opacity="0.9" />}
+          <path d={`M${cx - sw + 9.5} ${nb + 5} Q${cx} ${nb + 2.5} ${cx + sw - 9.5} ${nb + 5}`} stroke={cls.trim} strokeWidth="1.1" fill="none" />
+          {[-1, 1].map((d) => (
+            <g key={d}>
+              <path d={`M${cx + d * 7.5} ${nb + 6} L${cx + d * 6.5} 68`} stroke={cls.trim} strokeWidth="0.9" opacity="0.8" />
+              {[0, 1, 2].map((i) => <circle key={i} cx={cx + d * (sw * 0.56 + 1.5 - i * 0.6)} cy={nb + 9 + i * 5} r="0.75" fill={light(skin, 0.3)} />)}
+            </g>
+          ))}
+        </>
+      )}
       {cls.outfit === 'ruff' && [-3, -2, -1, 0, 1, 2, 3].map((i) => (
         <circle key={i} cx={cx + i * 2.9} cy={nb + 1.2 + Math.abs(i) * -0.35} r="2.3" fill="#efe6d0" stroke="#b8ab8c" strokeWidth="0.5" />
       ))}
@@ -945,7 +982,7 @@ function HeroBust({ sheet }) {
           <rect x={cx - 3.2} y={nb + 12.4} width="4" height="3.4" rx="0.6" fill="none" stroke="#c8b070" strokeWidth="0.9" transform={`rotate(-38 ${cx - 1.2} ${nb + 14})`} />
         </>
       )}
-      {cls.outfit !== 'plate' && cls.outfit !== 'ruff' && cls.outfit !== 'fur' && (
+      {cls.outfit !== 'plate' && cls.outfit !== 'ruff' && cls.outfit !== 'fur' && cls.outfit !== 'chassis' && (
         /* collar: a V-neck in the trim colour, never a stripe down the chest */
         <path d={`M${cx - 6.5} ${nb - 1} L${cx} ${nb + 8} L${cx + 6.5} ${nb - 1} L${cx + 9} ${nb + 1} L${cx} ${nb + 12.5} L${cx - 9} ${nb + 1}Z`} fill={cls.trim} opacity="0.55" />
       )}
@@ -985,7 +1022,11 @@ function HeroBust({ sheet }) {
       ))}
 
       {/* ---- ears ---- */}
-      {(race.ears === 'point' || race.ears === 'halfpoint' || race.ears === 'frill') && [-1, 1].map((d) => {
+      {race.robot && race.ears === 'frill' && [-1, 1].map((d) => (
+        /* a kobold chassis's fins, swept back from the sides of the head */
+        <path key={d} d={`M${cx + d * (rx - 1)} ${cy - 4} L${cx + d * (rx + 9)} ${cy - 9} L${cx + d * (rx + 5.5)} ${cy - 1.5} L${cx + d * (rx + 8)} ${cy + 1.5} L${cx + d * (rx - 1)} ${cy + 4}Z`} fill={cls.trim} stroke={shade(cls.trim, 0.45)} strokeWidth="0.5" strokeLinejoin="round" />
+      ))}
+      {!race.robot && !fullFace && (race.ears === 'point' || race.ears === 'halfpoint' || race.ears === 'frill') && [-1, 1].map((d) => {
         const reach = race.ears === 'point' ? 8 : 4.5;
         const lift = race.ears === 'point' ? 11 : 6;
         return (
@@ -995,7 +1036,7 @@ function HeroBust({ sheet }) {
           </g>
         );
       })}
-      {race.ears === 'round' && [-1, 1].map((d) => (
+      {race.ears === 'round' && !fullFace && [-1, 1].map((d) => (
         <g key={d}>
           <ellipse cx={cx + d * rx} cy={cy + 1.5} rx="2.6" ry="3.6" fill={d < 0 ? skin : shade(skin, 0.12)} />
           <path d={`M${cx + d * (rx + 0.6)} ${cy} q${d * 0.9} 1.6 0 3`} stroke={skinShade} strokeWidth="0.8" fill="none" opacity="0.75" />
@@ -1008,14 +1049,14 @@ function HeroBust({ sheet }) {
         : <path d={face} fill={`url(#f${uid})`} />}
       {race.robot && L.robotHead === 'crest' && <rect x={cx - 2.2} y={top - 5} width="4.4" height={ry * 0.9} rx="1.6" fill={cls.trim} />}
       {race.robot && L.finish === 'polished' && <path d={`M${cx - rx * 0.6} ${cy - ry * 0.7} q${rx * 0.3} -${ry * 0.18} ${rx * 0.7} -${ry * 0.12}`} stroke="#fff" strokeWidth="1.4" strokeLinecap="round" opacity="0.45" fill="none" />}
-      {race.robot && L.finish === 'rusted' && [[-0.55, -0.35, 2.4], [0.5, 0.45, 2], [0.2, -0.75, 1.5], [-0.4, 0.6, 1.7]].map(([fx, fy, r], i) => (
-        <circle key={i} cx={cx + fx * rx} cy={cy + fy * ry} r={r} fill="#8a4a24" opacity="0.6" />
-      ))}
+      {race.robot && L.finish === 'rusted' && (
+        <rect x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2} rx={L.robotHead === 'dome' ? rx : rx * 0.5} ry={L.robotHead === 'dome' ? ry * 0.9 : rx * 0.5} filter={`url(#r${uid})`} opacity="0.9" />
+      )}
 
       {/* gearforged: visor, lit eyes, speaker grille, plate seam, rivets, ear bolts */}
       {race.robot && (
         <>
-          <path d={`M${cx} ${top + 1.5}V${eyeY - 3.5}`} stroke="#1c1f24" strokeWidth="0.9" opacity="0.45" />
+          {L.robotHead !== 'dome' && <path d={`M${cx} ${top + 1.5}V${eyeY - 3.5}`} stroke="#1c1f24" strokeWidth="0.9" opacity="0.45" />}
           <rect x={cx - rx * 0.8} y={eyeY - 3.2} width={rx * 1.6} height="6.4" rx="3.2" fill="#15181c" />
           {[-1, 1].map((d) => (
             <g key={d}>
@@ -1024,6 +1065,13 @@ function HeroBust({ sheet }) {
             </g>
           ))}
           {beard === 'none' && <path d={`M${cx - 4} ${mouthY - 0.5}h8M${cx - 4} ${mouthY + 1.7}h8M${cx - 3} ${mouthY + 3.9}h6`} stroke="#1c1f24" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />}
+          {beard !== 'none' && (
+            /* a dwarf chassis's beard: a slotted plate hung from the jaw */
+            <>
+              <path d={`M${cx - rx * 0.62} ${mouthY - 2.5} H${cx + rx * 0.62} L${cx + rx * 0.42} ${chin + 5.5} Q${cx} ${chin + 7.5} ${cx - rx * 0.42} ${chin + 5.5}Z`} fill={shade(skin, 0.28)} stroke={cls.trim} strokeWidth="0.8" />
+              <path d={`M${cx - 4.2} ${mouthY + 0.5}h8.4M${cx - 3.5} ${mouthY + 3.2}h7M${cx - 2.7} ${mouthY + 5.9}h5.4`} stroke="#1c1f24" strokeWidth="1" strokeLinecap="round" opacity="0.75" />
+            </>
+          )}
           {[-1, 1].map((d) => (
             <g key={d} fill="#1c1f24" opacity="0.55">
               <circle cx={cx + d * (rx - 2.4)} cy={cy - ry * 0.45} r="0.9" />
@@ -1032,7 +1080,7 @@ function HeroBust({ sheet }) {
           ))}
         </>
       )}
-      {race.ears === 'bolt' && [-1, 1].map((d) => (
+      {race.robot && race.ears !== 'frill' && [-1, 1].map((d) => (
         <g key={d}>
           <circle cx={cx + d * rx} cy={cy + 1} r="3.3" fill="#2a2d33" />
           <circle cx={cx + d * rx} cy={cy + 1} r="1.4" fill="#8e98a3" />
@@ -1040,8 +1088,8 @@ function HeroBust({ sheet }) {
       ))}
       {race.robot && (cls.head === 'none' || cls.head === 'circlet' || !showHeadwear) && (
         <>
-          <path d={`M${cx} ${top}V${top - 6}`} stroke="#2a2d33" strokeWidth="1.6" />
-          <circle cx={cx} cy={top - 7} r="1.9" fill={eyes} />
+          <path d={`M${cx + rx * 0.3} ${top + 0.5}V${top - 6}`} stroke="#2a2d33" strokeWidth="1.6" />
+          <circle cx={cx + rx * 0.3} cy={top - 7} r="1.9" fill={eyes} />
         </>
       )}
 
@@ -1294,7 +1342,7 @@ function HeroBust({ sheet }) {
         <>
           <path d={`M${cx - rx - 1.5} ${cy + 6} q0 -${ry + 8} ${rx + 1.5} -${ry + 8} q${rx + 1.5} 0 ${rx + 1.5} ${ry + 8}z`} fill={`url(#t${uid})`} />
           <rect x={cx - 8} y={cy - 1.6} width="16" height="3.6" rx="1.4" fill="#141414" />
-          <rect x={cx - 1.6} y={cy + 3} width="3.2" height={ry * 0.25} fill="#141414" opacity="0.45" />
+          {[[-4.5, 4.4], [-1.5, 4.4], [1.5, 4.4], [4.5, 4.4], [-3, 7], [0, 7], [3, 7]].map(([dx, dy], i) => <circle key={i} cx={cx + dx} cy={cy + dy} r="0.75" fill="#141414" opacity="0.6" />)}
           <path d={`M${cx - 7} ${top - 2} ${cx} ${top - 10} ${cx + 7} ${top - 2}z`} fill="#e8c476" />
         </>
       )}
@@ -1340,6 +1388,20 @@ function HeroBust({ sheet }) {
 
 /* ---------------- public components ---------------- */
 
+// A bust is a few hundred SVG nodes, and parties, chat lines and lists show
+// many of them on every update of the table: redraw one only when something
+// it is drawn from changed (everything resolveLook reads).
+const LOOK_FIELDS = ['name', 'body', 'race', 'raceIndex', 'raceName', 'subrace', 'classIndex', 'className'];
+function sameLook(a, b) {
+  const x = a.sheet || {}, y = b.sheet || {};
+  if (x === y) return true;
+  for (const k of LOOK_FIELDS) if (x[k] !== y[k]) return false;
+  const p = x.portrait || {}, q = y.portrait || {};
+  if (p === q || (p.look === q.look && p.image === q.image)) return true;
+  return p.image === q.image && JSON.stringify(p.look || null) === JSON.stringify(q.look || null);
+}
+const HeroBustMemo = React.memo(HeroBust, sameLook);
+
 /**
  * What a character or creature looks like. Everything else (portrait frames,
  * map tokens, list rows) wraps this.
@@ -1355,7 +1417,7 @@ export function CreatureArt({ sheet, art, color = '#d4a94f', size = 64 }) {
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
       {body || (picture
         ? <image href={picture} x="0" y="0" width="64" height="64" preserveAspectRatio="xMidYMid slice" />
-        : <HeroBust sheet={sheet?.name ? sheet : { ...sheet, name: sheet?.name || 'hero' }} />)}
+        : <HeroBustMemo sheet={sheet?.name ? sheet : { ...sheet, name: sheet?.name || 'hero' }} />)}
     </svg>
   );
 }

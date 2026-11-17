@@ -13,6 +13,12 @@ const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 const _c = new THREE.Color();
 
+// Segment detail for round parts. Figures are built a second time at about
+// half the segments for when they stand small on screen (WorldView swaps
+// the meshes); nothing else changes, so the simple build matches part for part.
+export const DETAIL = { k: 1 };
+export const seg = (n, min = 3) => (DETAIL.k === 1 ? n : Math.max(Math.min(n, min), Math.round(n * DETAIL.k)));
+
 export default class Kit {
   constructor(rand = Math.random) {
     this.parts = [];
@@ -54,11 +60,11 @@ export default class Kit {
   }
 
   box(w, h, d, color, o) { return this.add(new THREE.BoxGeometry(w, h, d), color, o); }
-  cyl(rt, rb, h, color, o = {}) { return this.add(new THREE.CylinderGeometry(rt, rb, h, o.seg || 8, 1, o.open || false, 0, o.arc || Math.PI * 2), color, o); }
-  cone(r, h, color, o = {}) { return this.add(new THREE.ConeGeometry(r, h, o.seg || 8), color, o); }
-  ball(r, color, o = {}) { return this.add(new THREE.IcosahedronGeometry(r, o.detail ?? 1), color, o); }
+  cyl(rt, rb, h, color, o = {}) { return this.add(new THREE.CylinderGeometry(rt, rb, h, seg(o.seg || 8), 1, o.open || false, 0, o.arc || Math.PI * 2), color, o); }
+  cone(r, h, color, o = {}) { return this.add(new THREE.ConeGeometry(r, h, seg(o.seg || 8)), color, o); }
+  ball(r, color, o = {}) { return this.add(new THREE.IcosahedronGeometry(r, DETAIL.k < 1 ? 0 : o.detail ?? 1), color, o); }
   // theta: how far down from the top the sphere reaches (PI = whole, PI/2 = a dome).
-  sphere(r, color, o = {}) { return this.add(new THREE.SphereGeometry(r, o.seg || 10, Math.max(4, Math.round((o.seg || 10) * 0.6)), 0, Math.PI * 2, 0, o.theta || Math.PI), color, o); }
+  sphere(r, color, o = {}) { return this.add(new THREE.SphereGeometry(r, seg(o.seg || 10, 5), seg(Math.max(4, Math.round((o.seg || 10) * 0.6)), 3), 0, Math.PI * 2, 0, o.theta || Math.PI), color, o); }
   rock(r, color, o = {}) {
     // A lumpy stone: an icosahedron with its corners pushed about. Shared
     // corners move together (keyed by position), so the faces stay joined.
@@ -84,7 +90,7 @@ export default class Kit {
     const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
     const len = A.distanceTo(B);
     if (len < 1e-4) return this;
-    const g = new THREE.CylinderGeometry(r1, r0, len, o.seg || 6);
+    const g = new THREE.CylinderGeometry(r1, r0, len, seg(o.seg || 6, 4));
     const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize());
     g.applyQuaternion(q);
     const mid = A.clone().add(B).multiplyScalar(0.5);
@@ -110,7 +116,7 @@ export default class Kit {
     g.computeVertexNormals();
     return this.add(g, color, o);
   }
-  torus(r, t, color, o = {}) { return this.add(new THREE.TorusGeometry(r, t, o.rseg || 6, o.tseg || 14, o.arc || Math.PI * 2), color, o); }
+  torus(r, t, color, o = {}) { return this.add(new THREE.TorusGeometry(r, t, seg(o.rseg || 6), seg(o.tseg || 14, 5), o.arc || Math.PI * 2), color, o); }
   plane(w, h, color, o = {}) { return this.add(new THREE.PlaneGeometry(w, h), color, o); }
 
   get empty() { return this.parts.length === 0; }
@@ -131,6 +137,41 @@ export const MATS = {
   glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
   wall: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, metalness: 0.02 }),
 };
+
+// Fog of war inside the world's own materials: whatever stands on a square
+// the players haven't seen is painted dark, from every angle. (The smoky lid
+// over the fog only covers it from above, so a low camera, or walls dropped
+// by the cutaway, used to show the unknown from the side.) WorldView fills
+// these in; off (0) everywhere else, like the hero previews.
+export const FOGU = {
+  fogPrev: { value: null },
+  fogNext: { value: null },
+  fogMix: { value: 1 },
+  fogSize: { value: new THREE.Vector2(1, 1) },
+  fogAlpha: { value: 1 },
+  fogOn: { value: 0 },
+};
+function addFog(sh) {
+  Object.assign(sh.uniforms, FOGU);
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vFogW;')
+    .replace('#include <project_vertex>', '#include <project_vertex>\n  vFogW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vFogW; uniform sampler2D fogPrev; uniform sampler2D fogNext; uniform float fogMix; uniform vec2 fogSize; uniform float fogAlpha; uniform float fogOn;')
+    .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+  if (fogOn > 0.5) {
+    // (the edge walls' outer faces sit just past the grid: they count as the edge square)
+    vec2 fm = vec2(vFogW.x / fogSize.x, vFogW.z / fogSize.y), pad = 0.6 / fogSize;
+    float inside = step(-pad.x, fm.x) * step(fm.x, 1.0 + pad.x) * step(-pad.y, fm.y) * step(fm.y, 1.0 + pad.y);
+    fm = clamp(fm, 0.5 / (fogSize * 16.0), 1.0 - 0.5 / (fogSize * 16.0));
+    float seen = mix(texture2D(fogPrev, fm).r, texture2D(fogNext, fm).r, smoothstep(0.0, 1.0, fogMix));
+    float k = inside * smoothstep(0.45, 0.9, 1.0 - seen) * fogAlpha;
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.008, 0.008, 0.011), k);
+  }`);
+}
+MATS.solid.onBeforeCompile = addFog;
+MATS.metal.onBeforeCompile = addFog;
+MATS.glow.onBeforeCompile = addFog;
 
 // Dollhouse cutaway for walls: on the camera's side of what you're looking
 // at, walls drop to a stub so you always see into the room. (They still
@@ -161,6 +202,7 @@ MATS.wall.onBeforeCompile = (sh) => {
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying float vCap;')
     .replace('#include <color_fragment>', '#include <color_fragment>\n  if (vCap > 0.999) diffuseColor.rgb = vec3(0.045, 0.04, 0.035);');
+  addFog(sh);
 };
 
 // Shadows use the same cut, or a lowered wall would still darken the floor

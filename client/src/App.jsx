@@ -1,11 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { auth } from './api';
 import { socket } from './socket';
+import * as sync from './sync';
 import Login from './components/Login';
 import Lobby from './components/Lobby';
-import GameBoard from './components/GameBoard';
+// The table (board, DM tools, sound) is its own download: signing in and the
+// home screen don't wait for it, and it's fetched in the background once in.
+const GameBoard = React.lazy(() => import('./components/GameBoard'));
+import { TrainingTable } from './components/Training';
 import { DragonLogo } from './components/Icons';
 import { useDialog } from './utils';
+import { useSaveStatus, flushEdits } from './autosave';
+
+// Off the table for a moment (a dropped connection, a server restarting for an
+// update): say so, and that nothing done meanwhile is lost (sync.js keeps it
+// and sends it once we're back).
+function ReconnectNote() {
+  const st = useSaveStatus();
+  if (st !== 'offline') return null;
+  return (
+    <div className="reconnect-note" role="status">
+      <span className="spinner small" aria-hidden="true" /> Reconnecting… your changes are kept
+    </div>
+  );
+}
 
 // Consume /invite/CODE from the URL once, then clean it.
 function consumeInviteCode() {
@@ -35,7 +53,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return undefined;
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
-    const id = idle(() => { import('./components/Map3D'); import('./world/FigureStage'); });
+    const id = idle(() => { import('./components/GameBoard'); import('./components/Map3D'); import('./world/FigureStage'); import('./components/CharacterBuilder'); import('./components/CharacterSheet'); });
     return () => (window.cancelIdleCallback || clearTimeout)(id);
   }, [user]);
 
@@ -48,7 +66,7 @@ export default function App() {
   }, []);
 
   const enterGame = useCallback(({ code, state }) => {
-    setGame({ code, state });
+    setGame({ code, state: sync.loadFull(state, { fresh: true }) });
     setChat(state.chat || []);
     setLog(state.log || []);
     try {
@@ -57,7 +75,9 @@ export default function App() {
   }, []);
 
   const leaveGame = useCallback(() => {
+    flushEdits(); // a field still waiting goes before we leave the table
     socket.emit('leaveCampaign');
+    sync.clear();
     setGame(null);
     setChat([]);
     setLog([]);
@@ -69,7 +89,8 @@ export default function App() {
   const joinByCode = useCallback(
     (code, { silent = false } = {}) =>
       new Promise((resolve) => {
-        socket.emit('joinCampaign', { code, userId: user.id, username: user.username }, (res) => {
+        // who we are comes from the login cookie, not from this message
+        socket.emit('joinCampaign', { code }, (res) => {
           if (res && res.state) {
             enterGame({ code: res.code, state: res.state });
             resolve(true);
@@ -110,12 +131,22 @@ export default function App() {
       }
     };
     const onDisconnect = () => setConnected(false);
+    // A full state pushed by the server; patches arrive through sync.js.
     const onGameState = (state) => {
-      setGame((prev) => (prev ? { ...prev, state } : prev));
+      if (gameRef.current) sync.loadFull(state);
     };
-    const onChat = (msg) => setChat((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg].slice(-300)));
+    const offView = sync.subscribe((view) => setGame((prev) => (prev && view ? { ...prev, state: view } : prev)));
+    // Your own line is shown the moment you send it (sendChat); the server's
+    // copy replaces it, matched by `cid`.
+    const onChat = (msg) => setChat((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      const mine = msg.cid ? prev.findIndex((m) => m.cid === msg.cid) : -1;
+      if (mine >= 0) return prev.map((m, i) => (i === mine ? msg : m));
+      return [...prev, msg].slice(-300);
+    });
     const onLog = (entry) => setLog((prev) => (prev.some((l) => l.id === entry.id) ? prev : [...prev, entry].slice(-400)));
     const onKicked = () => {
+      sync.clear();
       setGame(null);
       try {
         localStorage.removeItem('dnd_lastCampaign');
@@ -131,21 +162,22 @@ export default function App() {
     socket.on('kicked', onKicked);
     socket.connect();
 
-    // staleness watchdog: if in a game and no state for 12s after an action, re-request
+    // Staleness check: after 15 s without a word from the server, compare
+    // version numbers (a few bytes); only a client that fell behind gets the
+    // full state back.
     const watchdog = setInterval(() => {
-      if (gameRef.current && socket.connected) {
-        socket.emit('requestState', (res) => {
-          if (res && res.state) {
-            setGame((prev) => (prev ? { ...prev, state: res.state } : prev));
-            setChat(res.state.chat || []);
-            setLog(res.state.log || []);
-          }
-        });
-      }
+      if (!gameRef.current || !socket.connected || Date.now() - sync.lastPatchAt() < 15000) return;
+      socket.emit('syncCheck', { v: sync.getVersion() }, (res) => {
+        if (!res || !res.state) return;
+        sync.loadFull(res.state);
+        setChat(res.state.chat || []);
+        setLog(res.state.log || []);
+      });
     }, 15000);
 
     return () => {
       clearInterval(watchdog);
+      offView();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('gameState', onGameState);
@@ -155,6 +187,14 @@ export default function App() {
       socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Chat shows your line at once, greyed until the server's copy arrives.
+  const sendChat = useCallback((text, whisperTo) => {
+    if (!text || !text.trim()) return;
+    const cid = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    socket.emit('sendChatMessage', { text, whisperTo, cid });
+    setChat((prev) => [...prev, { id: `local-${cid}`, cid, pending: true, kind: 'chat', userId: user.id, username: user.username, text: text.trim().slice(0, 1000), whisperTo: whisperTo || null, ts: Date.now() }].slice(-300));
   }, [user]);
 
   const logout = useCallback(async () => {
@@ -186,15 +226,27 @@ export default function App() {
 
   if (game && game.state) {
     return (
-      <GameBoard
-        user={user}
-        code={game.code}
-        state={game.state}
-        chat={chat}
-        log={log}
-        connected={connected}
-        onLeave={leaveGame}
-      />
+      <React.Suspense fallback={<div className="loading-screen"><DragonLogo size={54} /><div className="spinner" /></div>}>
+        {/* the board, with the DM coach, practice round and handbook on top (Training.jsx) */}
+        <TrainingTable
+          user={user}
+          state={game.state}
+          code={game.code}
+          render={(state, boardUser) => (
+            <GameBoard
+              user={boardUser}
+              code={game.code}
+              state={state}
+              chat={chat}
+              onSendChat={sendChat}
+              log={log}
+              connected={connected}
+              onLeave={leaveGame}
+            />
+          )}
+        />
+        <ReconnectNote />
+      </React.Suspense>
     );
   }
 

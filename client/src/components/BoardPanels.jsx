@@ -16,7 +16,7 @@ export function PartyPanel({ state, isDM, userId, onOpenSheet, onMonsterHp, onMo
       <div className="party-list">
         {state.members.map((m) => {
           const sheet = m.characterId ? state.charSheets[m.characterId] : null;
-          const online = !!m.socketId;
+          const online = !!(m.online ?? m.socketId);
           const isDm = state.mode === 'dm' && state.dmId === m.userId;
           return (
             <button
@@ -299,7 +299,7 @@ function ChatItem({ item, mine }) {
     );
   }
   return (
-    <div className={`chat-item ${mine ? 'mine' : ''}`}>
+    <div className={`chat-item ${mine ? 'mine' : ''}`} style={item.pending ? { opacity: 0.6 } : undefined}>
       <span className="chat-user">
         {item.username}
         {item.whisperTo && <em className="muted"> to {item.whisperTo === 'dm' ? 'the DM' : 'you'}</em>}

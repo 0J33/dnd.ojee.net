@@ -14,6 +14,8 @@ import { ChevronLeft, ChevronRight, D20Icon, SparkleIcon, XIcon } from './Icons'
 import { Avatar, BODIES, lookOptions } from './Portrait';
 import PortraitEditor, { PORTRAIT_COLORS, FigureStage } from './PortraitEditor';
 import { useSources, SourceChip, SourceHead, SubclassPicker, useSubclass, subclassFeaturesBetween, pressable, groupBySource } from './ContentChoices';
+import { FeatureItem, InfoTip, MoreText, SpellPickRow, PropertyChips } from './Explain';
+import { ABILITY_DETAILS, SKILL_BRIEFS, ARMOR_CATEGORIES, VITALS } from '../rules/glossary';
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
 
@@ -22,41 +24,100 @@ const FIGHTING_STYLES = [
   { id: 'dueling', name: 'Dueling', desc: '+2 damage with a one-handed weapon (and nothing in the other hand, shield ok).' },
   { id: 'archery', name: 'Archery', desc: '+2 to attack rolls with ranged weapons.' },
   { id: 'great-weapon', name: 'Great Weapon Fighting', desc: 'Reroll 1s and 2s on damage with two-handed weapons.' },
+  { id: 'protection', name: 'Protection', desc: 'With a shield, use your reaction to give a foe disadvantage on an attack against an ally next to you.' },
+  { id: 'two-weapon', name: 'Two-Weapon Fighting', desc: 'When you fight with a light weapon in each hand, the off-hand attack adds your ability modifier to its damage too.' },
 ];
+
+/** A skill or ability button that says what it's for, under its name. */
+function PickBrief({ name, brief, sub }) {
+  return (
+    <>
+      <span>{name}{sub && <span className="muted"> ({sub})</span>}</span>
+      {brief && <span className="skill-pick-brief">{brief}</span>}
+    </>
+  );
+}
 
 const STEPS = ['Start', 'Race', 'Class', 'Abilities', 'Background', 'Spells', 'Details', 'Review'];
 
-export default function CharacterBuilder({ onClose, onSaved, embedded = false, onPickPregen = null }) {
+const BUILDER_DRAFT = 'dnd.builderDraft';
+function readBuilderDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(BUILDER_DRAFT) || 'null');
+    if (!d || !(d.t > Date.now() - 14 * 24 * 3600 * 1000)) return null;
+    return d.step || d.name || d.race || d.classIndex ? d.choices || null : null;
+  } catch { return null; }
+}
+function writeBuilderDraft(c) {
+  if (!c.step && !c.name && !c.race && !c.classIndex) return;
+  try { localStorage.setItem(BUILDER_DRAFT, JSON.stringify({ t: Date.now(), step: c.step, name: c.name, race: c.race, classIndex: c.classIndex, choices: c })); } catch {}
+}
+
+export default function CharacterBuilder(props) {
+  // "Start over" mounts a fresh builder (every choice back to its default).
+  const [run, setRun] = useState(0);
+  return <Builder key={run} {...props} onRestart={() => setRun((n) => n + 1)} />;
+}
+
+function Builder({ onClose, onSaved, embedded = false, onPickPregen = null, onRestart = null }) {
   const dialog = useDialog();
-  const [step, setStep] = useState(0);
+  const [draft] = useState(readBuilderDraft); // a hero half made before (below)
+  const d = draft || {};
+  const [step, setStep] = useState(d.step || 0);
   const [races, setRaces] = useState([]);
   const [raceDetail, setRaceDetail] = useState(null);
   const [backgrounds, setBackgrounds] = useState([]);
   const [spellList, setSpellList] = useState({ cantrips: [], level1: [] });
   const [saving, setSaving] = useState(false);
 
+  // A hero half made survives a reload or a closed builder: every choice is
+  // kept in localStorage (BUILDER_DRAFT) as it's made, and the builder opens
+  // where you left it, with "Start over" beside the title. Saving the hero
+  // (or taking a ready-made one) clears it.
+  // The effects below reset later picks when an earlier one changes; on the
+  // first run after restoring, the picks are the draft's and stay.
+  const restoring = useRef(draft ? new Set(['race', 'picks', 'subclass', 'class']) : new Set());
+  const firstRun = (k) => restoring.current.delete(k);
+
   // choices
-  const [race, setRace] = useState(null);
-  const [subrace, setSubrace] = useState(null);
-  const [abilityPicks, setAbilityPicks] = useState([]); // one array per race ability-choice group
-  const [raceSkillPicks, setRaceSkillPicks] = useState([]); // one array per race skill-choice group
-  const [swapSkills, setSwapSkills] = useState([]); // replacements when race and background overlap
-  const [classIndex, setClassIndex] = useState(null);
-  const [subclass, setSubclass] = useState(null); // summary; only for classes that choose at level 1
-  const [method, setMethod] = useState('array');
-  const [assign, setAssign] = useState({}); // ability -> base score
-  const [rolled, setRolled] = useState(null);
-  const [pb, setPb] = useState({ str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
-  const [background, setBackground] = useState(null);
-  const [classSkills, setClassSkills] = useState([]);
-  const [expertisePicks, setExpertisePicks] = useState([]);
-  const [fightingStyle, setFightingStyle] = useState('defense');
-  const [cantrips, setCantrips] = useState([]);
-  const [spells, setSpells] = useState([]);
-  const [name, setName] = useState('');
-  const [alignment, setAlignment] = useState('Neutral Good');
-  const [personality, setPersonality] = useState({ traits: '', ideals: '', bonds: '', flaws: '' });
-  const [portrait, setPortrait] = useState({ color: PORTRAIT_COLORS[0] });
+  const [race, setRace] = useState(d.race ?? null);
+  const [subrace, setSubrace] = useState(d.subrace ?? null);
+  const [abilityPicks, setAbilityPicks] = useState(d.abilityPicks ?? []); // one array per race ability-choice group
+  const [raceSkillPicks, setRaceSkillPicks] = useState(d.raceSkillPicks ?? []); // one array per race skill-choice group
+  const [swapSkills, setSwapSkills] = useState(d.swapSkills ?? []); // replacements when race and background overlap
+  const [classIndex, setClassIndex] = useState(d.classIndex ?? null);
+  const [subclass, setSubclass] = useState(d.subclass ?? null); // summary; only for classes that choose at level 1
+  const [method, setMethod] = useState(d.method ?? 'array');
+  const [assign, setAssign] = useState(d.assign ?? {}); // ability -> base score
+  const [rolled, setRolled] = useState(d.rolled ?? null);
+  const [pb, setPb] = useState(d.pb ?? { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
+  const [background, setBackground] = useState(d.background ?? null);
+  const [classSkills, setClassSkills] = useState(d.classSkills ?? []);
+  const [expertisePicks, setExpertisePicks] = useState(d.expertisePicks ?? []);
+  const [fightingStyle, setFightingStyle] = useState(d.fightingStyle ?? 'defense');
+  const [cantrips, setCantrips] = useState(d.cantrips ?? []);
+  const [spells, setSpells] = useState(d.spells ?? []);
+  const [name, setName] = useState(d.name ?? '');
+  const [alignment, setAlignment] = useState(d.alignment ?? 'Neutral Good');
+  const [personality, setPersonality] = useState(d.personality ?? { traits: '', ideals: '', bonds: '', flaws: '' });
+  // A seed of its own from the start, so the look (gearforged plating
+  // included) stays put when the hero is named.
+  const [portrait, setPortrait] = useState(() => d.portrait ?? { color: PORTRAIT_COLORS[0], look: { seed: Math.random().toString(36).slice(2, 10) } });
+
+  const choices = { step, race, subrace, abilityPicks, raceSkillPicks, swapSkills, classIndex, subclass, method, assign, rolled, pb, background, classSkills, expertisePicks, fightingStyle, cantrips, spells, name, alignment, personality, portrait };
+  const choicesRef = useRef(choices);
+  choicesRef.current = choices;
+  const draftOff = useRef(false); // saved or taken: nothing more to keep
+  useEffect(() => {
+    if (draftOff.current) return undefined;
+    const t = setTimeout(() => writeBuilderDraft(choices), 300);
+    return () => clearTimeout(t);
+  }); // after every change
+  useEffect(() => () => { if (!draftOff.current) writeBuilderDraft(choicesRef.current); }, []);
+  const dropDraft = () => {
+    draftOff.current = true;
+    try { localStorage.removeItem(BUILDER_DRAFT); } catch {}
+  };
 
   useEffect(() => {
     srd.races().then((r) => Array.isArray(r) && setRaces(r));
@@ -64,7 +125,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   }, []);
 
   useEffect(() => {
-    setSubrace(null);
+    if (!firstRun('race')) setSubrace(null);
     if (!race) return setRaceDetail(null);
     // Switching races quickly: only the race still picked may land (an
     // earlier answer arriving last used to overwrite it, leaving Next off).
@@ -80,6 +141,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
   // picks belong to one race + subrace combination
   useEffect(() => {
+    if (firstRun('picks')) return;
     setAbilityPicks([]);
     setRaceSkillPicks([]);
   }, [race, subrace]);
@@ -101,7 +163,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
   // Level-1 subclass classes start on the SRD option, which the builder used to
   // hand out automatically; anything else is one click away.
   useEffect(() => {
-    setSubclass(null);
+    if (!firstRun('subclass')) setSubclass(null);
     if (!choosesSubclassNow) return;
     let live = true;
     srd.subclasses(classIndex).then((list) => {
@@ -135,7 +197,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
 
   // preselect recommended spells when class changes
   useEffect(() => {
-    if (!classIndex) return;
+    if (firstRun('class') || !classIndex) return;
     const rec = RECOMMENDED_SPELLS[classIndex] || { cantrips: [], spells: [] };
     setCantrips(rec.cantrips.slice(0, meta?.l1?.cantrips ?? 0));
     setSpells(rec.spells.slice(0, spellPickCount(classIndex)));
@@ -201,7 +263,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
         return !!resolved && !needsSubrace(raceDetail, subrace)
           && choicesComplete(resolved.ability_choices, abilityPicks)
           && choicesComplete(resolved.skill_choices, raceSkillPicks);
-      case 'Class': return !!classIndex && (!choosesSubclassNow || !!subclassDetail);
+      case 'Class': return !!classIndex && (!choosesSubclassNow || !!subclassDetail) && (classIndex !== 'fighter' || !!fightingStyle);
       case 'Abilities': return !!finalScores && (method !== 'pointbuy' || pointsSpent <= POINT_BUY_TOTAL);
       case 'Background': {
         if (!background) return false;
@@ -313,17 +375,17 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     const sheet = buildSheet();
     const res = await charsApi.create(sheet.name, sheet);
     setSaving(false);
-    if (res && res.id) onSaved(res);
+    if (res && res.id) { dropDraft(); onSaved(res); }
     else dialog.alert((res && res.error) || 'Could not save character');
   };
 
   const pickPregen = async (pregen) => {
-    if (onPickPregen) return onPickPregen(pregen);
+    if (onPickPregen) { dropDraft(); return onPickPregen(pregen); }
     if (saving) return;
     setSaving(true);
     const res = await charsApi.create(pregen.sheet.name, pregen.sheet);
     setSaving(false);
-    if (res && res.id) onSaved(res);
+    if (res && res.id) { dropDraft(); onSaved(res); }
     else dialog.alert((res && res.error) || 'Could not save character');
   };
 
@@ -349,6 +411,11 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
     <div ref={rootRef} tabIndex={-1} role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-label="Create a hero" className={`builder ${embedded ? 'builder-embedded' : ''}`}>
       <div className="builder-head">
         <h2><D20Icon size={18} /> Create a hero</h2>
+        {draft && !draftOff.current && (
+          <button className="link-btn small builder-restart" title="Forget these choices and begin again" onClick={() => { dropDraft(); onRestart ? onRestart() : null; }}>
+            Start over
+          </button>
+        )}
         <div className="builder-steps">
           {STEPS.map((s, i) => (
             <span key={s} className={`builder-step-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''} ${s === 'Spells' && !isCaster && classIndex ? 'skipped' : ''}`}>
@@ -417,7 +484,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                   : <SourceHead source={group} sources={sources} />}
                 <div className="choice-grid">
                   {items.map((r) => (
-                    <RaceCard key={r.index} r={r} sources={sources} selected={race === r.index} onPick={() => setRace(r.index)} />
+                    <RaceCard key={r.index} r={r} sources={sources} selected={race === r.index} onPick={() => setRace(race === r.index ? null : r.index)} />
                   ))}
                 </div>
                 {resolved && items.some((r) => r.index === race) && (
@@ -438,7 +505,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <p className="builder-intro">Your class is your job in the party: how you fight, what you're good at, and whether you sling spells.</p>
             <div className="choice-grid">
               {Object.entries(CLASS_META).map(([idx, c]) => (
-                <div key={idx} className={`choice-card ${classIndex === idx ? 'selected' : ''}`} aria-pressed={classIndex === idx} {...pressable(() => setClassIndex(idx))}>
+                <div key={idx} className={`choice-card ${classIndex === idx ? 'selected' : ''}`} aria-pressed={classIndex === idx} {...pressable(() => setClassIndex(classIndex === idx ? null : idx))}>
                   <h4>{c.name} {c.caster && <span className="chip magic">magic</span>}</h4>
                   <p>{c.blurb}</p>
                   <p className="choice-playstyle"><ChevronRight size={12} /> {c.playstyle}</p>
@@ -449,12 +516,14 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 </div>
               ))}
             </div>
+            {meta && <ClassPreview classIndex={classIndex} meta={meta} />}
             {classIndex === 'fighter' && (
               <div className="mt">
                 <h4>Fighting style</h4>
+                <p className="muted small">A fighting style is a permanent bonus for the way you like to fight. Pick the one that fits your weapon.</p>
                 <div className="choice-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
                   {FIGHTING_STYLES.map((s) => (
-                    <div key={s.id} className={`choice-card slim ${fightingStyle === s.id ? 'selected' : ''}`} aria-pressed={fightingStyle === s.id} {...pressable(() => setFightingStyle(s.id))}>
+                    <div key={s.id} className={`choice-card slim ${fightingStyle === s.id ? 'selected' : ''}`} aria-pressed={fightingStyle === s.id} {...pressable(() => setFightingStyle(fightingStyle === s.id ? null : s.id))}>
                       <h4>{s.name}</h4>
                       <p>{s.desc}</p>
                     </div>
@@ -482,7 +551,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
           <div>
             <p className="builder-intro">
               Six numbers define your raw talent, from 8 (weak) to 15+ (heroic). Each gives a <strong>modifier</strong> -
-              the number you actually add to dice rolls. {meta && <>For a {meta.name}, <strong>{meta.primary.map((a) => ABILITY_NAMES[a]).join(' and ')}</strong> matter most.</>}
+              the number you actually add to dice rolls. {meta && <>For a {meta.name}, <strong>{meta.primary.map((a) => ABILITY_NAMES[a]).join(' and ')}</strong> {meta.primary.length > 1 ? 'matter' : 'matters'} most.</>}
             </p>
             <div className="tab-row mb">
               <button className={method === 'array' ? 'active' : ''} onClick={() => { setMethod('array'); setAssign({}); }}>Standard array (recommended)</button>
@@ -514,7 +583,13 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                       <span className="ability-slot-name">{ABILITY_NAMES[a]}</span>
                       {meta && meta.primary.includes(a) && <span className="chip gold">key</span>}
                     </div>
-                    <div className="ability-slot-blurb">{ABILITY_BLURBS[a]}</div>
+                    <div className="ability-slot-blurb">
+                      {ABILITY_BLURBS[a]}{' '}
+                      <InfoTip label={ABILITY_NAMES[a]} size={13}>
+                        <p>{ABILITY_DETAILS[a].uses}</p>
+                        <p className="muted small">Your modifier is (score - 10) / 2, rounded down: 10 gives +0, 14 gives +2, 8 gives -1.</p>
+                      </InfoTip>
+                    </div>
                     <div className="ability-slot-controls">
                       {method === 'pointbuy' ? (
                         <div className="ability-stepper">
@@ -569,6 +644,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <div className="choice-grid">
               {backgrounds.map((b) => (
                 <div key={b.index} className={`choice-card ${background === b.index ? 'selected' : ''}`} aria-pressed={background === b.index} {...pressable(() => {
+                  if (background === b.index) { setBackground(null); return; }
                   setBackground(b.index);
                   setPersonality({
                     traits: b.suggested_personality.traits[0],
@@ -580,8 +656,15 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 })}>
                   <h4>{b.name}</h4>
                   <p>{b.blurb}</p>
+                  {b.feature && (
+                    <div className="bg-feature">
+                      <strong>Feature: {b.feature.name}.</strong> <MoreText text={b.feature.desc} max={110} />
+                    </div>
+                  )}
                   <div className="choice-tags">
-                    {b.skill_proficiencies.map((s) => <span className="chip gold" key={s}>{SKILL_BY_INDEX[s].name}</span>)}
+                    {b.skill_proficiencies.map((s) => <span className="chip gold" key={s} title={SKILL_BRIEFS[s]}>{SKILL_BY_INDEX[s].name}</span>)}
+                    {(b.tool_proficiencies || []).map((t) => <span className="chip" key={t}>{t}</span>)}
+                    {b.gold ? <span className="chip">{b.gold} gp</span> : null}
                   </div>
                 </div>
               ))}
@@ -594,7 +677,8 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                   You're already proficient in {bgSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')} from your background
                   {racialSkills.length > 0 && <> and {racialSkills.map((s) => SKILL_BY_INDEX[s].name).join(', ')} from your race</>}.
                 </p>
-                <div className="skill-pick-grid">
+                <p className="muted small">A skill you are trained in adds your proficiency bonus (+2 at level 1) whenever you roll it.</p>
+                <div className="skill-pick-grid with-briefs">
                   {skillOptions.map((s) => {
                     const on = classSkills.includes(s);
                     return (
@@ -606,7 +690,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                           else if (classSkills.length < meta.skillChoices.n) setClassSkills([...classSkills, s]);
                         }}
                       >
-                        {SKILL_BY_INDEX[s].name} <span className="muted">({SKILL_BY_INDEX[s].ability.toUpperCase()})</span>
+                        <PickBrief name={SKILL_BY_INDEX[s].name} sub={SKILL_BY_INDEX[s].ability.toUpperCase()} brief={SKILL_BRIEFS[s]} />
                       </button>
                     );
                   })}
@@ -618,7 +702,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                       Your race and background both give you {overlapSkills.map((s) => SKILL_BY_INDEX[s].name).join(' and ')}, so you pick
                       {overlapSkills.length > 1 ? ` ${overlapSkills.length} other skills` : ' another skill'} instead.
                     </p>
-                    <div className="skill-pick-grid">
+                    <div className="skill-pick-grid with-briefs">
                       {swapOptions.concat(swapSkills.filter((s) => !swapOptions.includes(s))).map((s) => {
                         const on = swapSkills.includes(s);
                         return (
@@ -626,7 +710,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                             if (on) setSwapSkills(swapSkills.filter((x) => x !== s));
                             else if (swapSkills.length < overlapSkills.length) setSwapSkills([...swapSkills, s]);
                           }}>
-                            {SKILL_BY_INDEX[s].name}
+                            <PickBrief name={SKILL_BY_INDEX[s].name} sub={SKILL_BY_INDEX[s].ability.toUpperCase()} brief={SKILL_BRIEFS[s]} />
                           </button>
                         );
                       })}
@@ -636,7 +720,8 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                 {meta.expertiseAtCreate && (
                   <div className="mt">
                     <h4>Expertise – double your bonus in {meta.expertiseAtCreate} skills ({expertisePicks.length}/{meta.expertiseAtCreate})</h4>
-                    <div className="skill-pick-grid">
+                    <p className="muted small">Expertise doubles your proficiency bonus for that skill: pick the ones you want to be the best at.</p>
+                    <div className="skill-pick-grid with-briefs">
                       {uniq([...bgSkills, ...racialSkills, ...classSkills, ...swapSkills]).map((s) => {
                         const on = expertisePicks.includes(s);
                         return (
@@ -644,7 +729,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
                             if (on) setExpertisePicks(expertisePicks.filter((x) => x !== s));
                             else if (expertisePicks.length < meta.expertiseAtCreate) setExpertisePicks([...expertisePicks, s]);
                           }}>
-                            {SKILL_BY_INDEX[s].name}
+                            <PickBrief name={SKILL_BY_INDEX[s].name} brief={SKILL_BRIEFS[s]} />
                           </button>
                         );
                       })}
@@ -661,6 +746,7 @@ export default function CharacterBuilder({ onClose, onSaved, embedded = false, o
             <p className="builder-intro">
               <strong>Cantrips</strong> are minor spells you can cast forever, at will. <strong>Leveled spells</strong> use
               up spell slots (you get them back on a long rest). We pre-picked a solid beginner set – change anything you like.
+              Each spell says what it does; tap <strong>(i)</strong> for the whole entry.
             </p>
             <h4>Cantrips – pick {cantripsNeeded} ({cantrips.length}/{cantripsNeeded})</h4>
             <div className="spell-pick-list">
@@ -832,7 +918,7 @@ function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, 
               </div>
             )}
             {subs.map((sr) => (
-              <div key={sr.index} className={`choice-card slim ${subrace === sr.index ? 'selected' : ''}`} aria-pressed={subrace === sr.index} {...pressable(() => setSubrace(sr.index))}>
+              <div key={sr.index} className={`choice-card slim ${subrace === sr.index ? 'selected' : ''}`} aria-pressed={subrace === sr.index} {...pressable(() => setSubrace(subrace === sr.index ? null : sr.index))}>
                 <h4>{sr.name}</h4>
                 <p>{sr.blurb}</p>
                 <div className="choice-tags">
@@ -855,14 +941,14 @@ function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, 
         return (
           <div key={`a${i}`} className="mt">
             <h4>+{c.bonus} to {c.choose === 1 ? 'one score' : `${['', 'one', 'two', 'three'][c.choose] || c.choose} different scores`}{c.label ? ` ${c.label}` : ''} ({mine.length}/{c.choose})</h4>
-            <div className="skill-pick-grid">
+            <div className="skill-pick-grid with-briefs">
               {ABILITIES.map((a) => {
                 const on = mine.includes(a);
                 const blocked = !pool.includes(a) || taken.includes(a) || (!on && mine.length >= c.choose);
                 return (
                   <button key={a} className={`skill-pick ${on ? 'on' : ''}`} disabled={blocked && !on}
                     onClick={() => toggleIn(setAbilityPicks, i, a, c.choose)}>
-                    {ABILITY_NAMES[a]}
+                    <PickBrief name={ABILITY_NAMES[a]} brief={ABILITY_DETAILS[a].brief} />
                   </button>
                 );
               })}
@@ -878,13 +964,13 @@ function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, 
         return (
           <div key={`s${i}`} className="mt">
             <h4>Pick {c.choose} skill{c.choose > 1 ? 's' : ''} ({mine.length}/{c.choose})</h4>
-            <div className="skill-pick-grid">
+            <div className="skill-pick-grid with-briefs">
               {pool.map((sk) => {
                 const on = mine.includes(sk);
                 return (
                   <button key={sk} className={`skill-pick ${on ? 'on' : ''}`} disabled={!on && mine.length >= c.choose}
                     onClick={() => toggleIn(setRaceSkillPicks, i, sk, c.choose)}>
-                    {SKILL_BY_INDEX[sk].name}
+                    <PickBrief name={SKILL_BY_INDEX[sk].name} sub={SKILL_BY_INDEX[sk].ability.toUpperCase()} brief={SKILL_BRIEFS[sk]} />
                   </button>
                 );
               })}
@@ -894,25 +980,67 @@ function RaceOptions({ raceDetail, resolved, subrace, setSubrace, abilityPicks, 
       })}
 
       <h4 className="mt">What you get</h4>
+      <p className="muted small">
+        Speed is how far you move each turn (5 ft per square).{resolved.darkvision > 0 ? ' Darkvision lets you see in the dark, in shades of grey.' : ''} Each trait below
+        says what it does; tap more for the full rule.
+      </p>
       <div className="choice-tags mb">
         <span className="chip">{resolved.size}</span>
         <span className="chip">Speed {resolved.speed} ft</span>
-        {resolved.darkvision > 0 && <span className="chip">Darkvision {resolved.darkvision} ft</span>}
-        {resolved.skills.map((sk) => <span key={sk} className="chip gold">{SKILL_BY_INDEX[sk].name}</span>)}
+        {resolved.darkvision > 0 && <span className="chip" title="You see in darkness as if it were dim light, in shades of grey">Darkvision {resolved.darkvision} ft</span>}
+        {resolved.skills.map((sk) => <span key={sk} className="chip gold" title={SKILL_BRIEFS[sk]}>{SKILL_BY_INDEX[sk].name}</span>)}
         {resolved.natural_attacks.map((n) => <span key={n.name} className="chip ember">{n.name} {n.damage} {n.damageType}</span>)}
         {resolved.languages.length > 0 && <span className="chip">{resolved.languages.join(', ')}{resolved.language_notes.length ? ' +' : ''}</span>}
       </div>
       <div className="feature-list">
         {resolved.traits.map((t) => (
-          <details key={`${t.source}-${t.name}`} className="feature-item">
-            <summary><strong>{t.name}</strong> <span className="muted small">· {t.source}</span></summary>
-            <p>{t.desc}</p>
-          </details>
+          <FeatureItem key={`${t.source}-${t.name}`} name={t.name} source={t.source} desc={t.desc} />
         ))}
       </div>
     </div>
   );
 }
+
+const ARMOR_WORDS = { light: 'light', medium: 'medium', heavy: 'heavy', shields: 'shields' };
+
+// What a level-1 hero of the picked class gets, before Next.
+function ClassPreview({ classIndex, meta }) {
+  const feats = CLASS_L1_FEATURES[classIndex] || [];
+  const armor = meta.armor.length ? meta.armor.map((a) => ARMOR_WORDS[a] || a).join(', ') : 'none';
+  return (
+    <div className="race-options class-preview">
+      <h3>A level 1 {meta.name}</h3>
+      <dl className="class-facts">
+        <dt>Hit points</dt>
+        <dd>{meta.hitDie} + your CON modifier, and about {AVG_DIE[meta.hitDie]} more each level (a d{meta.hitDie} hit die). Higher is tougher.</dd>
+        <dt>Saving throws</dt>
+        <dd>
+          Trained in {meta.saves.map((a) => ABILITY_NAMES[a]).join(' and ')} saves.{' '}
+          <InfoTip label="Saving throws" size={13}>{VITALS.save}</InfoTip>
+        </dd>
+        <dt>Armor</dt>
+        <dd>
+          {armor}{' '}
+          {meta.armor.length > 0 && (
+            <InfoTip label="Armor" size={13}>
+              {meta.armor.map((a) => <p key={a}>{ARMOR_CATEGORIES[a === 'shields' ? 'shield' : a]}</p>)}
+              <p className="muted small">Wearing armor you aren't trained in ruins your attacks and spells.</p>
+            </InfoTip>
+          )}
+        </dd>
+        <dt>Weapons</dt>
+        <dd>{meta.weapons === 'martial' ? 'all weapons (simple and martial)' : meta.weapons === 'simple' ? 'simple weapons (clubs, daggers, maces, spears, light crossbows...)' : meta.weapons}</dd>
+        {meta.caster && <><dt>Magic</dt><dd>Casts spells using {ABILITY_NAMES[meta.castingAbility]}. You pick them in the Spells step.</dd></>}
+      </dl>
+      {feats.length > 0 && (
+        <div className="feature-list">
+          {feats.map((f) => <FeatureItem key={f.name} name={f.name} source={f.source} desc={f.desc} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+const AVG_DIE = { 6: 4, 8: 5, 10: 6, 12: 7 };
 
 function SubclassPreview({ detail, level }) {
   const feats = (detail.levels || {})[level] || [];
@@ -920,26 +1048,14 @@ function SubclassPreview({ detail, level }) {
   return (
     <div className="race-options">
       <h3>{detail.name}</h3>
-      <p className="muted small">{detail.desc}</p>
+      <MoreText className="muted small" text={detail.desc} max={220} />
       <div className="feature-list mt">
         {feats.map((f) => (
-          <details key={f.name} className="feature-item">
-            <summary><strong>{f.name}</strong> <span className="muted small">· level {level}</span></summary>
-            <p>{f.desc}</p>
-          </details>
+          <FeatureItem key={f.name} name={f.name} source={`level ${level}`} desc={f.desc} />
         ))}
       </div>
       {later.length > 0 && <p className="muted small mt">More features at levels {later.join(', ')}.</p>}
     </div>
-  );
-}
-
-function SpellPickRow({ spell, on, toggle }) {
-  return (
-    <button className={`spell-pick ${on ? 'on' : ''}`} onClick={toggle} title={spell.casting_time}>
-      <span className="spell-pick-name">{spell.name}</span>
-      <span className="muted small">{spell.school}{spell.concentration ? ' · conc.' : ''}{spell.ritual ? ' · ritual' : ''}{spell.damage_type ? ` · ${spell.damage_type}` : ''}</span>
-    </button>
   );
 }
 
@@ -964,15 +1080,31 @@ function ReviewPane({ name, meta, bgData, sheet }) {
         ))}
       </div>
       <h4 className="mt">Attacks</h4>
-      <p>{derived.attacks.map((a) => `${a.name} ${fmtMod(a.bonus)} (${a.damage}${a.damageMod ? fmtMod(a.damageMod) : ''} ${a.damageType})`).join(' · ') || 'None'}</p>
+      <p className="muted small">To attack, roll d20 + the bonus; if it meets the target's AC you hit and roll the damage.</p>
+      {derived.attacks.length ? (
+        <ul className="review-attacks">
+          {derived.attacks.map((a) => (
+            <li key={a.name}>
+              <strong>{a.name}</strong> {fmtMod(a.bonus)} to hit, {a.damage}{a.damageMod ? fmtMod(a.damageMod) : ''} {a.damageType}{' '}
+              <PropertyChips properties={a.properties} range={a.range} />
+            </li>
+          ))}
+        </ul>
+      ) : <p>None</p>}
       <h4 className="mt">Proficient skills</h4>
       <p>{sheet.profSkills.map((s) => SKILL_BY_INDEX[s].name).join(', ')}</p>
+      <h4 className="mt">What your hero can do</h4>
+      <div className="feature-list">
+        {sheet.features.map((f) => <FeatureItem key={`${f.source}-${f.name}`} name={f.name} source={f.source} desc={f.desc} max={140} />)}
+      </div>
       {sheet.spellcasting && (
         <>
           <h4 className="mt">Magic</h4>
           <p>
-            Spell save DC <strong>{derived.spell.dc}</strong> · spell attack <strong>{fmtMod(derived.spell.attackBonus)}</strong> ·{' '}
+            Spell save DC <strong>{derived.spell.dc}</strong> <InfoTip label="Spell save DC" size={13}>{VITALS.saveDc}</InfoTip>
+            {' '}· spell attack <strong>{fmtMod(derived.spell.attackBonus)}</strong> <InfoTip label="Spell attack" size={13}>{VITALS.spellAttack}</InfoTip> ·{' '}
             {Object.entries(derived.spell.maxSlots).map(([lvl, n]) => (lvl === 'pact' ? `${n.slots} pact slots (lvl ${n.level})` : `${n} level-${lvl} slots`)).join(', ')}
+            {' '}<InfoTip label="Spell slots" size={13}>{VITALS.slots}</InfoTip>
           </p>
         </>
       )}
@@ -993,20 +1125,27 @@ function spellPickCount(classIndex) {
 // Level-1 class features (hand-condensed from the SRD for readable sheets).
 // Subclass features (Divine Domain, Sorcerous Origin, Otherworldly Patron) come
 // from the chosen subclass instead.
+const SPELLCASTING = (cls, ability, how) => ({
+  name: 'Spellcasting', source: `${cls} 1`,
+  desc: `You cast spells using ${ability}. Cantrips are free and unlimited; spells of level 1 and up each use a spell slot, and your slots come back after a long rest. ${how}`,
+});
 const CLASS_L1_FEATURES = {
   barbarian: [
-    { name: 'Rage (2/long rest)', source: 'Barbarian 1', desc: 'Bonus action: advantage on STR checks/saves, +2 melee damage, resistance to bludgeoning/piercing/slashing damage. Lasts 1 minute.' },
-    { name: 'Unarmored Defense', source: 'Barbarian 1', desc: 'AC = 10 + DEX + CON while not wearing armor.' },
+    { name: 'Rage (2/long rest)', source: 'Barbarian 1', desc: 'Bonus action: for 1 minute you have advantage on STR checks and saves, +2 damage with melee weapon attacks, and take half damage from bludgeoning, piercing and slashing. No spells while raging, and it ends early if you stop attacking or taking damage.' },
+    { name: 'Unarmored Defense', source: 'Barbarian 1', desc: 'AC = 10 + DEX + CON while not wearing armor (a shield is fine).' },
   ],
   bard: [
+    SPELLCASTING('Bard', 'Charisma', 'You know a fixed set of spells and can swap one each time you level.'),
     { name: 'Bardic Inspiration (d6)', source: 'Bard 1', desc: 'Bonus action: give a creature a d6 they can add to one attack, check, or save within 10 minutes. Uses = CHA modifier per long rest.' },
     { name: 'Ritual Casting', source: 'Bard 1', desc: 'Cast known ritual spells without a slot (+10 minutes).' },
   ],
   cleric: [
+    SPELLCASTING('Cleric', 'Wisdom', 'After a long rest you choose which cleric spells to have ready (prepared).'),
     { name: 'Ritual Casting', source: 'Cleric 1', desc: 'Cast prepared ritual spells without a slot (+10 minutes).' },
   ],
   druid: [
-    { name: 'Druidic', source: 'Druid 1', desc: 'You know the secret language of druids.' },
+    SPELLCASTING('Druid', 'Wisdom', 'After a long rest you choose which druid spells to have ready (prepared).'),
+    { name: 'Druidic', source: 'Druid 1', desc: 'You know Druidic, the secret language of druids, and can leave hidden messages in it that only druids notice.' },
     { name: 'Ritual Casting', source: 'Druid 1', desc: 'Cast prepared ritual spells without a slot (+10 minutes).' },
   ],
   fighter: [
@@ -1026,14 +1165,17 @@ const CLASS_L1_FEATURES = {
   ],
   rogue: [
     { name: 'Sneak Attack (1d6)', source: 'Rogue 1', desc: 'Once per turn: +1d6 damage with a finesse/ranged weapon if you have advantage or an ally is within 5 ft of the target.' },
-    { name: "Thieves' Cant", source: 'Rogue 1', desc: 'Secret dialect of the criminal underworld.' },
+    { name: 'Expertise', source: 'Rogue 1', desc: 'Two skills of your choice get double your proficiency bonus.' },
+    { name: "Thieves' Cant", source: 'Rogue 1', desc: "The secret slang and signs of the criminal underworld: hide a message in ordinary talk, or read the marks thieves leave for each other." },
   ],
-  sorcerer: [],
+  sorcerer: [
+    SPELLCASTING('Sorcerer', 'Charisma', 'Magic is in your blood: you know a few spells and can swap one each time you level.'),
+  ],
   warlock: [
-    { name: 'Pact Magic', source: 'Warlock 1', desc: 'Your slots are few but recharge on a SHORT rest.' },
+    { name: 'Pact Magic', source: 'Warlock 1', desc: 'You cast spells using Charisma. You have only one or two spell slots, but they always cast at your highest slot level and come back after a SHORT rest (an hour), not just a long one. Cantrips are free.' },
   ],
   wizard: [
+    SPELLCASTING('Wizard', 'Intelligence', 'Your spells live in your spellbook; after a long rest you prepare INT modifier + level of them.'),
     { name: 'Arcane Recovery', source: 'Wizard 1', desc: 'Once per day after a short rest, recover spell slots totaling half your wizard level (rounded up).' },
-    { name: 'Spellbook', source: 'Wizard 1', desc: 'You prepare INT mod + level spells from your book after each long rest.' },
   ],
 };

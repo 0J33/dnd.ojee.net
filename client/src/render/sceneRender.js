@@ -3,6 +3,7 @@
 // always previews exactly as it will play.
 
 import { TILES, FLOOR_THEMES, cellRandom, tileAt } from '../data/tiles';
+import { groundAt, walkCharAt, drawnLevels } from '../data/layers';
 
 export const themeFor = (scene) => FLOOR_THEMES[scene?.bg?.floor || 'stone'] || FLOOR_THEMES.stone;
 
@@ -12,13 +13,16 @@ export const charAt = (scene, x, y) => {
   return row[x] || (scene.bg?.floor === 'grass' ? ',' : '.');
 };
 
+// What creatures walk on: the top level everyone sees, else the base (data/layers.js).
+const walkAt = (scene, x, y) => (scene?.levels ? walkCharAt(scene, x, y) || charAt(scene, x, y) : charAt(scene, x, y));
+
 export const sceneBlocked = (scene, x, y) => {
-  const t = TILES[charAt(scene, x, y)];
+  const t = TILES[walkAt(scene, x, y)];
   return !!(t && t.blocked);
 };
 
 export const sceneDifficult = (scene, x, y) => {
-  const t = TILES[charAt(scene, x, y)];
+  const t = TILES[walkAt(scene, x, y)];
   return !!(t && t.difficult);
 };
 
@@ -56,10 +60,12 @@ export function drawTerrain(ctx, scene, cell, opts = {}) {
         continue;
       }
 
-      // Props sit on top of the scene's default ground, so paint that first,
-      // then a soft contact shadow so furniture reads against any material.
+      // Props sit on the floor under them (the scene's default ground when
+      // that isn't known), then a soft contact shadow so furniture reads
+      // against any material.
+      const under = tile.cat === 'floor' ? ch : groundAt(scene, x, y) || baseChar;
       if (tile.cat === 'prop') {
-        tileAt(baseChar).draw(ctx, px, py, cell, rnd, theme);
+        tileAt(under).draw(ctx, px, py, cell, rnd, theme);
         if (cell >= 10) {
           const g = ctx.createRadialGradient(px + cell / 2, py + cell / 2, cell * 0.12, px + cell / 2, py + cell / 2, cell * 0.52);
           g.addColorStop(0, 'rgba(0,0,0,0.34)');
@@ -70,12 +76,15 @@ export function drawTerrain(ctx, scene, cell, opts = {}) {
       }
       // A secret door or trap looks like plain wall/floor to players.
       if (tile.dmOnly && !dmView) {
-        tileAt(ch === 'S' ? '#' : baseChar).draw(ctx, px, py, cell, rnd, theme);
+        tileAt(ch === 'S' ? '#' : under).draw(ctx, px, py, cell, rnd, theme);
       } else {
-        tile.draw(ctx, px, py, cell, rnd, theme);
+        // a known floor under a prop shows through (props paint their own plain ground otherwise)
+        tile.draw(ctx, px, py, cell, rnd, tile.cat === 'prop' && groundAt(scene, x, y) ? clearTheme(theme) : theme);
       }
     }
   }
+
+  drawLevels(ctx, scene, cell, { dmView, theme });
 
   if (grid && cell >= 8) {
     ctx.strokeStyle = theme.grid;
@@ -95,6 +104,54 @@ export function drawTerrain(ctx, scene, cell, opts = {}) {
   }
 }
 
+// The theme with a see-through ground colour (props draw ground() first).
+const clearThemes = new WeakMap();
+function clearTheme(theme) {
+  let t = clearThemes.get(theme);
+  if (!t) clearThemes.set(theme, (t = { ...theme, base: 'rgba(0,0,0,0)', dark: 'rgba(0,0,0,0)' }));
+  return t;
+}
+
+// Levels painted over the base (data/layers.js): a drop shadow and a lit
+// rim make them read as standing higher. A level the players can't see is
+// drawn faded on the DM's screen.
+function drawLevels(ctx, scene, cell, { dmView, theme }) {
+  const list = drawnLevels(scene);
+  if (!list.length) return;
+  const { w, h } = scene.grid;
+  const off = Math.max(1, cell * 0.12);
+  for (const { level, dmOnly } of list) {
+    const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? ' ' : level.cells[y]?.[x] || ' ');
+    ctx.save();
+    if (dmOnly) ctx.globalAlpha = 0.55;
+    ctx.fillStyle = 'rgba(0,0,0,0.38)';
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (at(x, y) !== ' ') ctx.fillRect(x * cell + off, y * cell + off, cell, cell);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const ch = at(x, y);
+      if (ch === ' ') continue;
+      const tile = tileAt(ch);
+      const rnd = cellRandom(x + 31, y + 17);
+      if (tile.dmOnly && !dmView) { tileAt(ch === 'S' ? '#' : '.').draw(ctx, x * cell, y * cell, cell, rnd, theme); continue; }
+      tile.draw(ctx, x * cell, y * cell, cell, rnd, tile.cat === 'prop' ? clearTheme(theme) : theme); // props stand on what is below
+    }
+    // a light rim along each edge that drops to something lower
+    ctx.strokeStyle = dmOnly ? 'rgba(140,200,255,0.9)' : 'rgba(255,240,210,0.55)';
+    ctx.lineWidth = Math.max(1, cell * 0.05);
+    if (dmOnly) ctx.setLineDash([cell * 0.18, cell * 0.12]);
+    ctx.beginPath();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (at(x, y) === ' ') continue;
+      const x0 = x * cell, y0 = y * cell;
+      if (at(x, y - 1) === ' ') { ctx.moveTo(x0, y0); ctx.lineTo(x0 + cell, y0); }
+      if (at(x, y + 1) === ' ') { ctx.moveTo(x0, y0 + cell); ctx.lineTo(x0 + cell, y0 + cell); }
+      if (at(x - 1, y) === ' ') { ctx.moveTo(x0, y0); ctx.lineTo(x0, y0 + cell); }
+      if (at(x + 1, y) === ' ') { ctx.moveTo(x0 + cell, y0); ctx.lineTo(x0 + cell, y0 + cell); }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 /** Draw a single tile into a small square - used by palette swatches. */
 export function drawTileSwatch(ctx, ch, size, floor = 'stone') {
   const theme = FLOOR_THEMES[floor] || FLOOR_THEMES.stone;
@@ -103,6 +160,25 @@ export function drawTileSwatch(ctx, ch, size, floor = 'stone') {
   ctx.clearRect(0, 0, size, size);
   if (tile.cat === 'prop') tileAt('.').draw(ctx, 0, 0, size, rnd, theme);
   tile.draw(ctx, 0, 0, size, rnd, theme);
+}
+
+// Thumbnails' terrain, kept by what it shows: lists of scenes redraw their
+// thumbnails whenever the table changes (a token moved), and painting every
+// tile again each time was most of the cost of opening those lists.
+const thumbCache = new Map();
+function thumbTerrain(scene, cell, dpr) {
+  const key = `${cell}@${dpr}|${scene.grid.w}x${scene.grid.h}|${scene.bg?.kind || ''}|${scene.bg?.floor || ''}|${(scene.cells || []).join('/')}|${(scene.ground || []).join('/')}|${(scene.levels || []).map((l) => `${l.hidden}${l.players}${l.cells.join('/')}`).join('#')}`;
+  let c = thumbCache.get(key);
+  if (c) { thumbCache.delete(key); thumbCache.set(key, c); return c; }
+  c = document.createElement('canvas');
+  c.width = Math.ceil(scene.grid.w * cell * dpr);
+  c.height = Math.ceil(scene.grid.h * cell * dpr);
+  const x = c.getContext('2d');
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawTerrain(x, scene, cell, { grid: cell >= 6 });
+  thumbCache.set(key, c);
+  if (thumbCache.size > 120) thumbCache.delete(thumbCache.keys().next().value);
+  return c;
 }
 
 /**
@@ -126,7 +202,7 @@ export function drawThumbnail(canvas, scene, w, h) {
 
   ctx.save();
   ctx.translate(offX, offY);
-  drawTerrain(ctx, scene, cell, { grid: cell >= 6 });
+  ctx.drawImage(thumbTerrain(scene, cell, dpr), 0, 0, scene.grid.w * cell, scene.grid.h * cell);
 
   // token dots, so a prepped encounter reads at a glance
   for (const t of scene.tokens || []) {

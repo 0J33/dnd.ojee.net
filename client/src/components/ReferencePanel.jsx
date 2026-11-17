@@ -2,20 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { srd } from '../api';
 import { ModalOverlay } from '../utils';
 import { CONDITIONS } from '../rules/engine';
+import { ACTIONS, TURN_PARTS } from '../rules/glossary';
 import { ConditionIcon, XIcon } from './Icons';
-
-const ACTIONS = [
-  { name: 'Attack', desc: 'Make one attack with a weapon or unarmed strike. Roll d20 + your attack bonus vs the target\'s AC. Hit = roll damage.' },
-  { name: 'Cast a Spell', desc: 'Cast a spell you know/have prepared with a casting time of 1 action. Cantrips are free; leveled spells spend a spell slot.' },
-  { name: 'Dash', desc: 'Gain extra movement equal to your speed this turn (move twice as far).' },
-  { name: 'Disengage', desc: 'Your movement doesn\'t provoke opportunity attacks this turn. Use it to retreat safely.' },
-  { name: 'Dodge', desc: 'Until your next turn: attacks against you have disadvantage; you make DEX saves with advantage.' },
-  { name: 'Help', desc: 'Give an ally advantage on their next ability check, or on their next attack against a creature within 5 ft of you.' },
-  { name: 'Hide', desc: 'Make a Stealth check. If you beat their Perception, they can\'t see you - your next attack has advantage.' },
-  { name: 'Ready', desc: 'Prepare an action with a trigger ("if the goblin comes through the door, I shoot"). Uses your reaction when triggered.' },
-  { name: 'Search', desc: 'Devote your turn to finding something: usually a Perception or Investigation check.' },
-  { name: 'Use an Object', desc: 'Drink a potion, pull a lever, throw a torch - interact with a second object this turn.' },
-];
 
 const CHEATS = [
   { title: 'Your turn in combat', lines: ['Move up to your speed (30 ft = 6 squares, split freely)', 'Take ONE action (see the action list)', 'Maybe a bonus action, if a feature grants one', 'One free object interaction (draw a sword, open a door)', 'One reaction per ROUND (opportunity attacks, Shield...)'] },
@@ -67,7 +55,13 @@ export default function ReferencePanel({ onClose }) {
           )}
           {tab === 'actions' && (
             <div>
-              <p className="muted small">On your turn you move + take ONE of these actions:</p>
+              <p className="muted small">A turn in a fight has these parts:</p>
+              {TURN_PARTS.map((a) => (
+                <p key={a.name} className="small" style={{ margin: '6px 0' }}>
+                  <strong className="gold-text">{a.name}.</strong> {a.desc}
+                </p>
+              ))}
+              <p className="muted small mt">For your action, take ONE of these:</p>
               {ACTIONS.map((a) => (
                 <p key={a.name} className="small" style={{ margin: '8px 0' }}>
                   <strong className="gold-text">{a.name}.</strong> {a.desc}

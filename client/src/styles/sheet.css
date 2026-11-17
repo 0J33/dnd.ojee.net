@@ -30,11 +30,12 @@
   border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
   background: var(--bg-elev); padding: 7px 13px; min-width: 86px;
   font-family: var(--font-body); text-transform: none; letter-spacing: 0;
+  font-size: 1em; font-weight: 400; /* a clickable tile is a <button>: don't let it shrink its type to button size */
 }
 button.vital.clickable:hover { border-color: var(--gold-dim); box-shadow: 0 0 10px rgba(212, 169, 79, 0.12); }
 .vital-label {
   display: flex; align-items: center; gap: 5px;
-  font-family: var(--font-display); font-size: 0.6em; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim);
+  font-family: var(--font-label); font-weight: 700; font-size: 0.74em; letter-spacing: 0.06em; text-transform: none; color: var(--text-dim);
 }
 .vital-value { font-size: 1.25em; font-weight: 600; }
 .hp-vital { min-width: 250px; flex: 1; align-items: stretch; }
@@ -66,7 +67,7 @@ button.vital.clickable:hover { border-color: var(--gold-dim); box-shadow: 0 0 10
   padding: 10px 6px; border-radius: var(--radius-sm);
 }
 .ability-tile:hover { border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
-.ability-tile-label { font-size: 0.68em; letter-spacing: 2px; color: var(--text-dim); }
+.ability-tile-label { font-family: var(--font-label); font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; color: var(--text-dim); }
 .ability-tile-mod { font-size: 1.5em; font-weight: 700; color: var(--gold-bright); font-family: var(--font-body); }
 .ability-tile-score { font-size: 0.8em; color: var(--text-dim); font-family: var(--font-body); }
 
@@ -110,12 +111,12 @@ button.vital.clickable:hover { border-color: var(--gold-dim); box-shadow: 0 0 10
   text-align: left; padding: 7px 13px;
 }
 .spell-row:hover { border-color: var(--magic); }
-.spell-row.unprepared { opacity: 0.6; }
+.spell-row.unprepared { opacity: 0.75; } /* faded, but its small print stays readable */
 
 .gear-list { display: flex; flex-direction: column; gap: 6px; }
 .gear-row { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--bg-elev); padding: 7px 12px; }
 .coin-box { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.coin-box span { font-family: var(--font-display); font-size: 0.6em; letter-spacing: 2px; color: var(--text-dim); }
+.coin-box span { font-family: var(--font-label); font-weight: 700; font-size: 0.76em; letter-spacing: 0.06em; color: var(--text-dim); }
 .coin-box input { width: 64px; text-align: center; padding: 5px; }
 
 .feature-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }

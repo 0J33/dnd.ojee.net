@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import Kit, { MATS, seeded } from './kit';
+import { headTemplate, headGeo, shell, ring, hairline, girth, smooth, P, at, along, applyFinish } from './anatomy';
 
 // Painted miniatures for heroes, NPCs and monsters, built from parts so they
 // can move: a biped rig (heroes, NPCs, goblins, skeletons, giants…), a
@@ -13,15 +14,15 @@ import Kit, { MATS, seeded } from './kit';
 const darken = (c, k = 0.25) => '#' + new THREE.Color(c).lerp(new THREE.Color('#140c08'), k).getHexString();
 const lighten = (c, k = 0.2) => '#' + new THREE.Color(c).lerp(new THREE.Color('#fff3dc'), k).getHexString();
 
-// A movable body part: up to three meshes (painted, metal, glowing) sharing
-// one pivot. Materials are per figure so it can flash when hit and fade
-// when it dies.
+// A movable body part: up to five meshes (painted, metal, glowing, and
+// smooth-shaded skin and metal for heads) sharing one pivot. Materials are
+// per figure so it can flash when hit and fade when it dies.
 class Part extends THREE.Group {
   constructor(fig, build) {
     super();
-    const k = { s: new Kit(fig.rand), m: new Kit(fig.rand), g: new Kit(fig.rand) };
+    const k = { s: new Kit(fig.rand), m: new Kit(fig.rand), g: new Kit(fig.rand), k: new Kit(fig.rand), n: new Kit(fig.rand) };
     build(k);
-    for (const [kit, mat] of [[k.s, fig.mats.solid], [k.m, fig.mats.metal], [k.g, fig.mats.glow]]) {
+    for (const [kit, mat] of [[k.s, fig.mats.solid], [k.m, fig.mats.metal], [k.g, fig.mats.glow], [k.k, fig.mats.skin], [k.n, fig.mats.sheen]]) {
       const geo = kit.build();
       if (!geo) continue;
       const mesh = new THREE.Mesh(geo, mat);
@@ -48,8 +49,15 @@ export class Figure {
       solid: MATS.solid.clone(),
       metal: MATS.metal.clone(),
       glow: MATS.glow.clone(),
+      // Faces, hair and gearforged heads are smooth-shaded (clothes and armour
+      // stay faceted, painted-miniature style). Skin gets a little light of its
+      // own, so a jaw turned away from the lamp doesn't read as stubble.
+      skin: smoothSkin(MATS.solid.clone()),
+      sheen: Object.assign(MATS.metal.clone(), { flatShading: false }),
     };
-    if (ghostly) for (const m of Object.values(this.mats)) { m.transparent = true; m.opacity = 0.55; m.depthWrite = false; }
+    applyFinish(this.mats.metal, null);
+    applyFinish(this.mats.sheen, null);
+    if (ghostly) for (const m of Object.values(this.mats)) { m.transparent = true; m.opacity = 0.62; }
     this.anim = { name: 'idle', t: 0, phase: Math.random() * 10 };
     this.path = [];
     this.speed = 3.4;
@@ -144,8 +152,8 @@ export class Figure {
     if (this.flashT > 0) {
       this.flashT -= dt;
       const f = Math.max(0, this.flashT / 0.3);
-      this.mats.solid.emissive.setRGB(f * 0.9, f * 0.1, f * 0.05);
-    } else if (this.mats.solid.emissive.r) this.mats.solid.emissive.setRGB(0, 0, 0);
+      for (const m of [this.mats.solid, this.mats.skin]) m.emissive.setRGB(f * 0.9, f * 0.1, f * 0.05);
+    } else if (this.mats.solid.emissive.r) for (const m of [this.mats.solid, this.mats.skin]) m.emissive.setRGB(0, 0, 0);
 
     const walkK = moving ? 1 : 0;
     this.walkBlend = (this.walkBlend || 0) + (walkK - (this.walkBlend || 0)) * Math.min(1, dt * 10);
@@ -166,6 +174,15 @@ export class Figure {
   // Rig-specific posing (overridden per kind).
   pose() {}
   act() {}
+}
+
+function smoothSkin(mat) {
+  mat.flatShading = false;
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.12;');
+  };
+  mat.customProgramCacheKey = () => 'skin-fill';
+  return mat;
 }
 
 function easeOutBounce(k) { return k < 0.8 ? (k / 0.8) * (k / 0.8) : 1 - Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.06; }
@@ -249,14 +266,15 @@ function bipedBody(fig, o) {
         s.ball(0.04, '#e8e0cc', { y: -LEG + 0.03, sy: 0.6 });
       } else if (o.robot) {
         // plated thigh and shin on a dark knee joint, a trim stripe, a two-part foot
+        // (limbs thicken with the frame: slim, standard, heavy)
         const joint = darken(o.skin, 0.45);
-        m.cyl(0.055, 0.046, 0.18, o.skin, { y: -0.09, seg: 8 });
-        m.ball(0.04, joint, { y: -0.2 });
-        m.cyl(0.05, 0.042, 0.16, o.skin, { y: -0.29, seg: 8 });
-        m.box(0.012, 0.12, 0.012, o.trim || o.glow, { y: -0.29, z: 0.048 });
-        m.ball(0.032, joint, { y: -0.37 });
-        m.box(0.09, 0.05, 0.1, darken(o.skin), { y: -LEG + 0.025, z: 0.0 });
-        m.box(0.085, 0.035, 0.06, darken(o.skin, 0.1), { y: -LEG + 0.018, z: 0.075, rx: 0.15 });
+        m.cyl(0.055 * w, 0.046 * w, 0.18, o.skin, { y: -0.09, seg: 8 });
+        m.ball(0.04 * w, joint, { y: -0.2 });
+        m.cyl(0.05 * w, 0.042 * w, 0.16, o.skin, { y: -0.29, seg: 8 });
+        m.box(0.012, 0.12, 0.012, o.trim || o.glow, { y: -0.29, z: 0.046 * w + 0.002 });
+        m.ball(0.032 * w, joint, { y: -0.37 });
+        m.box(0.09 * w, 0.05, 0.1, darken(o.skin), { y: -LEG + 0.025, z: 0.0 });
+        m.box(0.085 * w, 0.035, 0.06, darken(o.skin, 0.1), { y: -LEG + 0.018, z: 0.075, rx: 0.15 });
       } else {
         // thigh, knee, shin; a boot with a turned-down cuff, a foot and a sole
         s.chain([[0, 0.01, 0], [0, -0.2, 0.008], [0, -0.3, 0]], 0.06 * w, 0.046 * w, pants, { seg: 9, vary: 0.03 });
@@ -290,10 +308,9 @@ function bipedBody(fig, o) {
         for (const dy of [-0.05, 0.05]) m.ball(0.008, lighten(o.skin, 0.3), { x: sd * 0.09 * w, y: TORSO - 0.1 + dy, z: 0.137 * w, detail: 0 });
         m.ball(0.01, lighten(o.skin, 0.3), { x: sd * 0.15 * w, y: TORSO - 0.01, z: 0.07, detail: 0 });
       }
-      g.ball(0.04, o.glow || '#5ef0e0', { y: TORSO * 0.6, z: 0.135 });
-      m.torus(0.048, 0.008, seam, { y: TORSO * 0.6, z: 0.13, tseg: 16 });
-      // the metal as it has aged: rust blooms on a rusted frame
-      if (o.finish === 'rusted') for (const [x, y, z] of [[0.06, TORSO - 0.06, 0.13], [-0.09, 0.16, 0.09], [0.1, 0.07, -0.08], [-0.05, TORSO - 0.14, -0.12]]) s.sphere(0.03, '#7a3e1e', { x: x * w, y, z: z * w, sz: 0.35, seg: 6, vary: 0.15 });
+      g.ball(0.04, o.glow || '#5ef0e0', { y: TORSO * 0.6, z: 0.12 * w + 0.018 });
+      m.torus(0.048, 0.008, seam, { y: TORSO * 0.6, z: 0.12 * w + 0.014, tseg: 16 });
+      // (how the metal has aged — rust, wear — is painted by its material)
       return;
     }
     // The body under the clothes: hips, a waist, a rounded chest and
@@ -329,7 +346,12 @@ function bipedBody(fig, o) {
       m.cyl(0.128 * w * hip, 0.156 * w * hip, 0.1, '#6e747c', { y: -0.025, seg: 14, open: true }); // mail
     }
     if (o.fur) s.torus(0.12 * w, 0.045, '#8a6a44', { y: TORSO - 0.02, rx: Math.PI / 2, tseg: 10 });
-    if (o.collar) s.cyl(0.1, 0.15, 0.08, o.trim, { y: TORSO + 0.01, seg: 8 });
+    if (o.collar) {
+      // a standing collar: two stiff flaps rising behind the neck, flaring out
+      // (the portrait draws the same), on a band round the neckline
+      s.torus(0.06, 0.012, o.trim, { y: TORSO - 0.01, rx: Math.PI / 2 + 0.2, tseg: 14 });
+      for (const sd of [-1, 1]) s.box(0.075, 0.1, 0.012, o.trim, { x: sd * 0.052, y: TORSO + 0.035, z: -0.045, ry: sd * 0.75, rz: -sd * 0.22, rx: -0.12, order: 'YXZ' });
+    }
     if (o.symbol) m.ball(0.022, o.trim || '#d4a94f', { y: TORSO * 0.78, z: 0.13 * w, sz: 0.5 }); // a plain brooch at the collar
     if (o.cloak) {
       // a cloak wrapped round the back from the shoulders, widening as it falls,
@@ -368,11 +390,11 @@ function bipedBody(fig, o) {
         // ball shoulder, plated upper arm, elbow joint, forearm with a trim
         // band, a hand with three fingers and a thumb
         const joint = darken(o.skin, 0.45);
-        m.ball(0.05, darken(o.skin), { y: 0 });
-        m.cyl(0.04, 0.036, 0.12, o.skin, { y: -0.08, seg: 8 });
-        m.ball(0.032, joint, { y: -0.15 });
-        m.cyl(0.037, 0.032, 0.11, o.skin, { y: -0.215, seg: 8 });
-        m.cyl(0.039, 0.039, 0.015, o.trim || o.glow, { y: -0.24, seg: 8 });
+        m.ball(0.05 * w, darken(o.skin), { y: 0 });
+        m.cyl(0.04 * w, 0.036 * w, 0.12, o.skin, { y: -0.08, seg: 8 });
+        m.ball(0.032 * w, joint, { y: -0.15 });
+        m.cyl(0.037 * w, 0.032 * w, 0.11, o.skin, { y: -0.215, seg: 8 });
+        m.cyl(0.039 * w, 0.039 * w, 0.015, o.trim || o.glow, { y: -0.24, seg: 8 });
         m.box(0.05, 0.04, 0.035, darken(o.skin), { y: -0.29 });
         for (const fx of [-0.016, 0, 0.016]) m.box(0.011, 0.035, 0.012, darken(o.skin, 0.2), { x: fx, y: -0.325 });
         m.box(0.01, 0.025, 0.012, darken(o.skin, 0.2), { x: -side * 0.03, y: -0.295, z: 0.012, rz: side * 0.5 });
@@ -397,191 +419,438 @@ function bipedBody(fig, o) {
 
 /* ---------------- heads ---------------- */
 
-function bipedHead(fig, torso, look) {
-  const r = 0.105;
+// Every head is the one parametric shape in anatomy.js: skull, jaw and chin
+// in a single surface sized by the race (long or round face, jaw, the body's
+// build), with every feature placed on it by angle — so eyes are the same
+// size on every face, and ears, horns, hair and hats sit on the head instead
+// of floating near it. The portrait draws the same features (Portrait.jsx).
+
+const EYE_AZ = 0.37, MOUTH_EL = -0.46;
+
+// What the headwear hides: the top of the head (hair, antenna), or the whole
+// face (a great helm).
+function headCover(look) {
+  const hw = look.headwear ? look.cls?.head : null;
+  return { hw, top: ['helm', 'greathelm', 'hood', 'wizhat', 'cap'].includes(hw), full: hw === 'greathelm', crown: ['helm', 'greathelm', 'hood', 'wizhat'].includes(hw) };
+}
+
+function bipedHead(fig, torso, look, build = 1) {
   const race = look.race || {};
-  const head = fig.part('head', ({ s, m, g }) => {
-    const skin = look.skin;
-    const y = r + 0.02;
-    if (race.robot) {
-      // a helm-like head: a bevelled box with a visor slit, a jaw grille,
-      // a crest in the trim colour, ear bolts and an antenna
-      const seam = look.cls?.trim || look.eyes;
-      if (look.robotHead === 'dome') {
-        m.sphere(0.115, skin, { y: y + 0.01, sy: 0.95, seg: 14 });
-        m.cyl(0.1, 0.105, 0.06, darken(skin, 0.08), { y: y - 0.06, seg: 14 });
-      } else {
-        m.box(0.2, 0.2, 0.2, skin, { y });
-        m.box(0.21, 0.18, 0.18, darken(skin, 0.08), { y });
-      }
-      if (look.robotHead === 'crest') m.box(0.03, 0.09, 0.22, seam, { y: y + 0.13, z: -0.01 });
-      if (look.finish === 'rusted') for (const [x, yy] of [[-0.06, 0.05], [0.07, -0.04]]) s.sphere(0.025, '#7a3e1e', { x, y: y + yy, z: 0.1, sz: 0.3, seg: 6 });
-      s.box(0.17, 0.055, 0.02, '#141414', { y: y + 0.015, z: 0.1 });
-      for (const sd of [-1, 1]) g.ball(0.022, look.eyes, { x: sd * 0.045, y: y + 0.015, z: 0.11 });
-      for (let i = 0; i < 4; i++) s.box(0.1, 0.007, 0.01, '#141414', { y: y - 0.045 - i * 0.014, z: 0.101 });
-      m.box(0.022, 0.016, 0.2, seam, { y: y + 0.105 });
-      for (const sd of [-1, 1]) m.cyl(0.028, 0.028, 0.025, darken(skin, 0.3), { x: sd * 0.108, y, rz: Math.PI / 2, seg: 8 });
-      m.cyl(0.012, 0.015, 0.12, darken(skin), { y: y + 0.16, x: 0.05 });
-      g.ball(0.02, look.eyes, { y: y + 0.225, x: 0.05 });
-      return;
-    }
+  const H = headTemplate(look, build);
+  const cover = headCover(look);
+  const head = fig.part('head', ({ s, m, g, k, n }) => {
     if (look.skull) {
+      const y = H.cy, r = H.r;
       s.sphere(r, '#ece4d0', { y, seg: 10 });
       for (const sd of [-1, 1]) g.ball(0.022, '#ff6a3a', { x: sd * 0.04, y: y + 0.01, z: 0.09 });
       s.box(0.1, 0.04, 0.06, '#d8d0bc', { y: y - 0.07, z: 0.04 });
       return;
     }
-    const long = race.longFace ? 1.12 : 1, round = race.roundFace ? 1.08 : 1;
-    s.sphere(r, skin, { y, sy: long, sx: round, sz: round, seg: 16 });
-    // jaw and chin: the lower face fuller and further forward than the skull
-    s.sphere(r * 0.6, skin, { y: y - r * 0.5 * long, z: r * 0.3, sx: round * 1.15, sy: 0.62, sz: 0.8, seg: 14 });
-    // Jaw / snout.
-    if (race.snout) s.box(0.12, 0.08, 0.14, skin, { y: y - 0.03, z: 0.1, vary: 0.04 });
-    else if (race.bull) s.box(0.12, 0.09, 0.1, lighten(skin, 0.1), { y: y - 0.04, z: 0.09 });
-    else if (race.cat) s.sphere(0.05, lighten(skin, 0.25), { y: y - 0.035, z: 0.08, sy: 0.7, seg: 8 });
-    else {
-      // a nose: a ridge from the brow to a rounded tip, with nostril wings
-      const big = race.bigNose ? 1.3 : 1;
-      s.cone(0.019 * big, 0.055 * big, darken(skin, 0.06), { y: y + 0.002, z: r * 0.93, rx: 0.32, sz: 0.8, seg: 5 });
-      s.sphere(0.017 * big, darken(skin, 0.1), { y: y - 0.022, z: r * 1.0 + 0.004, sy: 0.85, seg: 8 });
-      for (const sd of [-1, 1]) s.sphere(0.009 * big, darken(skin, 0.12), { x: sd * 0.014 * big, y: y - 0.026, z: r * 0.97, seg: 6 });
-    }
-    // Eyes.
-    const eyeGlow = race.glowEyes || race.robot;
-    for (const sd of [-1, 1]) {
-      const ex = sd * 0.04, ey = y + 0.02, ez = r * 0.88;
-      if (eyeGlow) g.ball(0.018, look.eyes, { x: ex, y: ey, z: ez });
-      else {
-        // Painted-on eyes: whites and irises sit nearly flush with the face.
-        s.sphere(0.0135, '#efe8da', { x: ex, y: ey, z: ez + 0.002, sy: 0.8, sz: 0.4, seg: 8 });
-        s.sphere(0.0085, darken(look.eyes, 0.5), { x: ex, y: ey - 0.001, z: ez + 0.0065, sz: 0.4, seg: 6 });
-        s.box(0.036, 0.009, 0.012, darken(look.hair || skin, 0.35), { x: ex, y: ey + 0.03, z: ez - 0.002, rz: sd * 0.12 }); // brow
-      }
-    }
-    // A small mouth line (not on snouts and beaks).
-    if (!race.snout && !race.bull && !race.cat && !look.beard?.match(/full|braided/)) {
-      s.box(0.034, 0.006, 0.006, darken(skin, 0.4), { y: y - 0.05, z: r * 0.97 });
-      s.sphere(0.016, darken(skin, 0.16), { y: y - 0.057, z: r * 0.93, sx: 1.3, sy: 0.42, sz: 0.6, seg: 8 }); // lower lip
-    }
-    // Ears.
-    const ears = race.ears;
-    for (const sd of [-1, 1]) {
-      if (ears === 'point') s.cone(0.03, 0.1, skin, { x: sd * r * 1.02, y: y + 0.02, rz: -sd * 1.1, seg: 5 });
-      else if (ears === 'halfpoint') s.cone(0.03, 0.07, skin, { x: sd * r, y: y + 0.01, rz: -sd * 1.2, seg: 5 });
-      else if (ears === 'cat') s.cone(0.04, 0.08, skin, { x: sd * 0.06, y: y + r * 0.95, rz: -sd * 0.3, seg: 4 });
-      else if (ears === 'frill') s.cone(0.04, 0.09, darken(skin, 0.15), { x: sd * r, y: y + 0.04, z: -0.03, rz: -sd * 1.3, rx: -0.4, seg: 4 });
-      else if (ears === 'bolt') s.cyl(0.02, 0.02, 0.04, darken(skin), { x: sd * r, y, rz: Math.PI / 2 });
-      else if (ears !== 'none') s.sphere(0.028, skin, { x: sd * r * 0.98, y, sx: 0.6, seg: 6 });
-    }
-    if (race.tusks) {
-      // An underbite: the lower jaw juts a little, and two tusks rise out of
-      // it at the corners of the mouth, curving up and slightly out.
-      s.sphere(0.06, skin, { y: y - 0.058, z: r * 0.5, sx: 1.05, sy: 0.6, sz: 0.85, seg: 10 });
-      for (const sd of [-1, 1]) s.chain([[sd * 0.036, y - 0.062, r * 0.92], [sd * 0.041, y - 0.044, r * 0.99], [sd * 0.048, y - 0.03, r * 0.98]], 0.009, 0.003, '#efe6cc', { seg: 6 });
-    }
-    if (race.fangs) for (const sd of [-1, 1]) s.cone(0.008, 0.03, '#f0e8d0', { x: sd * 0.02, y: y - 0.05, z: r * 0.9, rx: Math.PI });
-    if (race.horns || race.bull) {
-      for (const sd of [-1, 1]) s.cone(0.03, race.bull ? 0.16 : 0.12, race.bull ? '#e8dcc0' : '#3a2a2a', { x: sd * 0.07, y: y + 0.08, z: -0.01, rz: -sd * (race.bull ? 1.1 : 0.45), rx: -0.3, seg: 6 });
-    }
-    if (race.crest) for (let i = 0; i < 3; i++) s.cone(0.025, 0.08, darken(skin, 0.2), { y: y + r * 0.9 - i * 0.03, z: -0.03 - i * 0.04, rx: -0.6, seg: 4 });
-    if (race.antlers) {
-      for (const sd of [-1, 1]) {
-        s.cyl(0.012, 0.016, 0.16, '#d8c8a0', { x: sd * 0.07, y: y + 0.15, rz: -sd * 0.4 });
-        s.cyl(0.01, 0.012, 0.08, '#d8c8a0', { x: sd * 0.11, y: y + 0.19, rz: -sd * 1.1 });
-      }
-    }
-    if (race.cap) {
-      s.sphere(0.17, race.cap, { y: y + 0.07, sy: 0.55, seg: 12 });
-      for (let i = 0; i < 6; i++) { const a = i; s.ball(0.022, '#f4ecdc', { x: Math.cos(a) * 0.09, y: y + 0.13, z: Math.sin(a) * 0.09 }); }
-    }
-    if (race.spines) for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI - Math.PI / 2; s.cone(0.015, 0.09, '#5a4028', { x: Math.sin(a) * 0.08, y: y + 0.03 + Math.cos(a) * 0.06, z: -0.07, rx: -1.1, rz: Math.sin(a) * 0.6 }); }
-    if (race.markings) s.box(0.02, 0.08, 0.01, darken(skin, 0.35), { x: 0.03, y: y + 0.02, z: r * 0.95, rz: 0.4 });
-    if (look.mark === 'warpaint') s.box(0.15, 0.025, 0.01, '#a8302a', { y: y + 0.02, z: r * 0.97 });
-
-    hair(s, look, y, r);
-    beard(s, look, y, r);
-    headwear(s, m, g, look, y, r);
+    // skin, hair and plating are smooth-shaded (k, n); hats stay faceted
+    if (race.robot) robotHead(s, m, g, look, H, cover, n);
+    else face(k, g, look, H, cover);
+    hair(k, look, H, cover);
+    beard(k, look, H, cover);
+    headwear(s, m, g, look, H);
   });
   head.position.y = TORSO - 0.012; // sits down on the neck
   torso.add(head);
   return head;
 }
 
-// Hair, built on the head (centre y, radius r; the face looks along +z).
-// Under a helmet or hood only what hangs below it shows: long hair, braids,
-// a ponytail, a low bun.
-function hair(s, look, y, r) {
-  const st = look.hairStyle, c = look.hair;
-  if (!st || st === 'bald' || look.race?.hairless) return;
-  const covered = look.headwear && ['helm', 'greathelm', 'hood', 'wizhat'].includes(look.cls?.head);
-  const d = darken(c, 0.12);
-  // A scalp: a dome pulled a little back, over the top of the head.
-  // The scalp: a dome a little bigger than the skull (never squashed, or the
-  // skull pokes through on top), tipped back so the hairline sits above the
-  // brows at the front and drops toward the nape behind.
-  const lf = look.race?.longFace ? 1.12 : 1, rf = look.race?.roundFace ? 1.08 : 1; // the same proportions as the skull
-  const scalp = (k = 1.07) => s.sphere(r * (k + (lf > 1 ? 0.04 : 0)), c, { y, z: -r * 0.03, sx: rf, sy: lf, sz: rf, theta: Math.PI * 0.47, rx: -0.45, seg: 14, vary: 0.04 });
-  const fringe = (k = 1) => s.sphere(r * 0.92, c, { y: y + r * 0.42, z: r * 0.3, sx: 1.05, sy: 0.32 * k, sz: 0.62, seg: 10 });
-  // Hair falling down the back from the crown to below the shoulders.
-  const fall = (len) => {
-    s.chain([[0, y + r * 0.2, -r * 0.62], [0, y - r * 0.5, -r * 0.82], [0, y - r * 0.5 - len, -r * 0.7]], r * 0.92, r * 0.6, c, { seg: 8 });
-    for (const sd of [-1, 1]) s.chain([[sd * r * 0.8, y + r * 0.1, -r * 0.3], [sd * r * 0.92, y - r * 0.55, -r * 0.22], [sd * r * 0.75, y - r * 0.55 - len * 0.55, -r * 0.28]], r * 0.3, r * 0.2, d, { seg: 6 }); // locks framing the face
+// A flattened cone (an ear, a fin) from a base point, its tip tipped out by
+// rz and back by rx.
+function leaf(kit, base, len, rad, color, { rz = 0, rx = 0, flat = 0.32, flatAxis = 'x', seg = 6 } = {}) {
+  const d = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(rx, 0, rz, 'XYZ'));
+  kit.cone(rad, len, color, { x: base.x + d.x * len / 2, y: base.y + d.y * len / 2, z: base.z + d.z * len / 2, rx, rz, seg, [flatAxis === 'x' ? 'sx' : 'sz']: flat });
+}
+
+function face(s, g, look, H, cover) {
+  const race = look.race || {}, skin = look.skin, r = H.r;
+  s.add(headGeo(H, 16), skin);
+  // Horns, antlers, a mushroom cap and quills stand on the head whatever is
+  // worn (a hood or a great helm has holes for them).
+  horns(s, look, H, cover);
+  if (cover.full) return;
+  const masked = look.mark === 'mask';
+  const cloth = masked ? '#' + new THREE.Color(look.cls?.garb || '#555').lerp(new THREE.Color(look.cls?.trim || '#888'), 0.35).getHexString() : null;
+  const muzzle = race.snout || race.bull || race.cat;
+
+  // Eyes: one size and one almond shape on every face; lit eyes are the same
+  // eye drawn in light.
+  const e = r * 0.15, eyeEl = race.snout ? 0.14 : 0.08;
+  const glow = race.glowEyes;
+  const slit = race.slit || race.cat;
+  for (const sd of [-1, 1]) {
+    const az = sd * EYE_AZ;
+    if (glow) g.sphere(e, look.eyes, { ...P(H, az, eyeEl, -e * 0.12), sx: 1.2, sy: 0.72, sz: 0.38, seg: 7 });
+    else {
+      s.sphere(e, '#efe8da', { ...P(H, az, eyeEl, -e * 0.12), sx: 1.2, sy: 0.72, sz: 0.38, seg: 7 });
+      s.ball(e * 0.6, darken(look.eyes, 0.25), { ...P(H, az, eyeEl - 0.005, e * 0.1), sz: 0.35, detail: 0 });
+      s.ball(e * 0.28, '#120c08', { ...P(H, az, eyeEl - 0.005, e * 0.24), sx: slit ? 0.4 : 1, sy: slit ? 1.7 : 1, sz: 0.3, detail: 0 });
+    }
+    // the upper lid, a line of shadow along the top of the eye
+    s.box(e * 2.5, e * 0.26, e * 0.4, darken(skin, 0.45), { ...P(H, az, eyeEl + 0.085, -e * 0.02), rz: -sd * 0.12 });
+    // brows set the mood, as in the portrait
+    const tilt = look.mood === 'stern' ? 0.28 : look.mood === 'smile' || look.mood === 'grin' ? -0.12 : look.mood === 'smirk' && sd > 0 ? -0.25 : 0;
+    const browC = race.snout ? darken(skin, 0.3) : race.hairless || look.hairStyle === 'bald' ? darken(skin, 0.42) : darken(look.hair || skin, 0.08);
+    s.box(e * 2.3, e * (race.bushy || race.snout ? 0.6 : 0.4), e * 0.55, browC, { ...P(H, az, eyeEl + 0.25 + (look.mood === 'smirk' && sd > 0 ? 0.04 : 0), 0), rz: sd * tilt });
+  }
+
+  // Muzzles: a dragonborn's long scaled snout, a minotaur's broad pale muzzle,
+  // a catfolk's whisker pads and nose. They replace the nose and mouth.
+  if (race.snout) {
+    const b = P(H, 0, -0.3, 0);
+    const col = cloth || skin;
+    s.sphere(r * 0.62, col, { x: 0, y: b.y + r * 0.02, z: b.z + r * 0.12, sx: 0.84, sy: 0.6, sz: 1.05, seg: 12 });
+    s.sphere(r * 0.5, cloth || lighten(skin, 0.1), { x: 0, y: b.y - r * 0.2, z: b.z + r * 0.06, sx: 0.82, sy: 0.42, sz: 1.0, seg: 10 }); // the lower jaw
+    if (!masked) for (const sd of [-1, 1]) s.ball(r * 0.05, '#241c14', { x: sd * r * 0.14, y: b.y + r * 0.2, z: b.z + r * 0.68, detail: 0 });
+  } else if (race.bull) {
+    const b = P(H, 0, -0.42, 0);
+    s.sphere(r * 0.56, cloth || lighten(skin, 0.3), { x: 0, y: b.y, z: b.z + r * 0.02, sx: 1.05, sy: 0.72, sz: 0.78, seg: 12 });
+    if (!masked) for (const sd of [-1, 1]) s.sphere(r * 0.08, '#241c14', { x: sd * r * 0.2, y: b.y + r * 0.08, z: b.z + r * 0.42, sz: 0.5, seg: 6 });
+  } else if (race.cat) {
+    for (const sd of [-1, 1]) {
+      const pad = P(H, sd * 0.13, -0.32, r * 0.02);
+      s.sphere(r * 0.18, cloth || lighten(skin, 0.3), { ...pad, sz: 0.7, seg: 8 });
+      if (!masked) for (const dy of [-0.03, 0.02]) s.box(r * 0.6, r * 0.014, r * 0.014, '#f0e8d8', { x: pad.x + sd * r * 0.4, y: pad.y + dy * r * 2, z: pad.z + r * 0.02, rz: sd * dy * 6, ry: -sd * 0.35 });
+    }
+    if (!masked) s.sphere(r * 0.09, '#8a4a44', { ...P(H, 0, -0.18, r * 0.06), sy: 0.7, sz: 0.6, seg: 6 });
+  }
+
+  if (!muzzle && !masked) {
+    // a nose: a ridge from between the eyes to a rounded tip, nostril wings
+    const big = race.bigNose ? 1.28 : 1;
+    const tip = P(H, 0, -0.13, r * 0.2 * big);
+    s.limb(at(P(H, 0, 0.04, -r * 0.03)), at(tip), r * 0.05, r * 0.08 * big, darken(skin, 0.05), { seg: 6, joint: false });
+    s.sphere(r * 0.085 * big, darken(skin, 0.08), { x: tip.x, y: tip.y, z: tip.z, seg: 6 });
+    for (const sd of [-1, 1]) s.ball(r * 0.06 * big, darken(skin, 0.1), { ...P(H, sd * 0.1 * big, -0.16, r * 0.07 * big), detail: 0 });
+    // the mouth: a line whose corners follow the mood, and a lower lip
+    const lip = darken(skin, 0.45);
+    const corner = { smile: 0.4, grin: 0.45, stern: -0.28, smirk: 0, calm: 0.08 }[look.mood] ?? 0.08;
+    s.box(r * 0.2, r * 0.035, r * 0.05, lip, { ...P(H, 0, MOUTH_EL, -r * 0.01) });
+    for (const sd of [-1, 1]) {
+      const k = look.mood === 'smirk' ? (sd > 0 ? 0.4 : -0.05) : corner;
+      s.box(r * 0.13, r * 0.035, r * 0.05, lip, { ...P(H, sd * 0.16, MOUTH_EL + k * 0.09, -r * 0.012), rz: sd * k });
+    }
+    if (look.mood === 'grin') s.box(r * 0.3, r * 0.05, r * 0.03, '#efe8d8', { ...P(H, 0, MOUTH_EL - 0.05, -r * 0.01) });
+    s.sphere(r * 0.13, darken(skin, 0.14), { ...P(H, 0, MOUTH_EL - 0.08, -r * 0.035), sx: 1.4, sy: 0.45, sz: 0.6, seg: 6 });
+  }
+
+  // Ears.
+  if (!cover.full) {
+    for (const sd of [-1, 1]) {
+      const base = P(H, sd * 1.45, 0.04, -r * 0.06);
+      const ears = race.ears;
+      if (ears === 'point') leaf(s, base, r * 0.82, r * 0.22, skin, { rz: -sd * 0.82, rx: -0.32 });
+      else if (ears === 'halfpoint') leaf(s, base, r * 0.52, r * 0.21, skin, { rz: -sd * 1.0, rx: -0.25 });
+      else if (ears === 'frill') leaf(s, P(H, sd * 1.5, 0.12, -r * 0.05), r * 0.75, r * 0.24, darken(skin, 0.15), { rz: -sd * 0.45, rx: -1.25 });
+      else if (ears === 'cat') {
+        const c = P(H, sd * 0.62, 0.92, -r * 0.08);
+        leaf(s, c, r * 0.6, r * 0.32, skin, { rz: -sd * 0.38, rx: -0.12, flatAxis: 'z', flat: 0.4, seg: 4 });
+        leaf(s, { x: c.x, y: c.y + r * 0.02, z: c.z + r * 0.05 }, r * 0.42, r * 0.2, '#d99a90', { rz: -sd * 0.38, rx: -0.12, flatAxis: 'z', flat: 0.3, seg: 4 });
+      } else if (ears !== 'none') s.sphere(r * 0.26, skin, { ...P(H, sd * 1.5, 0, -r * 0.04), sx: 1, sy: 1.2, sz: 0.42, seg: 8 });
+    }
+  }
+
+  // Tusks rise from an underbite at the corners of the mouth; fangs hang.
+  if (race.tusks && !masked) {
+    s.sphere(r * 0.42, skin, { ...P(H, 0, -0.66, -r * 0.2), sx: 1.25, sy: 0.6, sz: 0.85, seg: 10 });
+    for (const sd of [-1, 1]) s.chain([at(P(H, sd * 0.2, -0.6, -r * 0.02)), at(P(H, sd * 0.24, -0.45, r * 0.12)), at(P(H, sd * 0.3, -0.3, r * 0.15))], r * 0.085, r * 0.028, '#efe6cc', { seg: 6 });
+  }
+  if (race.fangs && !masked) for (const sd of [-1, 1]) s.cone(r * 0.05, r * 0.22, '#f0e8d0', { ...P(H, sd * 0.07, MOUTH_EL - 0.1, r * 0.02), rx: Math.PI });
+
+  // Painted marks.
+  if (race.markings) {
+    for (const sd of [-1, 1]) s.box(r * 0.3, r * 0.045, r * 0.03, darken(skin, 0.42), { ...P(H, sd * 0.62, -0.1, 0), rz: sd * 0.6 });
+    s.box(r * 0.32, r * 0.045, r * 0.03, darken(skin, 0.42), { ...P(H, 0, 0.5, 0) });
+  }
+  const mark = look.mark;
+  if (mark === 'warpaint') {
+    const paint = look.cls?.trim === '#e8c476' ? '#c2542e' : look.cls?.trim || '#a8302a';
+    for (const sd of [-1, 1]) s.box(r * 0.36, r * 0.075, r * 0.03, paint, { ...P(H, sd * (EYE_AZ + 0.03), -0.13, 0) });
+  } else if (mark === 'scar') {
+    s.box(r * 0.05, r * 0.52, r * 0.03, lighten(skin, 0.3), { ...P(H, EYE_AZ + 0.05, 0.02, 0.0015), rz: -0.32 });
+  } else if (mark === 'freckles') {
+    for (const [a, el] of [[0.22, -0.1], [0.32, -0.18], [0.44, -0.1], [-0.22, -0.1], [-0.32, -0.18], [-0.44, -0.1]]) s.ball(r * 0.025, darken(skin, 0.42), { ...P(H, a, el, 0), detail: 0 });
+  } else if (mark === 'tattoo') {
+    s.box(r * 0.04, r * 0.4, r * 0.03, '#2f3f66', { ...P(H, -0.62, 0.18, 0), rz: 0.25 });
+    s.box(r * 0.26, r * 0.04, r * 0.03, '#2f3f66', { ...P(H, -0.48, -0.16, 0), rz: -0.4 });
+  } else if (masked && !muzzle) {
+    // a rogue's mask: cloth over the nose and mouth to under the chin, with a
+    // knot behind the ear
+    s.add(shell(H, r * 0.07, { a0: -1.7, a1: 1.7, top: (a) => Math.PI / 2 + 0.02 + Math.abs(a) * 0.08, bot: Math.PI * 0.86, cols: 16, rows: 5, post: (v, a, th) => { const k = Math.exp(-((a / 0.32) ** 2)) * Math.max(0, 1 - Math.abs(th - Math.PI * 0.56) / 0.3); v[2] += r * 0.16 * k; } }), cloth);
+    s.ball(r * 0.12, darken(cloth, 0.15), { ...P(H, 1.9, -0.25, r * 0.06) });
+  }
+}
+
+function horns(s, look, H, cover) {
+  const race = look.race || {}, r = H.r;
+  const rel = (b, dx, dy, dz, sd) => [b.x + sd * dx * r, b.y + dy * r, b.z + dz * r];
+  for (const sd of [-1, 1]) {
+    if (race.horns) {
+      const b = P(H, sd * 0.42, 0.72, -r * 0.08);
+      s.chain([at(b), rel(b, 0.1, 0.42, 0.04, sd), rel(b, 0.2, 0.66, -0.22, sd), rel(b, 0.22, 0.6, -0.52, sd)], r * 0.15, r * 0.03, '#3a2a2a', { seg: 7 });
+    }
+    if (race.bull) {
+      const b = P(H, sd * 1.05, 0.6, -r * 0.08);
+      s.chain([at(b), rel(b, 0.5, 0.06, 0, sd), rel(b, 0.86, 0.3, -0.05, sd), rel(b, 0.92, 0.66, -0.1, sd)], r * 0.17, r * 0.03, '#e8dcc0', { seg: 7 });
+    }
+    if (race.crest) {
+      const b = P(H, sd * 0.55, 0.5, -r * 0.06);
+      s.chain([at(b), rel(b, 0.14, 0.3, -0.28, sd), rel(b, 0.2, 0.42, -0.66, sd)], r * 0.13, r * 0.02, darken(look.skin, 0.35), { seg: 6 });
+    }
+    if (race.antlers && !(cover.hw === 'antlers')) antler(s, H, sd);
+  }
+  if (race.spines) {
+    // a hedgehog's quills: a dense coat over the crown and the back of the
+    // head, every quill lying back (out of the skin, then backward)
+    const c = '#6a4e30', tip = '#d8c4a0';
+    s.add(shell(H, r * 0.06, { bot: hairline(Math.PI * 0.3, Math.PI * 0.5, Math.PI * 0.8), cols: 16, rows: 6, taper: 0.6 }), c);
+    for (let i = 0; i < 26; i++) {
+      const row = i % 3, a = ((i * 0.618) % 1) * 2 * Math.PI, el = 0.25 + row * 0.42;
+      if (Math.cos(a) > 0.6 && el < 0.9) continue; // leave the face clear
+      const b = P(H, a, el, r * 0.02);
+      const d = [b.n[0] * 0.6, b.n[1] * 0.45 + 0.2, b.n[2] * 0.6 - 0.55];
+      s.limb(at(b), [b.x + d[0] * r * 0.85, b.y + d[1] * r * 0.85, b.z + d[2] * r * 0.85], r * 0.13, r * 0.012, i % 4 ? c : tip, { seg: 4, joint: false });
+    }
+  }
+  if (race.cap) {
+    // a mushroom's cap is the crown of its head: a dome over the brow, gills
+    // under it, spots (or a morel's pits) on top; the eyes stay clear
+    const y0 = H.cy + H.ry * 0.5, R = r * 1.6, k = race.capPits ? 0.85 : 0.58;
+    s.sphere(R, race.cap, { y: y0, sy: k, theta: Math.PI / 2, seg: 14 });
+    s.cyl(R * 0.98, r * 0.62, r * 0.26, '#e2d6bc', { y: y0 - r * 0.13, seg: 14 });
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.4, el = 0.35 + (i % 3) * 0.32;
+      const x = Math.sin(a) * Math.cos(el) * R, y = y0 + Math.sin(el) * R * k, z = Math.cos(a) * Math.cos(el) * R;
+      s.sphere(r * (race.capPits ? 0.13 : 0.16), race.capPits ? '#4a3420' : '#f4ecdc', { x, y, z, sy: 0.45, rx: -el + Math.PI / 2, ry: a, order: 'YXZ', seg: 6 });
+    }
+  }
+}
+
+function antler(s, H, sd, col = '#d8c8a0') {
+  const r = H.r, b = P(H, sd * 0.38, 0.95, -r * 0.05);
+  const p = (dx, dy, dz) => [b.x + sd * dx * r, b.y + dy * r, b.z + dz * r];
+  s.chain([at(b), p(0.25, 0.75, 0), p(0.6, 1.35, -0.1), p(0.7, 1.85, -0.15)], r * 0.12, r * 0.045, col, { seg: 6 });
+  s.limb(p(0.45, 1.1, -0.06), p(1.05, 1.35, 0.1), r * 0.07, r * 0.035, col, { seg: 5 });
+  s.limb(p(0.62, 1.55, -0.12), p(0.25, 1.95, -0.05), r * 0.06, r * 0.03, col, { seg: 5 });
+}
+
+// A gearforged head: plating on the head's shape (a rounded box, a crested
+// box or a dome), a dark visor band with the two lit eyes in it — the same
+// size as anyone's eyes — a jaw grille, ear bolts, and an antenna when
+// nothing is worn over the crown.
+function robotHead(s, m, g, look, H, cover, n = m) {
+  const race = look.race || {}, skin = look.skin, r = H.r, kind = look.robotHead;
+  const accent = look.cls?.trim || look.eyes, joint = darken(skin, 0.4);
+  n.add(headGeo(H, H.square < 1 ? 14 : 18), skin);
+  m.cyl(H.rx * 0.5, H.rx * 0.58, r * 0.3, joint, { y: H.cy - H.ry * 0.92, seg: 10 }); // neck joint
+  if (kind === 'crest') for (let i = 0; i < 7; i++) m.box(r * 0.1, r * 0.34, r * (0.42 - Math.abs(i - 2.5) * 0.05), accent, { ...P(H, 0, 0.5 + i * 0.3, r * 0.12) }); // a fin from brow to nape
+  else if (kind === 'dome') m.add(ring(H, r * 0.015, 0.3, 0.38), darken(skin, 0.18)); // a brow band round the dome
+  else {
+    // a seam ridge over the crown from above the visor to the nape (never
+    // down across the face)
+    m.add(shell(H, r * 0.012, { a0: -0.08, a1: 0.08, top: 0, bot: Math.PI * 0.34, cols: 1, rows: 4 }), accent);
+    m.add(shell(H, r * 0.012, { a0: Math.PI - 0.08, a1: Math.PI + 0.08, top: 0, bot: Math.PI * 0.72, cols: 1, rows: 7 }), accent);
+  }
+  if (!cover.full) {
+    s.add(shell(H, r * 0.02, { a0: -0.95, a1: 0.95, top: Math.PI / 2 - 0.21, bot: Math.PI / 2 + 0.03, cols: 10, rows: 2 }), '#15181c'); // visor
+    // (on a boxy head the same angle lands further out, so the eyes sit closer)
+    for (const sd of [-1, 1]) g.sphere(r * 0.15, look.eyes, { ...P(H, sd * (H.square < 1 ? 0.2 : EYE_AZ), 0.09, r * 0.02), sx: 1.1, sy: 0.9, sz: 0.45, seg: 8 });
+    if (look.beard && look.beard !== 'none') {
+      // a dwarf chassis's beard: a plate hung from the jaw, slotted like a grille
+      const y = H.cy - H.ry * 1.0, z = H.rz * 1.05; // hung in front of the chest plate
+      m.cyl(r * 0.62, r * 0.34, r * 0.8, darken(skin, 0.22), { x: 0, y, z, sz: 0.5, seg: 6 });
+      m.cyl(r * 0.64, r * 0.64, r * 0.06, accent, { x: 0, y: y + r * 0.4, z, sz: 0.52, seg: 6 });
+      for (let i = 0; i < 3; i++) s.box(r * (0.62 - i * 0.14), r * 0.04, r * 0.04, '#15181c', { x: 0, y: y + r * 0.15 - i * r * 0.2, z: z + r * 0.3 - i * r * 0.035 });
+    } else for (let i = 0; i < 4; i++) s.box(r * (0.6 - i * 0.07), r * 0.04, r * 0.04, '#15181c', { ...P(H, 0, -0.36 - i * 0.11, 0) });
+  }
+  for (const sd of [-1, 1]) {
+    if (race.ears === 'frill') leaf(m, P(H, sd * 1.5, 0.12, -r * 0.05), r * 0.75, r * 0.26, accent, { rz: -sd * 0.4, rx: -1.2 }); // a kobold chassis's fins
+    else m.cyl(r * 0.22, r * 0.24, r * 0.16, joint, along(P(H, sd * Math.PI / 2, 0, r * 0.04))); // ear bolts
+  }
+  if (!cover.top && cover.hw !== 'antlers') {
+    const b = P(H, 0.5, 1.1, -r * 0.05);
+    m.cyl(r * 0.07, r * 0.1, r * 0.9, darken(skin), { x: b.x, y: b.y + r * 0.42, z: b.z });
+    g.ball(r * 0.15, look.eyes, { x: b.x, y: b.y + r * 0.95, z: b.z });
+  }
+}
+
+// Hair on the head's own surface: a cap whose hairline runs from the brow
+// round over the ears to the nape, lifted a little off the skull (more for
+// fuller styles), and the style's volume on top of it. Under a helm, hood or
+// hat only what hangs below it shows.
+function hair(s, look, H, cover) {
+  const st = look.hairStyle, c = look.hair, race = look.race || {};
+  if (!st || st === 'bald' || race.hairless || race.robot || race.cap) return;
+  const r = H.r, d = darken(c, 0.12);
+  const cap = (off = r * 0.08, front = 0.31, side = 0.5, back = 0.72) => s.add(shell(H, off, { bot: hairline(Math.PI * front, Math.PI * side, Math.PI * back), cols: 18, rows: 7, taper: 0.75 }), c);
+  // hair falling down the back from under the crown to below the shoulders,
+  // and a lock either side framing the face
+  const fall = (len, locks = true) => {
+    s.cyl(H.rx * 0.82, H.rx * 0.98, len, c, { y: H.cy - len / 2 + r * 0.25, z: -H.rz * 0.62, sz: 0.5, seg: 10 });
+    if (locks) for (const sd of [-1, 1]) s.chain([at(P(H, sd * 1.3, 0.35, r * 0.06)), at(P(H, sd * 1.42, -0.45, r * 0.12)), [sd * H.rx * 0.95, H.cy - H.ry * 0.5 - len * 0.5, -r * 0.18]], r * 0.26, r * 0.16, d, { seg: 6 });
   };
-  if (covered) {
-    if (st === 'long' || st === 'curls') fall(r * 1.4);
-    if (st === 'braids') for (const sd of [-1, 1]) s.chain([[sd * r * 0.7, y - r * 0.3, -r * 0.3], [sd * r * 0.75, y - r * 1.2, -r * 0.15], [sd * r * 0.7, y - r * 2.2, -r * 0.05]], r * 0.2, r * 0.12, c, { seg: 6 });
-    if (st === 'ponytail' || st === 'bun') s.chain([[0, y - r * 0.25, -r * 0.92], [0, y - r * 0.95, -r * 1.02], [0, y - r * 1.65, -r * 0.92]], r * 0.3, r * 0.14, c, { seg: 6 });
+  const braid = (sd) => {
+    const top = P(H, sd * 1.55, -0.15, r * 0.06), bot = [sd * H.rx * 0.82, H.cy - r * 2.2, r * 0.25];
+    s.chain([at(top), [sd * H.rx * 0.98, H.cy - r * 1.1, r * 0.08], bot], r * 0.2, r * 0.13, c, { seg: 6 });
+    for (let i = 1; i < 5; i++) { const t = i / 5; s.ball(r * (0.21 - t * 0.06), d, { x: top.x + (bot[0] - top.x) * t, y: top.y + (bot[1] - top.y) * t, z: top.z + (bot[2] - top.z) * t, detail: 0 }); }
+    s.cyl(r * 0.12, r * 0.12, r * 0.12, '#d4a94f', { x: bot[0], y: bot[1] - r * 0.04, z: bot[2], seg: 6 });
+  };
+  const tail = (len) => {
+    const b = P(H, Math.PI, 0.05, r * 0.06);
+    s.ball(r * 0.18, d, { x: b.x, y: b.y, z: b.z });
+    s.chain([at(b), [0, b.y - len * 0.45, b.z - r * 0.3], [0, b.y - len, b.z - r * 0.15]], r * 0.26, r * 0.08, c, { seg: 6 });
+  };
+  if (cover.crown) {
+    // Under a helm, hood or hat the hair still shows at the brow and sides
+    // below it (as the portrait draws it): the style's cap, kept close to the
+    // head so the headwear covers its top, and whatever hangs below.
+    if (cover.hw !== 'greathelm') {
+      const low = { long: [0.35, 0.56, 0.9], curls: [0.33, 0.56, 0.78], wild: [0.31, 0.56, 0.8] }[st] || [st === 'crop' || st === 'topknot' ? 0.31 : 0.34, 0.5, 0.72];
+      if (st !== 'mohawk') cap(r * 0.06, ...low);
+    }
+    if (st === 'long' || st === 'curls') fall(r * 1.4, cover.hw !== 'greathelm');
+    if (st === 'braids') for (const sd of [-1, 1]) braid(sd);
+    if (st === 'ponytail' || st === 'bun') tail(r * 1.5);
     return;
   }
+  const hatted = cover.hw === 'cap'; // a beret squashes what stands up
   switch (st) {
-    case 'crop': scalp(1.045); break;
-    case 'swept': scalp(); s.sphere(r * 0.95, c, { y: y + r * 0.78, z: r * 0.02, sx: 1.08, sy: 0.4, sz: 0.95, rx: -0.25, seg: 10 }); break; // a quiff above the hairline
-    case 'long': scalp(); fringe(); fall(r * 1.6); break;
-    case 'wild': scalp(1.09); for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; s.cone(r * 0.32, r * 0.9, c, { x: Math.cos(a) * r * 0.75, y: y + r * 0.55, z: Math.sin(a) * r * 0.75 - r * 0.15, rz: -Math.cos(a) * 1.0, rx: Math.sin(a) * 1.0, seg: 5 }); } break;
-    case 'curls': for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, ring = i % 2; s.ball(r * 0.36, c, { x: Math.cos(a) * r * (0.82 - ring * 0.25), y: y + r * (0.45 + ring * 0.35), z: Math.sin(a) * r * (0.82 - ring * 0.25) - r * 0.18 }); } fall(r * 0.5); break;
-    case 'braids': scalp(); fringe(0.7); for (const sd of [-1, 1]) s.chain([[sd * r * 0.75, y - r * 0.1, -r * 0.35], [sd * r * 0.8, y - r * 1.0, -r * 0.2], [sd * r * 0.72, y - r * 2.1, -r * 0.05]], r * 0.22, r * 0.12, c, { seg: 6 }); break;
-    case 'ponytail': scalp(); fringe(0.6); s.ball(r * 0.22, d, { y: y + r * 0.1, z: -r * 1.02 }); s.chain([[0, y + r * 0.1, -r * 1.05], [0, y - r * 0.6, -r * 1.35], [0, y - r * 1.6, -r * 1.25]], r * 0.3, r * 0.1, c, { seg: 6 }); break;
-    case 'bun': scalp(); fringe(0.5); s.sphere(r * 0.42, c, { y: y + r * 0.55, z: -r * 0.85, seg: 9 }); break;
-    case 'topknot': scalp(1.045); s.sphere(r * 0.34, c, { y: y + r * 1.12, z: -r * 0.1, seg: 9 }); break;
-    case 'mohawk': for (let i = 0; i < 6; i++) s.cone(r * 0.2, r * 0.75, c, { y: y + r * 0.95, z: r * 0.55 - i * r * 0.3, rx: -0.3 - i * 0.12, seg: 4 }); break;
-    default: scalp();
+    case 'crop': cap(r * 0.05); break;
+    case 'swept': {
+      cap(r * 0.07, 0.3);
+      if (!hatted) { const q = P(H, 0, 0.78, r * 0.06); s.sphere(r * 0.45, c, { x: 0, y: q.y, z: q.z, sx: 1.35, sy: 0.55, sz: 1.0, rx: -0.6, seg: 10 }); } // a quiff over the brow
+      break;
+    }
+    case 'long': cap(r * 0.09, 0.35, 0.56, 0.9); fall(r * 1.6); break;
+    case 'wild':
+      cap(r * 0.12, 0.31, 0.56, 0.8);
+      if (!hatted) for (let i = 0; i < 11; i++) {
+        const a = (i / 11) * Math.PI * 2 + 0.3, b = P(H, a, 0.55 + (i % 3) * 0.25, r * 0.05);
+        s.limb(at(b), [b.x + b.n[0] * r * 0.55, b.y + b.n[1] * r * 0.55 + r * 0.12, b.z + b.n[2] * r * 0.55], r * 0.2, r * 0.02, i % 2 ? c : d, { seg: 5, joint: false });
+      }
+      break;
+    case 'curls':
+      cap(r * 0.1, 0.33, 0.56, 0.78);
+      for (let i = 0; i < 20; i++) {
+        const ringN = i < 12 ? 0 : 1, a = ((i % 12) / (ringN ? 8 : 12)) * Math.PI * 2 + ringN * 0.4;
+        if (hatted && ringN) continue;
+        s.ball(r * 0.25, i % 3 ? c : d, { ...P(H, a, ringN ? 0.95 : 0.42, r * 0.12) });
+      }
+      fall(r * 0.5, false);
+      break;
+    case 'braids': cap(r * 0.07, 0.34); for (const sd of [-1, 1]) braid(sd); break;
+    case 'ponytail': cap(r * 0.07, 0.34); tail(r * 1.6); break;
+    case 'bun': { cap(r * 0.07, 0.34); const b = P(H, Math.PI, 0.65, r * 0.2); s.sphere(r * 0.4, c, { x: b.x, y: b.y, z: b.z, seg: 10 }); break; }
+    case 'topknot': cap(r * 0.05); if (!hatted) { s.sphere(r * 0.34, c, { y: H.cy + H.ry + r * 0.16, z: -r * 0.1, seg: 10 }); s.cyl(r * 0.14, r * 0.14, r * 0.1, d, { y: H.cy + H.ry + r * 0.03, z: -r * 0.08, seg: 8 }); } break;
+    case 'mohawk':
+      // a strip from the front hairline over the crown to the nape
+      s.add(shell(H, r * 0.04, { a0: -0.22, a1: 0.22, top: 0, bot: Math.PI * 0.3, cols: 2, rows: 3 }), c);
+      s.add(shell(H, r * 0.04, { a0: Math.PI - 0.22, a1: Math.PI + 0.22, top: 0, bot: Math.PI * 0.82, cols: 2, rows: 7 }), c);
+      if (!hatted) for (let i = 0; i < 6; i++) { const b = P(H, 0, 0.75 + i * 0.32, r * 0.02); s.limb(at(b), [b.x, b.y + b.n[1] * r * 0.6, b.z + b.n[2] * r * 0.6 - r * 0.1], r * 0.16, r * 0.02, c, { seg: 4, joint: false }); }
+      break;
+    default: cap();
   }
 }
 
-function beard(s, look, y, r) {
-  const b = look.beard, c = look.hair;
-  if (!b || b === 'none') return;
-  const by = y - 0.06, bz = r * 0.72;
-  if (b === 'stubble') s.sphere(r * 0.9, darken(look.skin, 0.25), { y: y - 0.04, z: 0.01, sy: 0.6, seg: 8 });
-  if (b === 'moustache' || b === 'goatee' || b === 'full' || b === 'braided' || b === 'short') for (const sd of [-1, 1]) s.sphere(0.022, c, { x: sd * 0.018, y: y - 0.032, z: r * 0.9, sx: 1.3, sy: 0.55, sz: 0.7, rz: sd * 0.25, seg: 8 });
-  if (b === 'goatee') s.cone(0.03, 0.07, c, { y: by - 0.02, z: bz + 0.02, rx: Math.PI });
-  if (b === 'short') s.sphere(0.07, c, { y: by, z: bz - 0.02, sy: 0.8, seg: 8 });
-  if (b === 'full') s.cone(0.085, 0.17, c, { y: by - 0.04, z: bz - 0.02, rx: Math.PI, seg: 7 });
-  if (b === 'braided') { s.cone(0.08, 0.12, c, { y: by - 0.02, z: bz - 0.02, rx: Math.PI, seg: 7 }); for (const sd of [-1, 1]) s.cyl(0.015, 0.012, 0.12, c, { x: sd * 0.03, y: by - 0.13, z: bz }); }
+// A beard grows on the jaw: a shell from the sideburns down round the chin,
+// thicker for fuller beards, with a bib hanging below the chin for a full
+// one. The portrait draws the same kinds.
+function beard(s, look, H, cover) {
+  const b = look.beard, c = look.hair, race = look.race || {};
+  if (!b || b === 'none' || race.robot || race.snout || race.cat || race.bull || race.cap) return;
+  if (cover.full && b !== 'full' && b !== 'braided') return;
+  const r = H.r, masked = look.mark === 'mask';
+  // from the sideburns in front of the ears, along the cheeks, to under the lip
+  // (len: how far a fuller beard hangs below the chin, in front of the neck)
+  const jaw = (off, len = 0) => s.add(shell(H, off, { a0: -1.62, a1: 1.62, top: (a) => Math.PI / 2 + 0.56 - 0.62 * smooth((Math.abs(a) - 0.2) / 1.05), bot: Math.PI * 0.94, cols: 14, rows: 6, post: (v, a, th) => {
+    const k = smooth((th - Math.PI * 0.7) / (Math.PI * 0.24)) * Math.max(0, 1 - (a / 1.25) ** 2);
+    v[1] -= len * k; v[2] += len * 0.35 * k;
+  } }), b === 'stubble' ? darken(look.skin, 0.22) : c);
+  const tache = () => { if (!masked && !cover.full) for (const sd of [-1, 1]) s.sphere(r * 0.17, c, { ...P(H, sd * 0.12, -0.33, r * 0.05), sx: 1.5, sy: 0.5, sz: 0.6, rz: sd * 0.3, seg: 8 }); };
+  const chin = P(H, 0, -0.95, 0);
+  if (b === 'stubble') { if (!masked) jaw(r * 0.02); return; }
+  tache();
+  if (b === 'goatee' && !masked) s.sphere(r * 0.2, c, { ...P(H, 0, -0.82, r * 0.08), sy: 1.4, sz: 0.7, seg: 8 });
+  if (b === 'short') jaw(r * 0.07, r * 0.22);
+  if (b === 'full' || b === 'braided') {
+    // the jaw's hair carried on down below the chin
+    jaw(r * 0.09, r * (b === 'full' ? 0.75 : 0.5));
+    if (b === 'braided') for (const sd of [-1, 1]) {
+      const top = [sd * r * 0.2, chin.y - r * 0.5, chin.z + r * 0.2];
+      s.chain([top, [top[0], top[1] - r * 0.5, top[2] + r * 0.02]], r * 0.11, r * 0.08, c, { seg: 6 });
+      s.cyl(r * 0.1, r * 0.1, r * 0.1, '#d4a94f', { x: top[0], y: top[1] - r * 0.52, z: top[2] + r * 0.02, seg: 6 });
+    }
+  }
 }
 
-function headwear(s, m, g, look, y, r) {
+// Headwear, fitted to the head's shape: rims follow the skull, bands hug it.
+function headwear(s, m, g, look, H) {
   if (!look.headwear) return;
-  const trim = look.cls?.trim || '#d4a94f', garb = look.cls?.garb || '#555';
+  const r = H.r, trim = look.cls?.trim || '#d4a94f', garb = look.cls?.garb || '#555';
   switch (look.cls?.head) {
-    case 'helm': // a steel cap with a rim above the brows and a thin nasal guard
-      m.sphere(r * 1.16, '#9aa0a8', { y, z: -r * 0.04, theta: Math.PI * 0.5, rx: -0.42, seg: 12 });
-      m.torus(r * 1.1, 0.012, '#7a8088', { y: y + r * 0.28, z: -r * 0.02, rx: Math.PI / 2 - 0.42, tseg: 16 });
-      m.box(0.018, 0.07, 0.016, '#8a9098', { y: y + r * 0.12, z: r * 1.06, rx: -0.15 });
+    case 'helm': {
+      // a steel cap down to the brow with a rolled rim, a nasal guard down to
+      // the nose, and cheek guards beside the eyes (as the portrait draws it)
+      const rim = hairline(Math.PI * 0.35, Math.PI * 0.47, Math.PI * 0.6);
+      m.add(shell(H, r * 0.16, { bot: rim, cols: 18, rows: 6 }), '#9aa0a8');
+      m.add(shell(H, r * 0.19, { top: (a) => rim(a) - 0.12, bot: rim, cols: 18, rows: 1 }), '#7a8088');
+      m.box(r * 0.16, r * 0.62, r * 0.1, '#8a9098', { ...P(H, 0, 0.2, r * 0.2) });
+      for (const sd of [-1, 1]) m.box(r * 0.42, r * 0.72, r * 0.08, '#8a9098', { ...P(H, sd * 1.12, -0.08, r * 0.11), rz: sd * 0.08 });
       break;
-    case 'greathelm': m.cyl(r * 1.1, r * 1.1, 0.26, '#a8aeb5', { y: y + 0.01, seg: 10 }); s.box(0.16, 0.02, 0.03, '#141414', { y: y + 0.02, z: r * 1.1 }); m.cone(r * 1.12, 0.06, '#a8aeb5', { y: y + 0.17, seg: 10 }); g.box(0.02, 0.06, 0.02, '#ffe08a', { y: y - 0.03, z: r * 1.12 }); break;
-    case 'hood': // cloth over the crown, back and cheeks; the face stays open
-      s.sphere(r * 1.24, garb, { y: y + 0.005, z: -r * 0.14, theta: Math.PI * 0.64, rx: -1.0, seg: 12, vary: 0.04 });
-      s.cone(r * 1.15, r * 1.3, garb, { y: y - r * 1.05, z: -r * 0.3, seg: 10 }); // drape over the shoulders
-      s.cone(r * 0.35, r * 0.9, garb, { y: y + r * 0.6, z: -r * 1.05, rx: -2.2, seg: 6 }); // the point, hanging back
+    }
+    case 'greathelm': {
+      // a closed barrel helm: an eye slit and two rows of breathing holes (no
+      // slot down the middle), a conical top
+      const R = girth(H, 0) * 1.14 + 0.004, y0 = H.cy - H.ry * 1.02, h = H.ry * 2.06, eyeY = H.cy + H.ry * 0.1;
+      m.cyl(R, R, h, '#a8aeb5', { y: y0 + h / 2, seg: 14 });
+      m.cone(R * 1.02, r * 0.5, '#a8aeb5', { y: y0 + h + r * 0.25, seg: 14 });
+      s.cyl(R + 0.002, R + 0.002, r * 0.13, '#141414', { y: eyeY, arc: 1.5, ry: -0.75, open: true, seg: 10 });
+      for (const [row, n] of [[0, 4], [1, 3]]) for (let i = 0; i < n; i++) {
+        const a = (i - (n - 1) / 2) * 0.24;
+        s.ball(r * 0.04, '#141414', { x: Math.sin(a) * R, y: eyeY - r * (0.5 + row * 0.22), z: Math.cos(a) * R, detail: 0 });
+      }
+      m.cyl(R + 0.003, R + 0.003, r * 0.1, trim, { y: eyeY + r * 0.3, open: true, seg: 14 });
       break;
-    case 'cap': s.cyl(r * 1.05, r * 1.15, 0.06, garb, { y: y + 0.08, seg: 10 }); s.cone(0.02, 0.24, '#e8e0cc', { x: 0.06, y: y + 0.16, z: -0.05, rz: -0.8, rx: -0.5 }); break;
-    case 'wizhat': s.cyl(r * 2.1, r * 2.1, 0.02, garb, { y: y + 0.07, seg: 14 }); s.cone(r * 1.05, 0.38, garb, { y: y + 0.26, rx: -0.15, seg: 9 }); s.cyl(r * 1.08, r * 1.08, 0.03, trim, { y: y + 0.09, seg: 10 }); break;
+    }
+    case 'hood': {
+      // cloth over the crown, back and cheeks; the face stays open
+      const edge = (a) => { const t = smooth((Math.abs(a) - 0.75) / 0.85); return Math.PI * (0.33 + 0.53 * t); };
+      s.add(shell(H, r * 0.22, { bot: edge, cols: 22, rows: 8 }), garb);
+      s.add(shell(H, r * 0.25, { a0: -1.75, a1: 1.75, top: (a) => edge(a) - 0.1, bot: edge, cols: 20, rows: 1 }), darken(garb, 0.18)); // the rim
+      s.cone(H.rx * 1.25, r * 1.2, garb, { y: H.cy - H.ry * 1.05, z: -r * 0.25, seg: 12 }); // drape over the shoulders
+      s.cone(r * 0.32, r * 0.85, garb, { y: H.cy + H.ry * 0.45, z: -H.rz * 1.18, rx: -2.2, seg: 6 }); // the point, hanging back
+      break;
+    }
+    case 'cap': {
+      // a soft beret tipped to one side, with a curling feather in the trim colour
+      const y = H.cy + H.ry * 0.7, R = girth(H, 0.62) + r * 0.12;
+      s.cyl(R * 1.04, R, r * 0.36, garb, { y, rz: 0.12, seg: 14 });
+      s.sphere(R * 1.1, garb, { y: y + r * 0.18, sy: 0.3, rz: 0.12, seg: 14 });
+      s.cyl(R * 1.005, R * 1.005, r * 0.1, darken(garb, 0.3), { y: y - r * 0.14, rz: 0.12, seg: 14 });
+      s.chain([[R * 0.9, y + r * 0.15, -r * 0.2], [R * 1.2, y + r * 0.5, -r * 0.55], [R * 1.08, y + r * 0.82, -r * 1.0]], r * 0.1, r * 0.02, trim, { seg: 4 });
+      break;
+    }
+    case 'wizhat': {
+      // a band on the brow, a moderate brim, and a tall cone whose tip flops back
+      const y = H.cy + H.ry * 0.48, R = girth(H, 0.5) + r * 0.16;
+      s.cyl(r * 1.7, r * 1.78, r * 0.05, garb, { y, seg: 16 });
+      s.cone(R, r * 2.3, garb, { y: y + r * 1.15, seg: 12 });
+      s.cyl(R * 0.93, R * 1.0, r * 0.26, trim, { y: y + r * 0.15, seg: 12 });
+      s.cone(r * 0.42, r * 1.0, garb, { y: y + r * 2.35, z: -r * 0.28, rx: -0.55, seg: 8 });
+      break;
+    }
     case 'antlers':
-      for (const sd of [-1, 1]) { s.cyl(0.012, 0.016, 0.18, '#d8c8a0', { x: sd * 0.07, y: y + 0.16, rz: -sd * 0.4 }); s.cyl(0.01, 0.012, 0.08, '#d8c8a0', { x: sd * 0.12, y: y + 0.2, rz: -sd * 1.1 }); }
-      s.torus(r * 0.95, 0.012, '#4a7a3a', { y: y + 0.07, rx: Math.PI / 2, tseg: 12 });
+      s.add(ring(H, r * 0.13, 0.38, 0.5), '#4a7a3a');
+      for (let i = 0; i < 6; i++) s.cone(r * 0.13, r * 0.32, i % 2 ? '#4a7a3a' : '#5f8a44', { ...P(H, (i - 2.5) * 0.45, 0.48, r * 0.16), sz: 0.3, seg: 4 });
+      for (const sd of [-1, 1]) antler(s, H, sd, '#d8c8a0');
       break;
-    case 'circlet': m.torus(r * 1.02, 0.012, '#d4a94f', { y: y + 0.05, rx: Math.PI / 2, tseg: 14 }); g.ball(0.018, trim, { y: y + 0.06, z: r }); break;
+    case 'circlet':
+      m.add(ring(H, r * 0.1, 0.42, 0.5), '#d4a94f');
+      g.sphere(r * 0.11, trim, { ...P(H, 0, 0.46, r * 0.15), sz: 0.6, seg: 8 });
+      break;
     default:
   }
 }
@@ -616,7 +885,7 @@ function weaponFor(fig, cls, handR, handL, look) {
         m.torus(0.14, 0.015, '#8a9098', { z: 0.065, tseg: 20 });
         m.sphere(0.04, '#9aa0a8', { z: 0.065, sz: 0.7, theta: Math.PI / 2, rx: Math.PI / 2, seg: 10 });
         for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; m.ball(0.008, '#b4bac2', { x: Math.cos(a) * 0.115, y: Math.sin(a) * 0.115, z: 0.068, detail: 0 }); }
-        if (cls === 'paladin') g.box(0.012, 0.12, 0.01, '#ffe08a', { z: 0.09 });
+        if (cls === 'paladin') m.torus(0.1, 0.008, '#d4a94f', { z: 0.068, tseg: 20 });
       }, { rx: 0.1 });
       break;
     case 'barbarian':
@@ -703,10 +972,18 @@ function weaponFor(fig, cls, handR, handL, look) {
       W(handR, ({ m, s }) => { m.box(0.015, 0.4, 0.008, '#c8ccd2', { y: 0.22 }); s.torus(0.04, 0.008, '#d4a94f', { y: 0.03, tseg: 8 }); });
       break;
     case 'monk':
-      W(handR, ({ s }) => { s.cyl(0.016, 0.016, 1.0, '#7a5432', { y: 0.05, rz: Math.PI / 2 - 0.2 }); }, { rx: 0.4 });
+      // a plain quarterstaff held upright at the side, bound at the grip
+      W(handR, ({ s }) => { s.cyl(0.016, 0.016, 0.96, '#7a5432', { y: 0.12, seg: 6 }); s.cyl(0.019, 0.019, 0.07, '#3a2416', { y: 0, seg: 6 }); }, { rx: 0.12 });
       break;
     default:
   }
+}
+
+// Small folk stand three-quarters as tall; a chassis built for a gnome or a
+// kobold, or a darakhul who was one, is small too.
+const SMALL_RACES = /halfling|gnome|kobold|derro|erina/i;
+export function figureSize(sheet) {
+  return SMALL_RACES.test(`${sheet?.raceIndex || sheet?.race || sheet?.raceName || ''} ${sheet?.subrace || ''}`) ? 'small' : 'medium';
 }
 
 const OUTFIT = { plate: { plate: true }, robe: { robe: true }, fur: { fur: true }, collar: { collar: true }, quiver: { quiver: true, cloak: '#2f4a2a' }, strap: { cloak: '#22242a' }, ruff: { lute: true }, stole: {}, leaf: { cloak: '#3f5a2a' }, wrap: {} };
@@ -719,8 +996,11 @@ export function heroFigure(look, { seed, size = 'medium' } = {}) {
   const cls = look.cls || {};
   const garb = cls.garb || '#5a5348', trim = cls.trim || '#8d8a95';
   const outfit = OUTFIT[cls.outfit] || {};
+  // How broad the body is, from the race, the body and (gearforged) the
+  // frame, kept to a range that still reads as a person.
+  const build = Math.min(1.26, Math.max(0.84, (race.build || 1) * (look.body === 'feminine' ? 0.94 : look.body === 'masculine' ? 1.04 : 1) * (look.frame === 'heavy' ? 1.18 : look.frame === 'slim' ? 0.86 : 1)));
   const torso = bipedBody(fig, {
-    skin: look.skin, garb, trim, build: (race.build || 1) * (look.body === 'feminine' ? 0.92 : look.body === 'masculine' ? 1.04 : 1) * (look.frame === 'heavy' ? 1.14 : look.frame === 'slim' ? 0.88 : 1), robot: race.robot, finish: look.finish, body: look.body, glow: look.eyes, bones: look.bones,
+    skin: look.skin, garb, trim, build, robot: race.robot, finish: look.finish, body: look.body, glow: look.eyes, bones: look.bones,
     symbol: cls.chest === 'symbol', ...outfit, apron: look.apron,
   });
   if (look.apron) {
@@ -735,9 +1015,9 @@ export function heroFigure(look, { seed, size = 'medium' } = {}) {
       for (const sd of [-1, 1]) s.box(0.012, 0.11, 0.008, darken(cloth, 0.15), { x: sd * 0.05, y: TORSO * 0.8, z: 0.118, rz: sd * 0.35 });
     }));
   }
-  bipedHead(fig, torso, look);
+  bipedHead(fig, torso, look, build);
   weaponFor(fig, look.classKey, fig.parts.armR, fig.parts.armL, look);
-  if (race.robot) Object.assign(fig.mats.metal, { polished: { roughness: 0.22, metalness: 0.8 }, worn: { roughness: 0.48, metalness: 0.55 }, rusted: { roughness: 0.85, metalness: 0.25 } }[look.finish] || {});
+  if (race.robot) { applyFinish(fig.mats.metal, look.finish); applyFinish(fig.mats.sheen, look.finish); }
   return fig;
 }
 
@@ -1142,7 +1422,7 @@ const HUMANOID_MONSTERS = {
   zombie: () => ({ race: { ears: 'round', build: 1 }, skin: '#7a8a6a', eyes: '#d8d0a0', hair: '#3a3a30', hairStyle: 'wild', beard: 'none', cls: { garb: '#4a4a3a', trim: '#3a3a2a', head: 'none' }, classKey: 'npc', zombie: true }),
   giant: () => ({ race: { ears: 'round', build: 1.2 }, skin: '#a87c52', eyes: '#5a3620', hair: '#6b4a28', hairStyle: 'wild', beard: 'full', cls: { garb: '#6b4a28', trim: '#8a6a44', head: 'none', outfit: 'fur' }, classKey: 'barbarian', scale: 1.9 }),
   fiend: () => ({ race: { ears: 'point', horns: true, glowEyes: true, build: 1.05 }, skin: '#a83a2a', eyes: '#ffd04a', hair: '#1a1512', hairStyle: 'bald', beard: 'none', cls: { garb: '#2a1a1a', trim: '#8a2a2a', head: 'none', outfit: 'collar' }, classKey: 'warlock' }),
-  celestial: () => ({ race: { ears: 'round', glowEyes: true, build: 1.05 }, skin: '#f0dcc0', eyes: '#ffe08a', hair: '#f0e0a0', hairStyle: 'long', beard: 'none', cls: { garb: '#ece4d0', trim: '#d4a94f', head: 'none', chest: 'symbol' }, classKey: 'paladin', halo: true }),
+  celestial: () => ({ race: { ears: 'round', glowEyes: true, build: 1.05 }, skin: '#f0dcc0', eyes: '#ffe08a', hair: '#f0e0a0', hairStyle: 'long', beard: 'none', cls: { garb: '#ece4d0', trim: '#d4a94f', head: 'circlet', chest: 'symbol' }, headwear: true, classKey: 'paladin' }),
   golem: () => ({ race: { robot: true, build: 1.25 }, skin: '#7a7670', eyes: '#ffb347', cls: { garb: '#7a7670', trim: '#5a5650', head: 'none' }, classKey: 'npc', scale: 1.3 }),
   construct: () => ({ race: { robot: true, build: 1.1 }, skin: '#8e98a3', eyes: '#7fd0ff', cls: { garb: '#8e98a3', trim: '#5a6068', head: 'none' }, classKey: 'npc' }),
   humanoid: (c) => ({ npcSeed: c.seed }),
@@ -1165,7 +1445,6 @@ export function creatureFigure(art, { seed = 'm', color, label = '', body, resol
     if (look.zombie) fig.zombie = true;
     if (look.scale) fig.body.scale.multiplyScalar(look.scale);
     if (/bugbear|skarn/i.test(label)) fig.body.scale.multiplyScalar(1.22);
-    if (look.halo) fig.parts.head.add(new Part(fig, ({ g }) => g.torus(0.108, 0.01, '#ffe08a', { y: 0.17, rx: Math.PI / 2, tseg: 16 }))); // a plain glowing circlet
     return fig;
   }
   return (MONSTERS[art] || MONSTERS.monstrosity)(c);

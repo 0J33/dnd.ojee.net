@@ -1,6 +1,7 @@
 const srd = require('../srd/store');
 const { executeRoll } = require('./dice');
 const { findToken, addLog } = require('./roomState');
+const { walkRows } = require('./layers');
 
 // Minimal monster-turn automation for guided mode (and a DM convenience).
 // Strategy: pick the nearest living PC, walk toward it (blocked by walls),
@@ -23,7 +24,7 @@ function isWall(scene, x, y) {
 const BLOCKS = new Set('346lx#%wvh_LF[TOAUPQWSqo~'.split(''));
 const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));
 const DIFFICULT = new Set('ri~mY(7'.split(''));
-const chAt = (scene, x, y) => (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h ? '#' : ((scene.cells?.[y] || '')[x] || '.'));
+const chAt = (scene, x, y) => (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h ? '#' : ((walkRows(scene)[y] || '')[x] || '.'));
 const passable = (scene, x, y) => !BLOCKS.has(chAt(scene, x, y));
 
 // Cheapest route to a square from which `target` is in reach (Chebyshev 1),
@@ -191,7 +192,8 @@ function runMonsterTurn(room, scene, tokenId) {
   const sheet = target.characterId ? room.charSheets[target.characterId] : null;
   if (sheet) {
     const before = sheet.currentHp ?? 0;
-    let remaining = dmg;
+    let remaining = require('./world').resisted(sheet, dmg, attack.damageType); // a raging barbarian takes half
+    const halved = remaining < dmg ? ` (halved by rage to ${remaining})` : '';
     if (sheet.tempHp && sheet.tempHp > 0) {
       const absorbed = Math.min(sheet.tempHp, remaining);
       sheet.tempHp -= absorbed;
@@ -201,7 +203,7 @@ function runMonsterTurn(room, scene, tokenId) {
     events.push({ kind: 'pcDamaged', characterId: target.characterId, tokenId: target.id, amount: dmg, currentHp: sheet.currentHp });
     addLog(room, {
       type: 'combat',
-      text: `${token.label} HITS ${target.label} with ${attack.name}${isCrit ? ' (CRITICAL!)' : ''}: ${dmg} ${attack.damageType} damage. ${target.label} is at ${sheet.currentHp} HP${sheet.currentHp === 0 ? ' and falls unconscious!' : '.'}`,
+      text: `${token.label} HITS ${target.label} with ${attack.name}${isCrit ? ' (CRITICAL!)' : ''}: ${dmg} ${attack.damageType} damage${halved}. ${target.label} is at ${sheet.currentHp} HP${sheet.currentHp === 0 ? ' and falls unconscious!' : '.'}`,
       roll: dmgRoll,
     });
   } else {

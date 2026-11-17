@@ -1,9 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { socket } from '../socket';
+import { getView } from '../sync';
 import { characters as charsApi } from '../api';
 import { useDialog, ModalOverlay, ContextMenu, useLocalStorage } from '../utils';
 import { deriveSheet } from '../rules/engine';
 import { PREGENS } from '../data/pregens';
+import { withPlaceHidden, getPlaceHidden } from '../mapSelection';
+import { PlaceHiddenPill } from './MapControls';
+import { GiveItemModal, ShopModal } from './Items';
 import { blankCells } from '../data/scenes';
 import { charAt } from '../render/sceneRender';
 import MapCanvas from './MapCanvas';
@@ -24,21 +28,32 @@ import Guide from './Guide';
 import TutorialOverlay from './TutorialOverlay';
 import SceneEditor from './SceneEditor';
 import ScenePrep, { SceneThumb } from './ScenePrep';
+import { QuickDmPanel, CreaturesPanel, TokenQuickEdit, DmNote, viewCell } from './QuickDm';
+import { useViewAs, setViewAs } from './Training';
+import { useEditHistory } from '../editHistory';
+import { restoreUi, useUiContext } from '../uiContext';
+import { useAutoSave, SaveStatus } from '../autosave';
+import { roomAround } from '../data/mapKit';
+import { TILES } from '../data/tiles';
 import { Avatar, NPC_ART_KEYS } from './Portrait';
 import {
   DragonLogo, BookIcon, MapIcon, GearIcon, RulerIcon, PenIcon, FogIcon, TargetIcon, ScrollIcon,
   EyeIcon, SwordIcon, SkullIcon, LightningIcon, BurstIcon, XIcon, PersonIcon, FlagIcon, CopyIcon,
   SparkleIcon, TrophyIcon, ChevronLeft, ChevronRight, ExpandIcon, BrushIcon, EraserIcon, PlusIcon,
-  MenuIcon, UsersIcon, ChatIcon, D20Icon, PencilIcon, CheckIcon, LockIcon, CrownIcon, VolumeIcon,
+  MenuIcon, UsersIcon, ChatIcon, D20Icon, PencilIcon, LockIcon, CrownIcon, VolumeIcon,
+  UndoIcon, RedoIcon, WandIcon, HeartIcon, CoinsIcon, HandIcon, BackpackIcon,
 } from './Icons';
+import { matches, firstKey, isTyping, useKeybinds, useKeybindUser } from '../keybinds';
 
+const TOOL_OPTS = new Set(['draw', 'erase', 'fog', 'secrets']); // tools with a flyout beside the rail
 const DRAW_COLORS = ['#e8c476', '#e07040', '#7fb069', '#5f87a8', '#c94f6d', '#ffffff'];
 const NPC_COLORS = ['#5f87a8', '#7fb069', '#b06ab0', '#c2542e', '#5fb0a5', '#d4a94f'];
 const MOBILE_MAX = 820;
 
 /** Tools available in the left dock. `dm` tools only appear for the DM. */
 const TOOLS = [
-  { key: 'select', name: 'Select', hint: 'Move tokens. Drag empty space to pan, double-click to ping.', Icon: TargetIcon, shortcut: 'V' },
+  // keys come from keybinds.js ('tool.<key>'); `shortcut` is only the default
+  { key: 'select', name: 'Pointer', hint: 'Click to select or use, double-click for a sheet, right-click for a menu. Left-drag pans (or moves a creature), right-drag turns, middle-drag box-selects, Ctrl+click adds to the selection.', Icon: HandIcon, shortcut: 'V' },
   { key: 'measure', name: 'Measure', hint: 'Drag to measure - one square is 5 ft.', Icon: RulerIcon, shortcut: 'M' },
   { key: 'draw', name: 'Draw', hint: 'Sketch on the map for everyone.', Icon: PenIcon, shortcut: 'P' }, // not D: WASD moves the 3D camera
   { key: 'fog', name: 'Fog', hint: 'Reveal or re-hide parts of the map.', Icon: FogIcon, shortcut: 'F', dm: true },
@@ -46,14 +61,26 @@ const TOOLS = [
   { key: 'build', name: 'Build', hint: 'Paint walls, floors, doors and furniture straight onto the map.', Icon: BrushIcon, shortcut: 'B', dm: true },
 ];
 
-export default function GameBoard({ user, code, state, chat, log, connected, onLeave }) {
+// Derived numbers per sheet object: a patch that leaves a sheet alone keeps
+// the same object, so it isn't worked out again.
+const derivedCache = new WeakMap();
+const withDerived = (sheet) => {
+  let out = derivedCache.get(sheet);
+  if (!out) { out = { ...sheet, derived: deriveSheet(sheet) }; derivedCache.set(sheet, out); }
+  return out;
+};
+
+export default function GameBoard({ user, code, state, chat, log, connected, onLeave, onSendChat }) {
   const dialog = useDialog();
   const isDM = !!state.viewerIsDM;
+  const previewing = useViewAs(); // the DM looking as a player (Training.jsx)
   const me = state.members.find((m) => m.userId === user.id);
   const myCharacterId = me?.characterId || null;
   const activeScene = state.scenes.find((s) => s.id === state.activeSceneId) || state.scenes[0];
 
-  const [tool, setTool] = useState('select');
+  // Which panels were open before an update's reload (uiContext.js).
+  const [was] = useState(() => restoreUi('board') || {});
+  const [tool, setTool] = useState(was.tool || 'select');
   const [view3d, setView3d] = useLocalStorage('dnd.view3d', typeof window !== 'undefined' && window.innerWidth > MOBILE_MAX && webglOk);
   const [fogMode, setFogMode] = useState('reveal');
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
@@ -61,35 +88,58 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const [toasts, setToasts] = useState([]);
   const [pings, setPings] = useState([]);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX);
-  const [mobilePane, setMobilePane] = useState('map'); // map | party | chat | more
+  const [mobilePane, setMobilePane] = useState(was.mobilePane || 'map'); // map | party | chat | more
   const [chatOpen, setChatOpen] = useLocalStorage('dnd_chatOpen', false);
-  const [sceneStripOpen, setSceneStripOpen] = useLocalStorage('dnd_sceneStrip2', false);
-  const [creaturesOpen, setCreaturesOpen] = useState(false);
-  const [dmTools, setDmTools] = useState(false); // guided games: DM tools on request
+  const [scenesOpen, setScenesOpen] = useState(!!was.scenesOpen); // the scene list, dropped from its pill
+  const [creaturesOpen, setCreaturesOpen] = useState(!!was.creaturesOpen);
+  const [quick, setQuick] = useState(was.quick || null); // the quick DM panel: { tab, at }
+  const [quickEdit, setQuickEdit] = useState(null); // one creature's HP / conditions: { tokenId, x, y }
+  const [flash, setFlash] = useState(null); // a short note ("Undone: painting")
+  const [dmTools, setDmTools] = useState(!!was.dmTools); // guided games: DM tools on request
   const [objKind, setObjKind] = useState('trap');
-  const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [selectedObjectId, setSelectedObjectId] = useState(was.selectedObjectId || null);
   const [pickingDoors, setPickingDoors] = useState(false);
   const [patrolDraft, setPatrolDraft] = useState(null); // { tokenId, label, pts }
-  const [showDmPanel, setShowDmPanel] = useState(false);
-  const [showSound, setShowSound] = useState(false);
-  const [sheetChar, setSheetChar] = useState(null);
-  const [showMonsters, setShowMonsters] = useState(false);
-  const [showReference, setShowReference] = useState(false);
-  const [showPrep, setShowPrep] = useState(false);
-  const [prepTab, setPrepTab] = useState('scenes');
-  const [showSettings, setShowSettings] = useState(false);
+  const [showDmPanel, setShowDmPanel] = useState(!!was.showDmPanel);
+  const [showSound, setShowSound] = useState(!!was.showSound);
+  const [sheetChar, setSheetChar] = useState(was.sheetChar || null);
+  const [showMonsters, setShowMonsters] = useState(!!was.showMonsters);
+  const [showReference, setShowReference] = useState(!!was.showReference);
+  const [showPrep, setShowPrep] = useState(!!was.showPrep);
+  const [prepTab, setPrepTab] = useState(was.prepTab || 'scenes');
+  const [showSettings, setShowSettings] = useState(!!was.showSettings);
   const [showGuide, setShowGuide] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [statblockToken, setStatblockToken] = useState(null);
+  const [giveTo, setGiveTo] = useState(null);   // the DM giving a hero an item: { characterId, name }
+  const [shopId, setShopId] = useState(null);   // a merchant's shop window (token id)
   const [ctx, setCtx] = useState(null); // {x, y, items}
-  const [posOverlay, setPosOverlay] = useState({});
+  // Moves, paint, doors and the rest show at once through sync.js; only
+  // drawings (sent as events, not state) keep an overlay here.
   const [strokeOverlay, setStrokeOverlay] = useState({});
   const [strokeGone, setStrokeGone] = useState({}); // sceneId -> ids erased / cleared, until the room state agrees
-  const [cellOverlay, setCellOverlay] = useState({}); // sceneId -> {'x,y': ch}
   const [placeToken, setPlaceToken] = useState(null); // { kind } while placing from a menu
+  useUiContext('board', () => ({
+    code, tool, mobilePane, scenesOpen, creaturesOpen, quick, dmTools, selectedObjectId, showDmPanel, showSound,
+    sheetChar, showMonsters, showReference, showPrep, prepTab, showSettings,
+  }));
   const pendingSpawn = useRef(null);
   const diceModeRef = useRef('normal');
+  const mapAreaRef = useRef(null);
+  const topLeftRef = useRef(null);
+
+  // The DM's flyouts open just below the party / pills row, however tall it is.
+  useLayoutEffect(() => {
+    const el = topLeftRef.current, area = mapAreaRef.current;
+    if (!el || !area) return undefined;
+    const ro = new ResizeObserver(() => {
+      area.style.setProperty('--hud-tl-h', `${el.offsetHeight}px`);
+      area.style.setProperty('--hud-tl-w', `${el.offsetLeft + el.offsetWidth}px`); // the initiative bar keeps clear of it
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   // needs a character? (players always; DM optional)
   const needsCharacter = !myCharacterId && (state.mode === 'guided' || state.dmId !== user.id);
@@ -108,13 +158,13 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ---------- keyboard shortcuts ----------
+  // ---------- keyboard shortcuts (keybinds.js: rebindable, per user) ----------
+  useKeybindUser(user.id);
+  useKeybinds();
   useEffect(() => {
     const onKey = (e) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const el = document.activeElement;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
-      const hit = TOOLS.find((t) => t.shortcut.toLowerCase() === e.key.toLowerCase() && (!t.dm || isDM));
+      if (isTyping() || e.repeat) return;
+      const hit = TOOLS.find((t) => matches(e, `tool.${t.key}`) && (!t.dm || isDM));
       if (hit) {
         e.preventDefault();
         setTool(hit.key);
@@ -123,6 +173,17 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isDM]);
+
+  // The table panel, the sound board and a secret's editor share the right edge: one at a time.
+  useEffect(() => { if (selectedObjectId) { setShowDmPanel(false); setShowSound(false); } }, [selectedObjectId]);
+  useEffect(() => { if (showDmPanel) setShowSound(false); }, [showDmPanel]);
+  useEffect(() => { if (showSound) { setShowDmPanel(false); setSelectedObjectId(null); } }, [showSound]);
+
+  // Scenes, Creatures, Quick and a tool's options share the space beside the
+  // rail: one at a time, so nothing overlaps and nothing gets shoved aside.
+  const quickOn = !!quick;
+  useEffect(() => { if (quickOn) { setScenesOpen(false); setCreaturesOpen(false); } }, [quickOn]);
+  useEffect(() => { if (TOOL_OPTS.has(tool)) { setScenesOpen(false); setCreaturesOpen(false); setQuick(null); } }, [tool]);
 
   // a player who stops being the DM must not keep a DM-only tool selected
   useEffect(() => {
@@ -140,9 +201,8 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       setPings((prev) => [...prev, p]);
       setTimeout(() => setPings((prev) => prev.filter((x) => x.id !== p.id)), 2600);
     };
-    const onTokenMoved = ({ tokenId, x, y }) => {
-      setPosOverlay((prev) => ({ ...prev, [tokenId]: { x, y, ts: Date.now() } }));
-    };
+    // The server said no to something we did (moved too far, out of turn).
+    const onRejected = ({ error }) => error && setFlash({ text: error, id: Math.random() });
     const onStroke = ({ sceneId, stroke }) => {
       setStrokeOverlay((prev) => ({ ...prev, [sceneId]: [...(prev[sceneId] || []), stroke] }));
     };
@@ -155,13 +215,6 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       setStrokeOverlay((prev) => ({ ...prev, [sceneId]: (prev[sceneId] || []).filter((s) => ids && !ids.includes(s.id)) }));
       if (ids) forget(sceneId, ids);
       else setStrokeGone((prev) => ({ ...prev, [sceneId]: 'all' }));
-    };
-    const onPainted = ({ sceneId, cells }) => {
-      setCellOverlay((prev) => {
-        const next = { ...(prev[sceneId] || {}) };
-        for (const c of cells) next[`${c.x},${c.y}`] = c.ch;
-        return { ...prev, [sceneId]: next };
-      });
     };
     const onCombatEvent = (ev) => {
       if (ev.kind === 'monsterAttackRoll' && ev.roll) {
@@ -179,34 +232,28 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
     };
     socket.on('rollResult', onRoll);
     socket.on('ping', onPingEv);
-    socket.on('tokenMoved', onTokenMoved);
+    socket.on('actionRejected', onRejected);
     socket.on('strokeAdded', onStroke);
     socket.on('strokesErased', onErased);
     socket.on('drawingsCleared', onCleared);
-    socket.on('scenePainted', onPainted);
     socket.on('combatEvent', onCombatEvent);
     return () => {
       socket.off('rollResult', onRoll);
       socket.off('ping', onPingEv);
-      socket.off('tokenMoved', onTokenMoved);
+      socket.off('actionRejected', onRejected);
       socket.off('strokeAdded', onStroke);
       socket.off('strokesErased', onErased);
       socket.off('drawingsCleared', onCleared);
-      socket.off('scenePainted', onPainted);
       socket.off('combatEvent', onCombatEvent);
     };
   }, []);
 
-  // clear stale overlays once the authoritative state catches up
+  // clear stale drawing overlays once the authoritative state catches up
   useEffect(() => {
-    setPosOverlay((prev) => {
-      const now = Date.now();
-      const next = {};
-      for (const [id, p] of Object.entries(prev)) if (now - p.ts < 1200) next[id] = p;
-      return next;
-    });
-    setStrokeGone({}); // the room state is the truth again
+    // (the same object back when there's nothing to clear: no extra render per patch)
+    setStrokeGone((prev) => (Object.keys(prev).length ? {} : prev)); // the room state is the truth again
     setStrokeOverlay((prev) => {
+      if (!Object.keys(prev).length) return prev;
       const next = {};
       for (const [sceneId, strokes] of Object.entries(prev)) {
         const scene = state.scenes.find((s) => s.id === sceneId);
@@ -217,51 +264,26 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
       }
       return next;
     });
-    setCellOverlay((prev) => {
-      const next = {};
-      for (const [sceneId, cells] of Object.entries(prev)) {
-        const scene = state.scenes.find((s) => s.id === sceneId);
-        if (!scene) continue;
-        const pending = {};
-        for (const [key, ch] of Object.entries(cells)) {
-          const [x, y] = key.split(',').map(Number);
-          if (charAt(scene, x, y) !== ch) pending[key] = ch;
-        }
-        if (Object.keys(pending).length) next[sceneId] = pending;
-      }
-      return next;
-    });
-  }, [state]);
+  }, [state.scenes]);
 
-  // merge optimistic overlays into the scene we actually render
+  // merge drawings not yet in the room state into the scene we render
   const renderScene = useMemo(() => {
     if (!activeScene) return null;
-    const tokens = activeScene.tokens.map((t) => (posOverlay[t.id] ? { ...t, x: posOverlay[t.id].x, y: posOverlay[t.id].y } : t));
+    const pendingStrokes = strokeOverlay[activeScene.id];
     const gone = strokeGone[activeScene.id];
+    if (!pendingStrokes?.length && !gone) return activeScene; // same object: nothing below redraws for nothing
     const seenIds = new Set();
     const strokes = [...(activeScene.strokes || []), ...(strokeOverlay[activeScene.id] || [])].filter((st) => {
       if (seenIds.has(st.id) || gone === 'all' || (gone && gone.has(st.id))) return false;
       seenIds.add(st.id);
       return true;
     });
-    let cells = activeScene.cells;
-    const pending = cellOverlay[activeScene.id];
-    if (pending && Object.keys(pending).length && cells) {
-      const rows = cells.map((r) => r.split(''));
-      for (const [key, ch] of Object.entries(pending)) {
-        const [x, y] = key.split(',').map(Number);
-        if (rows[y] && rows[y][x] !== undefined) rows[y][x] = ch;
-      }
-      cells = rows.map((r) => r.join(''));
-    }
-    return { ...activeScene, tokens, strokes, cells };
-  }, [activeScene, posOverlay, strokeOverlay, strokeGone, cellOverlay]);
+    return { ...activeScene, strokes };
+  }, [activeScene, strokeOverlay, strokeGone]);
 
   const charSheets = useMemo(() => {
     const out = {};
-    for (const [id, sheet] of Object.entries(state.charSheets || {})) {
-      out[id] = { ...sheet, derived: deriveSheet(sheet) };
-    }
+    for (const [id, sheet] of Object.entries(state.charSheets || {})) out[id] = withDerived(sheet);
     return out;
   }, [state.charSheets]);
 
@@ -292,7 +314,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   useEffect(() => {
     if (!myTurn) return undefined;
     const onKey = (e) => {
-      if (e.key !== 'Enter' || e.repeat || /input|textarea|select/i.test(document.activeElement?.tagName || '')) return;
+      if (!matches(e, 'turn.end') || e.repeat || isTyping() || document.activeElement?.tagName === 'BUTTON') return;
       socket.emit('nextTurn');
     };
     window.addEventListener('keydown', onKey);
@@ -323,39 +345,83 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   // The sheet arrives with the `derived` it was opened with; recompute it so the
   // server (the auto-DM reads derived.ac) never sees values one edit stale.
   const updateSheet = useCallback((characterId) => (sheet) => socket.emit('updateSheet', { characterId, sheet: { ...sheet, derived: deriveSheet(sheet) } }), []);
-  const announce = useCallback((text) => socket.emit('sendChatMessage', { text }), []);
+  const announce = useCallback((text) => onSendChat(text), [onSendChat]);
 
-  // Undo for building: each paint remembers what it covered.
-  const undoStack = useRef([]);
-  const paintCells = useCallback(
-    (cells, { undoing } = {}) => {
-      if (!activeScene) return;
-      if (!undoing) {
-        const before = cells.map((c) => ({ x: c.x, y: c.y, ch: charAt(renderScene || activeScene, c.x, c.y) })).filter((b, i) => b.ch !== cells[i].ch);
-        if (before.length) { undoStack.current.push({ sceneId: activeScene.id, cells: before }); if (undoStack.current.length > 60) undoStack.current.shift(); }
+  // Paint onto a scene: shown at once (sync.js predicts it), sent as one delta.
+  // On the level picked in the builder (build.level), if the scene has it;
+  // a stamp replaces what is there (data/layers.js). opts: { level, replace }.
+  const paintOn = useCallback((sceneId, cells, opts = {}) => {
+    socket.emit('paintScene', { sceneId, cells, ...(opts.level ? { level: opts.level } : {}), ...(opts.replace ? { replace: true } : {}) });
+  }, []);
+  const paintCells = useCallback((cells, opts = {}) => {
+    if (!activeScene) return;
+    const level = 'level' in opts ? opts.level : (activeScene.levels || []).some((l) => l.id === build?.level) ? build.level : null;
+    paintOn(activeScene.id, cells, { level, replace: opts.replace ?? build?.shape === 'stamp' });
+  }, [activeScene, paintOn, build]);
+
+  const say = useCallback((text) => {
+    setFlash({ text: text.charAt(0).toUpperCase() + text.slice(1), id: Math.random() });
+  }, []);
+  useEffect(() => {
+    if (!flash) return undefined;
+    const t = setTimeout(() => setFlash(null), 2800);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  // Undo / redo for every edit the DM makes to a scene (editHistory.js). It
+  // reads the scene straight from sync.js, which already includes every edit
+  // sent a moment ago (even before a render), so quick repeated Ctrl+Z steps
+  // back exactly one edit at a time.
+  const live = useRef({});
+  live.current = { state };
+  const liveState = () => getView() || live.current.state;
+  const history = useEditHistory({
+    enabled: isDM,
+    getScene: (id) => liveState().scenes.find((sc) => sc.id === id),
+    getActiveSceneId: () => liveState().activeSceneId || liveState().scenes[0]?.id,
+    findTokenScene: (tokenId) => {
+      for (const sc of liveState().scenes) {
+        const token = sc.tokens.find((t) => t.id === tokenId);
+        if (token) return { scene: sc, token };
       }
-      setCellOverlay((prev) => {
-        const next = { ...(prev[activeScene.id] || {}) };
-        for (const c of cells) next[`${c.x},${c.y}`] = c.ch;
-        return { ...prev, [activeScene.id]: next };
-      });
-      socket.emit('paintScene', { sceneId: activeScene.id, cells });
+      return null;
     },
-    [activeScene, renderScene]
-  );
+    paint: paintOn,
+  });
+  const { undo: histUndo, redo: histRedo } = history;
+  const doUndo = useCallback(() => { const l = histUndo(); say(l ? `Undone: ${l}` : 'Nothing to undo here'); }, [histUndo, say]);
+  const doRedo = useCallback(() => { const l = histRedo(); say(l ? `Redone: ${l}` : 'Nothing to redo'); }, [histRedo, say]);
   useEffect(() => {
     if (!isDM) return undefined;
     const onKey = (e) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || /input|textarea|select/i.test(document.activeElement?.tagName || '')) return;
-      const last = undoStack.current[undoStack.current.length - 1];
-      if (!last || last.sceneId !== activeScene?.id) return;
-      e.preventDefault();
-      undoStack.current.pop();
-      paintCells(last.cells, { undoing: true });
+      if (isTyping()) return;
+      if (matches(e, 'edit.undo')) { e.preventDefault(); doUndo(); }
+      else if (matches(e, 'edit.redo')) { e.preventDefault(); doRedo(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isDM, activeScene?.id, paintCells]);
+  }, [isDM, doUndo, doRedo]);
+
+  // Fog by the room: a click reveals (or hides) the whole room or open area.
+  const revealCells = useCallback((cells, mode) => {
+    if (!activeScene) return;
+    if (mode === 'room' || mode === 'roomHide') {
+      const seeds = cells.map((k) => { const [x, y] = k.split(',').map(Number); return { x, y }; });
+      const isWall = (ch) => TILES[ch]?.cat === 'wall';
+      const isDoor = (ch) => TILES[ch]?.group === 'Doors' && ch !== '/';
+      cells = roomAround(renderScene || activeScene, seeds, isWall, isDoor);
+      mode = mode === 'room' ? 'reveal' : 'hide';
+    }
+    socket.emit('revealFog', { sceneId: activeScene.id, cells, mode });
+  }, [activeScene, renderScene]);
+
+  // Another one like this, next to it (a fresh copy: full HP, no conditions).
+  const duplicateToken = useCallback((t) => {
+    const { id, x, y, dead, conditions, patrol, patrolIndex, ...rest } = t;
+    const base = (t.label || '').replace(/\s+\d+$/, '');
+    const n = (renderScene?.tokens || []).filter((o) => (o.label || '').replace(/\s+\d+$/, '') === base).length + 1;
+    socket.emit('addTokens', { sceneId: activeScene.id, tokens: [{ ...rest, label: `${base} ${n}`.slice(0, 40), hp: t.maxHp ?? t.hp, conditions: [] }], at: { x, y } });
+  }, [renderScene, activeScene]);
 
   const selectCharacter = async (charLike) => {
     let id = charLike.id;
@@ -383,11 +449,22 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   };
 
   // ---------- context menus ----------
-  const tokenContext = (token, x, y) => {
-    const items = [];
+  // `extra`: items the map adds first (attack, help, select, doors).
+  const tokenContext = (token, x, y, extra = []) => {
+    const items = [...extra];
     const isMine = token.ownerId === user.id;
     if (token.kind === 'pc' && token.characterId) {
       items.push({ label: 'Open sheet', icon: <ScrollIcon size={15} />, onClick: () => setSheetChar(token.characterId) });
+      if (isDM) items.push({ label: 'Give an item...', icon: <BackpackIcon size={15} />, onClick: () => setGiveTo({ characterId: token.characterId, name: charSheets[token.characterId]?.name || token.label }) });
+    }
+    // a merchant: anyone can browse; the DM stocks it
+    if (token.kind !== 'pc' && token.shop && !token.dead && (isDM || token.shop.open !== false)) {
+      items.push({ label: isDM ? `${token.label}'s shop...` : `Shop with ${token.label}...`, icon: <CoinsIcon size={15} />, onClick: () => setShopId(token.id) });
+    } else if (isDM && token.kind === 'npc' && !token.shop) {
+      items.push({ label: 'Make them a merchant...', icon: <CoinsIcon size={15} />, onClick: () => { socket.emit('updateToken', { tokenId: token.id, patch: { shop: { open: true, items: [] } } }); setShopId(token.id); } });
+    }
+    if (isDM && token.kind !== 'pc') {
+      items.push({ label: 'HP, conditions, hide...', icon: <HeartIcon size={15} />, onClick: () => setQuickEdit({ tokenId: token.id, x, y }) });
     }
     if (token.kind === 'monster' && token.monsterIndex) {
       items.push({ label: 'Stat block', icon: <BookIcon size={15} />, onClick: () => setStatblockToken(token) });
@@ -401,6 +478,10 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           if (v !== null && v !== '') socket.emit('setInitiative', { tokenId: token.id, value: parseInt(v, 10) || 0, name: token.label });
         },
       });
+    }
+    if (isDM && state.combat.active && token.kind === 'npc' && !token.dead && !state.combat.order.some((o) => o.tokenId === token.id)) {
+      // friendly folk sit fights out unless the DM brings them in
+      items.push({ label: 'Add to the fight (roll initiative)', icon: <LightningIcon size={15} />, onClick: () => socket.emit('addToInitiative', { tokenId: token.id }, (r) => r?.error && say(r.error)) });
     }
     if (isDM) {
       if (token.kind !== 'pc') {
@@ -450,13 +531,14 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
         icon: <ExpandIcon size={15} />,
         onClick: () => socket.emit('updateToken', { tokenId: token.id, patch: { size: token.size >= 3 ? 1 : token.size + 1 } }),
       });
+      if (token.kind !== 'pc') items.push({ label: 'Another like this', icon: <CopyIcon size={15} />, onClick: () => duplicateToken(token) });
       items.push({ label: 'Remove', icon: <XIcon size={15} />, danger: true, onClick: () => socket.emit('removeToken', { tokenId: token.id }) });
     }
     if (items.length) setCtx({ x, y, items });
   };
 
-  const cellContext = (cell, x, y) => {
-    const items = [];
+  const cellContext = (cell, x, y, extra = []) => {
+    const items = [...extra];
     if (myToken) {
       items.push({
         label: 'Move my token here',
@@ -468,6 +550,9 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
     if (isDM) {
       items.push({ divider: true });
       items.push({ header: 'Place here' });
+      items.push({ label: 'A fight...', icon: <SwordIcon size={15} />, onClick: () => setQuick({ tab: 'fight', at: cell }) });
+      items.push({ label: 'Someone (one click)...', icon: <UsersIcon size={15} />, onClick: () => setQuick({ tab: 'people', at: cell }) });
+      items.push({ label: 'Loot, a trap, a secret...', icon: <CoinsIcon size={15} />, onClick: () => setQuick({ tab: 'things', at: cell }) });
       items.push({
         label: 'Monster...',
         icon: <SkullIcon size={15} />,
@@ -518,6 +603,17 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
   const guided = state.mode === 'guided';
   const showDm = isDM && (!guided || dmTools);
   const visibleTools = TOOLS.filter((t) => !t.dm || showDm);
+  // A tool's options hide while Scenes / Creatures / Quick has the space.
+  const leftPanelOpen = showDm && !isMobile && (scenesOpen || creaturesOpen || !!quick);
+  // Pressing the tool you're on: bring its options back if a panel hid them,
+  // otherwise put it down and go back to Select.
+  const pickTool = (key) => {
+    const on = tool === key || (key === 'draw' && tool === 'erase');
+    if (!on) return setTool(key);
+    if (TOOL_OPTS.has(tool) && leftPanelOpen) { setScenesOpen(false); setCreaturesOpen(false); setQuick(null); return undefined; }
+    if (key !== 'select') setTool('select');
+    return undefined;
+  };
   const openPrep = (tab) => {
     setPrepTab(tab);
     setShowPrep(true);
@@ -548,7 +644,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             </button>
           )}
           {showDm && (
-            <button className={`small-btn ${showDmPanel ? 'primary-btn' : ''}`} onClick={() => setShowDmPanel((v) => !v)} title="Talk to the table (narrate, whisper, handouts, ask for rolls) and set the mood">
+            <button className={`small-btn ${showDmPanel ? 'primary-btn' : ''}`} onClick={() => { setShowDmPanel((v) => !v); setSelectedObjectId(null); }} title="Talk to the table (narrate, whisper, handouts, ask for rolls) and set the mood">
               <CrownIcon size={13} /> <span className="hide-sm">Table</span>
             </button>
           )}
@@ -562,12 +658,24 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
               <MapIcon size={13} /> <span className="hide-sm">Prep</span>
             </button>
           )}
+          {((isDM && !guided) || previewing) && (
+            <button
+              className={`small-btn trn-viewas ${previewing ? 'primary-btn' : ''}`}
+              aria-pressed={previewing}
+              onClick={() => setViewAs(!previewing, { training: !!state.training })}
+              title={previewing ? 'Back to the DM view' : 'See the table as your players do: fog, no hidden creatures, no notes'}
+            >
+              <EyeIcon size={13} /> <span className="hide-sm">{previewing ? 'DM view' : 'Player view'}</span>
+            </button>
+          )}
           {!isMobile && <OverflowMenu
             items={[
               { label: 'Rules quick reference', icon: <BookIcon size={14} />, onClick: () => setShowReference(true) },
               { label: "Player's guide", icon: <BookIcon size={14} />, onClick: () => setShowGuide(true) },
+              { label: isDM && !guided ? 'DM handbook & practice round' : 'DM handbook', icon: <BookIcon size={14} />, onClick: () => window.dispatchEvent(new Event('dnd:handbook')) }, // Training.jsx
               webglOk && !isMobile && { label: view3d ? 'Switch to the flat 2D map' : 'Switch to the 3D world', icon: <MapIcon size={14} />, onClick: () => setView3d(!view3d) },
               { label: 'Sound', icon: <VolumeIcon size={14} />, hint: 'music, effects', onClick: () => setShowSound(true) },
+              { label: 'Controls & keys', icon: <HandIcon size={14} />, hint: 'rebind keys', onClick: () => window.dispatchEvent(new Event('dnd:keybinds')) }, // MapControls.jsx
               { label: 'Copy invite link', icon: <CopyIcon size={14} />, hint: code, onClick: copyInvite },
               (isDM || state.hostId === user.id) && { label: 'Campaign settings', icon: <GearIcon size={14} />, onClick: () => setShowSettings(true) },
               guided && isDM && { label: dmTools ? 'Hide the DM tools' : 'Show the DM tools', icon: <SkullIcon size={14} />, hint: 'monsters, maps, fog', onClick: () => setDmTools((v) => !v) },
@@ -579,7 +687,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
 
       {/* ---------- main area ---------- */}
       <div className="board-main">
-        {(isMobile || (showDm && creaturesOpen)) && <PartyPanel
+        {isMobile && <PartyPanel
           state={{ ...state, charSheets }}
           isDM={showDm}
           userId={user.id}
@@ -590,27 +698,66 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           onAddMonster={isDM ? () => setShowMonsters(true) : null}
         />}
 
-        <div className="map-area">
+        <div ref={mapAreaRef} className="map-area">
           {(!isMobile || mobilePane === 'map') && (
-            <div className="hud-topleft">
+            <div className="hud-topleft" ref={topLeftRef}>
               <PartyStrip state={state} charSheets={charSheets} userId={user.id} onOpenSheet={setSheetChar} tokens={activeScene?.tokens || []} turnTokenId={turnTokenId} />
-              {showDm && !isMobile && (
-                <button className={`hud-pill ${creaturesOpen ? 'on' : ''}`} onClick={() => setCreaturesOpen((o) => !o)} title="Creatures on this scene: HP, stat blocks, run a turn">
-                  Creatures {creatureCount > 0 && <b>{creatureCount}</b>}
-                </button>
+              {showDm && (
+                <div className="hud-dm-pills" role="group" aria-label="DM">
+                  <button className={`hud-pill ${scenesOpen ? 'on' : ''}`} aria-expanded={scenesOpen} onClick={() => { setScenesOpen((o) => !o); setQuick(null); setCreaturesOpen(false); }} title="Scenes: take the table somewhere else">
+                    <MapIcon size={13} /> <span>Scenes</span>
+                  </button>
+                  {!isMobile && (
+                    <button className={`hud-pill ${creaturesOpen ? 'on' : ''}`} aria-expanded={creaturesOpen} onClick={() => { setCreaturesOpen((o) => !o); setQuick(null); setScenesOpen(false); }} title="Creatures on this scene: HP, conditions, hide, run a turn">
+                      <SkullIcon size={13} /> <span>Creatures</span> <b className="hud-pill-count">{creatureCount || ''}</b>
+                    </button>
+                  )}
+                  <button className={`hud-pill ${quick ? 'on' : ''}`} aria-expanded={!!quick} onClick={() => { setQuick((q) => (q ? null : { tab: 'fight' })); setScenesOpen(false); }} title="Quick: drop a fight, a person, loot or a trap; new scenes from templates; reset or clear the scene">
+                    <WandIcon size={13} /> <span>Quick</span>
+                  </button>
+                  <PlaceHiddenPill />
+                </div>
               )}
             </div>
           )}
-          {showDm && state.scenes.length > 0 && (
+          {showDm && scenesOpen && (!isMobile || mobilePane === 'map') && (
             <SceneStrip
               scenes={state.scenes}
               activeId={state.activeSceneId}
-              open={sceneStripOpen}
-              onToggle={() => setSceneStripOpen(!sceneStripOpen)}
-              onGo={(id) => socket.emit('switchScene', { sceneId: id })}
-              onManage={() => openPrep('scenes')}
+              onClose={() => setScenesOpen(false)}
+              onGo={(id) => { socket.emit('switchScene', { sceneId: id }); setScenesOpen(false); }}
+              onManage={() => { setScenesOpen(false); openPrep('scenes'); }}
+              onTemplate={() => { setScenesOpen(false); setQuick({ tab: 'scene' }); }}
             />
           )}
+          {showDm && creaturesOpen && !isMobile && (
+            <CreaturesPanel
+              scene={renderScene}
+              say={say}
+              onClose={() => setCreaturesOpen(false)}
+              onStatBlock={setStatblockToken}
+              onQuickEdit={(t, r) => setQuickEdit({ tokenId: t.id, x: r.right + 8, y: r.top })}
+              onAddFight={() => { setQuick({ tab: 'fight' }); setScenesOpen(false); }}
+              onAddMonster={() => setShowMonsters(true)}
+            />
+          )}
+          {showDm && quick && (!isMobile || mobilePane === 'map') && (
+            <QuickDmPanel
+              state={state}
+              scene={renderScene}
+              charSheets={charSheets}
+              tab={quick.tab}
+              at={quick.at || null}
+              dialog={dialog}
+              say={say}
+              onTab={(tab) => setQuick((q) => ({ ...q, tab }))}
+              onClose={() => setQuick(null)}
+              onSelectObject={(id) => { setTool('secrets'); setSelectedObjectId(id); setQuick(null); }}
+              onPickStamp={(st) => { setBuild({ ...build, shape: 'stamp', stamp: st }); setTool('build'); say(`${st.name}: click the map to place it.`); }}
+              onCustomPlace={(kind) => { if (quick.at) pendingSpawn.current = quick.at; setPlaceToken({ kind }); setQuick(null); }}
+            />
+          )}
+          {flash && <div key={flash.id} className="dm-flash" role="status">{flash.text}</div>}
 
           <InitiativeBar
             state={state}
@@ -627,12 +774,15 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           />
 
           <ToolDock
+            history={showDm ? { ...history, onUndo: doUndo, onRedo: doRedo } : null}
             objKind={objKind}
             onObjKind={setObjKind}
             canClearAll={isDM}
             tools={visibleTools}
             tool={tool}
-            onTool={setTool}
+            onTool={pickTool}
+            onSetTool={setTool}
+            optionsHidden={leftPanelOpen}
             drawColor={drawColor}
             onDrawColor={setDrawColor}
             fogMode={fogMode}
@@ -640,6 +790,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             scene={activeScene}
             onFogToggle={() => socket.emit('updateScene', { sceneId: activeScene.id, patch: { fogEnabled: !activeScene.fogEnabled } })}
             onFogCoverAll={() => socket.emit('resetFog', { sceneId: activeScene.id, covered: true })}
+            onFogRevealAll={() => socket.emit('resetFog', { sceneId: activeScene.id, covered: false })}
             onClearDrawings={() => socket.emit('clearDrawings', { sceneId: activeScene.id })}
           />
 
@@ -657,14 +808,15 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
                 userId={user.id}
                 canMoveToken={canMoveToken}
                 pings={pings}
-                onMoveToken={(tokenId, x, y) => socket.emit('moveToken', { tokenId, x, y })}
+                onMoveToken={(tokenId, x, y, cost) => socket.emit('moveToken', { tokenId, x, y, cost })}
                 onTokenContext={tokenContext}
                 onCellContext={cellContext}
                 onTokenClick={(t) => {
                   if (t.kind === 'pc' && t.characterId) setSheetChar(t.characterId);
+                  else if (t.shop && !t.dead && (isDM || t.shop.open !== false)) setShopId(t.id); // a merchant: double-click to shop
                   else if (t.kind === 'monster' && (isDM || !t.hidden) && t.monsterIndex) setStatblockToken(t);
                 }}
-                onRevealCells={(cells, mode2) => socket.emit('revealFog', { sceneId: activeScene.id, cells, mode: mode2 })}
+                onRevealCells={revealCells}
                 onPing={(x, y) => socket.emit('ping', { x, y })}
                 onDrawStroke={(stroke) => socket.emit('drawStroke', { sceneId: activeScene.id, stroke })}
                 onEraseStrokes={(ids) => socket.emit('eraseStrokes', { sceneId: activeScene.id, ids })}
@@ -686,6 +838,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
                 }}
                 patrolDraft={patrolDraft}
                 onPatrolPoint={(c) => setPatrolDraft((d) => d && { ...d, pts: [...d.pts, { x: c.x, y: c.y }] })}
+                onTool={setTool}
               />
             </React.Suspense>
           ) : (
@@ -701,18 +854,20 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
               userId={user.id}
               canMoveToken={canMoveToken}
               pings={pings}
-              onMoveToken={(tokenId, x, y) => socket.emit('moveToken', { tokenId, x, y })}
+              onMoveToken={(tokenId, x, y, cost) => socket.emit('moveToken', { tokenId, x, y, cost })}
               onTokenContext={tokenContext}
               onCellContext={cellContext}
               onTokenClick={(t) => {
                 if (t.kind === 'pc' && t.characterId) setSheetChar(t.characterId);
+                else if (t.shop && !t.dead && (isDM || t.shop.open !== false)) setShopId(t.id); // a merchant: double-click to shop
                 else if (t.kind === 'monster' && (isDM || !t.hidden) && t.monsterIndex) setStatblockToken(t);
               }}
-              onRevealCells={(cells, mode2) => socket.emit('revealFog', { sceneId: activeScene.id, cells, mode: mode2 })}
+              onRevealCells={revealCells}
               onPing={(x, y) => socket.emit('ping', { x, y })}
               onDrawStroke={(stroke) => socket.emit('drawStroke', { sceneId: activeScene.id, stroke })}
               onEraseStrokes={(ids) => socket.emit('eraseStrokes', { sceneId: activeScene.id, ids })}
               onPaint={paintCells}
+              onBuildChange={setBuild}
               bottomInset={isMobile && tool === 'build' ? Math.round(window.innerHeight * 0.46) : 0}
             />
           )}
@@ -745,6 +900,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           )}
           {showDm && tool === 'secrets' && selectedObjectId && (activeScene.objects || []).some((o) => o.id === selectedObjectId) && (
             <ObjectEditor
+              key={selectedObjectId}
               object={(activeScene.objects || []).find((o) => o.id === selectedObjectId)}
               scenes={state.scenes}
               sceneId={activeScene.id}
@@ -784,9 +940,11 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             onBuildChange={setBuild}
             onClose={() => setTool('select')}
             onSceneUpdate={(patch) => socket.emit('updateScene', { sceneId: activeScene.id, patch })}
+            onPaint={paintCells}
+            history={{ ...history, onUndo: doUndo, onRedo: doRedo }}
             onReshape={({ w, h, floor, cells: given }) => {
               const cells = given || resizeCells(activeScene, w, h, floor);
-              socket.emit('reshapeScene', { sceneId: activeScene.id, w, h, floor, cells });
+              socket.emit('reshapeScene', { sceneId: activeScene.id, w, h, floor, cells, fresh: !!given });
             }}
           />
         )}
@@ -799,7 +957,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           isDM={isDM}
           collapsed={!chatOpen && !isMobile}
           onToggle={() => setChatOpen(!chatOpen)}
-          onSend={(text, whisperTo) => socket.emit('sendChatMessage', { text, whisperTo })}
+          onSend={onSendChat}
           onRollFormula={(formula, secret) => doRoll({ formula, label: formula, secret })}
         />
       </div>
@@ -871,6 +1029,15 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
 
       {/* ---------- modals ---------- */}
       {ctx && <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} />}
+      {quickEdit && renderScene.tokens.some((t) => t.id === quickEdit.tokenId) && (
+        <TokenQuickEdit
+          token={renderScene.tokens.find((t) => t.id === quickEdit.tokenId)}
+          anchor={quickEdit}
+          onClose={() => setQuickEdit(null)}
+          onDuplicate={() => duplicateToken(renderScene.tokens.find((t) => t.id === quickEdit.tokenId))}
+          notes={isDM && state.mode === 'dm'}
+        />
+      )}
 
       {sheetChar && charSheets[sheetChar] && (
         <ModalOverlay onClose={() => setSheetChar(null)} className="sheet-overlay">
@@ -884,6 +1051,16 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
             onSheetChange={updateSheet(sheetChar)}
             onRoll={({ formula, label, mode }) => sheetRoll({ formula, label, mode })}
             onAnnounce={announce}
+            leveling={state.mode === 'guided' ? 'xp' : state.settings?.leveling || 'xp'}
+            canAlwaysLevel={state.mode === 'dm' && state.dmId === user.id}
+            dmNote={isDM && state.mode === 'dm' ? <DmNote key={sheetChar} characterId={sheetChar} value={state.dmNotes?.[sheetChar]} /> : null}
+            castTargets={sheetChar === myCharacterId && myToken ? renderScene.tokens.filter((t) => (t.kind === 'monster' ? !t.dead && (isDM || !t.hidden) : t.kind === 'pc' || t.kind === 'npc')).map((t) => ({ id: t.id, label: t.id === myToken.id ? `${t.label} (you)` : t.label, friendly: t.kind !== 'monster' })) : null}
+            onCastAt={({ spellIndex, slot, targetId, heal }) => {
+              setSheetChar(null);
+              // the server checks range, your action and the slot, then spends it
+              if (heal) socket.emit('heroAction', { actorTokenId: myToken.id, targetTokenId: targetId, action: { ref: `s:${spellIndex}`, slot } }, (r) => r?.error && say(r.error));
+              else socket.emit('attackToken', { attackerTokenId: myToken.id, targetTokenId: targetId, attack: { ref: `s:${spellIndex}`, slot, style: 'spell' } }, (r) => r?.error && say(r.error));
+            }}
           />
         </ModalOverlay>
       )}
@@ -898,9 +1075,10 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           sceneMonsters={renderScene.tokens.filter((t) => t.kind === 'monster' && !t.dead)}
           onRoll={({ formula, label }) => doRoll({ formula, label, characterName: null })}
           onAddToken={(token) => {
-            const spawn = pendingSpawn.current || findFreeCell(renderScene);
+            const spawn = pendingSpawn.current || findFreeCell(renderScene, nearParty(renderScene), 2);
             pendingSpawn.current = null;
-            socket.emit('addToken', { sceneId: activeScene.id, token: { ...token, x: spawn.x, y: spawn.y } });
+            socket.emit('addToken', { sceneId: activeScene.id, token: withPlaceHidden({ ...token, x: spawn.x, y: spawn.y }) });
+            say(`${token.label || 'A monster'} is on the map near the party: drag it where you want it.`);
           }}
         />
       )}
@@ -920,6 +1098,12 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
           }}
         />
       )}
+
+      {giveTo && <GiveItemModal characterId={giveTo.characterId} heroName={giveTo.name} onClose={() => setGiveTo(null)} onDone={(it) => say(`${it.name} is in ${giveTo.name}'s gear.`)} />}
+      {shopId && (() => {
+        const t = renderScene?.tokens?.find((x) => x.id === shopId);
+        return t ? <ShopModal token={t} isDM={isDM} mySheet={mySheet} onClose={() => setShopId(null)} /> : null;
+      })()}
 
       {statblockToken && (
         <ModalOverlay onClose={() => setStatblockToken(null)}>
@@ -1024,18 +1208,30 @@ function SceneCaption({ scene, isDM, story, onOpenStory, onEditScene }) {
 }
 
 /* ---------------- tool dock ---------------- */
+// A rail of tools down the left edge. A tool's options open beside it as a
+// flyout lined up with its button, so nothing in the rail ever moves.
 
 function ToolDock({
-  objKind, onObjKind, canClearAll, tools, tool, onTool, drawColor, onDrawColor, fogMode, onFogMode, scene, onFogToggle, onFogCoverAll, onClearDrawings,
+  objKind, onObjKind, canClearAll, tools, tool, onTool, drawColor, onDrawColor, fogMode, onFogMode, scene, onFogToggle, onFogCoverAll, onFogRevealAll, onClearDrawings, history, optionsHidden, onSetTool = onTool,
 }) {
+  useKeybinds(); // titles show the current keys
+  const railRef = useRef(null);
+  const [optTop, setOptTop] = useState(0);
+  useLayoutEffect(() => {
+    const on = railRef.current?.querySelector('.tool-btn.on');
+    setOptTop(on ? on.offsetTop : 0); // offsetParent is the dock itself
+  }, [tool, tools.length]);
+  const fogBtn = (mode, label, title) => (
+    <button className={`small-btn ${fogMode === mode ? 'primary-btn' : 'ghost-btn'}`} aria-pressed={fogMode === mode} title={title} onClick={() => onFogMode(mode)}>{label}</button>
+  );
   return (
-    <div className="tool-dock">
-      <div className="tool-dock-main" role="toolbar" aria-label="Map tools">
-        {tools.map(({ key, name, hint, Icon, shortcut }) => (
+    <div className="tool-dock" style={{ '--opt-top': `${optTop}px` }}>
+      <div className="tool-dock-main" role="toolbar" aria-label="Map tools" ref={railRef}>
+        {tools.map(({ key, name, hint, Icon }) => (
           <button
             key={key}
-            className={`tool-btn ${tool === key ? 'on' : ''}`}
-            title={`${name} (${shortcut}) - ${hint}`}
+            className={`tool-btn ${tool === key || (key === 'draw' && tool === 'erase') ? 'on' : ''}`}
+            title={`${name}${firstKey(`tool.${key}`) ? ` (${firstKey(`tool.${key}`)})` : ''} - ${hint}`}
             aria-label={name}
             aria-pressed={tool === key}
             onClick={() => onTool(key)}
@@ -1044,9 +1240,19 @@ function ToolDock({
             <span className="tool-btn-label">{name}</span>
           </button>
         ))}
+        {history && (
+          <div className="tool-history" role="group" aria-label="Undo and redo">
+            <button className="tool-btn" disabled={!history.canUndo} title={history.canUndo ? `Undo ${history.undoLabel} (${firstKey('edit.undo')})` : 'Nothing to undo on this scene'} aria-label="Undo" onClick={history.onUndo}>
+              <UndoIcon size={18} /><span className="tool-btn-label">Undo</span>
+            </button>
+            <button className="tool-btn" disabled={!history.canRedo} title={history.canRedo ? `Redo ${history.redoLabel} (${firstKey('edit.redo')})` : 'Nothing to redo'} aria-label="Redo" onClick={history.onRedo}>
+              <RedoIcon size={18} /><span className="tool-btn-label">Redo</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {tool === 'draw' && (
+      {!optionsHidden && tool === 'draw' && (
         <div className="tool-options" role="group" aria-label="Drawing options">
           {DRAW_COLORS.map((c) => (
             <button
@@ -1058,22 +1264,22 @@ function ToolDock({
               onClick={() => onDrawColor(c)}
             />
           ))}
-          <button className="small-btn ghost-btn" onClick={() => onTool('erase')} title="Erase drawings">
+          <button className="small-btn ghost-btn" onClick={() => onSetTool('erase')} title="Erase drawings">
             <EraserIcon size={13} /> Erase
           </button>
         </div>
       )}
 
-      {tool === 'erase' && (
+      {!optionsHidden && tool === 'erase' && (
         <div className="tool-options">
-          <button className="small-btn ghost-btn" onClick={() => onTool('draw')}>
+          <button className="small-btn ghost-btn" onClick={() => onSetTool('draw')}>
             <PenIcon size={13} /> Back to drawing
           </button>
           <button className="small-btn danger-btn" onClick={onClearDrawings}>{canClearAll ? 'Clear all' : 'Clear mine'}</button>
         </div>
       )}
 
-      {tool === 'secrets' && (
+      {!optionsHidden && tool === 'secrets' && (
         <div className="tool-options dm-kinds" role="group" aria-label="What to place">
           {OBJECT_KINDS.map((k) => (
             <button key={k.key} className={`small-btn ${objKind === k.key ? 'primary-btn' : 'ghost-btn'}`} title={k.hint} onClick={() => onObjKind(k.key)}>{k.name}</button>
@@ -1081,18 +1287,20 @@ function ToolDock({
         </div>
       )}
 
-      {tool === 'fog' && (
-        <div className="tool-options" role="group" aria-label="Fog options">
-          <button className={`small-btn ${fogMode === 'reveal' ? 'primary-btn' : 'ghost-btn'}`} aria-pressed={fogMode === 'reveal'} onClick={() => onFogMode('reveal')}>
-            Reveal
-          </button>
-          <button className={`small-btn ${fogMode === 'hide' ? 'primary-btn' : 'ghost-btn'}`} aria-pressed={fogMode === 'hide'} onClick={() => onFogMode('hide')}>
-            Re-hide
-          </button>
+      {!optionsHidden && tool === 'fog' && (
+        <div className="tool-options fog-options" role="group" aria-label="Fog options">
+          <span className="tool-options-label">Brush</span>
+          {fogBtn('reveal', 'Reveal', 'Drag to reveal squares')}
+          {fogBtn('hide', 'Re-hide', 'Drag to hide squares again')}
+          <span className="tool-options-label">Room</span>
+          {fogBtn('room', 'Reveal', 'Click a room to reveal all of it, up to its walls and doors')}
+          {fogBtn('roomHide', 'Hide', 'Click a room to hide all of it again')}
+          <span className="tool-options-label">Scene</span>
           <button className="small-btn ghost-btn" onClick={onFogToggle} title="Turn fog of war on or off for this scene">
             Fog: {scene.fogEnabled ? 'on' : 'off'}
           </button>
-          <button className="small-btn ghost-btn" onClick={onFogCoverAll}>Cover all</button>
+          <button className="small-btn ghost-btn" onClick={onFogCoverAll}>Hide all</button>
+          <button className="small-btn ghost-btn" onClick={onFogRevealAll}>Reveal all</button>
         </div>
       )}
 
@@ -1100,38 +1308,39 @@ function ToolDock({
   );
 }
 
-/* ---------------- scene strip ---------------- */
+/* ---------------- scene list ---------------- */
+// Dropped from the Scenes pill: every scene, one click to take the table there.
 
-function SceneStrip({ scenes, activeId, open, onToggle, onGo, onManage }) {
+function SceneStrip({ scenes, activeId, onClose, onGo, onManage, onTemplate }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target) && !e.target.closest?.('.hud-dm-pills')) onClose(); };
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('pointerdown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onKey); };
+  }, [onClose]);
   return (
-    <div className={`scene-strip ${open ? '' : 'closed'}`}>
-      <button className="scene-strip-toggle" onClick={onToggle} aria-expanded={open} title={open ? 'Hide the scene bar' : 'Show the scene bar'}>
-        <MapIcon size={13} />
-        {open ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
-      </button>
-      {open && (
-        <div className="scene-strip-list" role="tablist" aria-label="Scenes">
-          {scenes.map((s) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={s.id === activeId}
-              className={`scene-chip ${s.id === activeId ? 'on' : ''}`}
-              title={s.id === activeId ? `${s.name} (live)` : `Take the table to ${s.name}`}
-              onClick={() => s.id !== activeId && onGo(s.id)}
-            >
-              <SceneThumb scene={s} w={78} h={48} />
-              <span>{s.name}</span>
-            </button>
-          ))}
-          <button className="scene-chip add" onClick={onManage} title="Scenes and story prep">
-            <span className="scene-chip-add-box">
-              <PlusIcon size={16} />
-            </span>
-            <span>Prep</span>
+    <div ref={ref} className="scene-flyout panel" role="dialog" aria-label="Scenes">
+      <div className="scene-strip-list" role="tablist" aria-label="Scenes">
+        {scenes.map((s) => (
+          <button
+            key={s.id}
+            role="tab"
+            aria-selected={s.id === activeId}
+            className={`scene-chip ${s.id === activeId ? 'on' : ''}`}
+            title={s.id === activeId ? `${s.name} (live)` : `Take the table to ${s.name}`}
+            onClick={() => (s.id !== activeId ? onGo(s.id) : onClose())}
+          >
+            <SceneThumb scene={s} w={78} h={48} />
+            <span>{s.name}</span>
           </button>
-        </div>
-      )}
+        ))}
+      </div>
+      <div className="scene-flyout-foot">
+        <button className="small-btn" onClick={onTemplate}><WandIcon size={12} /> New from a template</button>
+        <button className="small-btn ghost-btn" onClick={onManage}><PlusIcon size={12} /> Prep: all scenes</button>
+      </div>
     </div>
   );
 }
@@ -1143,7 +1352,7 @@ function PlaceTokenModal({ kind, onClose, onPlace }) {
   const [label, setLabel] = useState(isNpc ? 'Villager' : 'Objective');
   const [art, setArt] = useState(isNpc ? 'humanoid' : 'marker');
   const [color, setColor] = useState(isNpc ? NPC_COLORS[0] : '#8a7448');
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(getPlaceHidden);
 
   return (
     <ModalOverlay onClose={onClose}>
@@ -1221,6 +1430,7 @@ function MoreSheet({ isDM, showDm, isHost, hasSheet, onClose, onSheet, onMonster
     showDm && { label: 'Story outline', Icon: ScrollIcon, onClick: onStory },
     { label: 'Rules reference', Icon: BookIcon, onClick: onRules },
     { label: "Player's guide", Icon: BookIcon, onClick: onGuide },
+    { label: isDM && !guided ? 'DM handbook & practice round' : 'DM handbook', Icon: BookIcon, onClick: () => { window.dispatchEvent(new Event('dnd:handbook')); onClose(); } }, // Training.jsx
     (isDM || isHost) && { label: 'Campaign settings', Icon: GearIcon, onClick: onSettings },
     guided && isDM && { label: showDm ? 'Hide the DM tools' : 'Show the DM tools', Icon: SkullIcon, onClick: onToggleDm },
   ].filter(Boolean);
@@ -1303,7 +1513,7 @@ function CharacterPicker({ onPick, onBuild, canClose, onClose }) {
 
 function SettingsModal({ state, user, isDM, dialog, onClose }) {
   const isHost = state.hostId === user.id;
-  const [name, setName] = useState(state.name);
+  const [name, setName, flushName] = useAutoSave({ key: `${state.code}:name`, value: state.name, save: (v) => v.trim() && socket.emit('renameCampaign', { name: v.trim() }) });
   return (
     <ModalOverlay onClose={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -1318,10 +1528,7 @@ function SettingsModal({ state, user, isDM, dialog, onClose }) {
             <>
               <label className="field-label" htmlFor="campaign-rename">Campaign name</label>
               <div className="row">
-                <input id="campaign-rename" value={name} onChange={(e) => setName(e.target.value)} className="grow" maxLength={60} />
-                <button className="small-btn" disabled={!name.trim() || name === state.name} onClick={() => socket.emit('renameCampaign', { name: name.trim() })}>
-                  <CheckIcon size={12} /> Save
-                </button>
+                <input id="campaign-rename" value={name} onChange={(e) => setName(e.target.value)} onBlur={flushName} className="grow" maxLength={60} />
               </div>
             </>
           )}
@@ -1334,6 +1541,13 @@ function SettingsModal({ state, user, isDM, dialog, onClose }) {
                   onChange={(e) => socket.emit('updateSettings', { playersCanMoveAny: e.target.checked })}
                 />
                 Players can move any token
+              </label>
+              <label className="row mt small" title="XP: heroes level up when their XP reaches the next threshold. Milestone: they level up when you grant it.">
+                Levelling{' '}
+                <select value={state.settings?.leveling === 'milestone' ? 'milestone' : 'xp'} onChange={(e) => socket.emit('updateSettings', { leveling: e.target.value })}>
+                  <option value="xp">By XP (award XP after fights)</option>
+                  <option value="milestone">Milestone (you grant levels)</option>
+                </select>
               </label>
               <div className="row mt wrap">
                 <button
@@ -1348,9 +1562,10 @@ function SettingsModal({ state, user, isDM, dialog, onClose }) {
                 </button>
                 <button
                   className="small-btn"
-                  onClick={() => socket.emit('announce', { text: 'The DM says: level up! Open your sheet and press the Level button.', type: 'reward' })}
+                  title="Every hero at the table may go up one level (milestone levelling, or a reward)"
+                  onClick={() => socket.emit('grantLevel', {}, (r) => r?.error && dialog.alert(r.error))}
                 >
-                  <TrophyIcon size={12} /> Announce level-up
+                  <TrophyIcon size={12} /> Grant a level
                 </button>
               </div>
             </>
@@ -1388,6 +1603,8 @@ function SettingsModal({ state, user, isDM, dialog, onClose }) {
           </div>
         </div>
         <div className="modal-actions">
+          <SaveStatus />
+          <span className="grow" />
           <button className="primary-btn" onClick={onClose}>Done</button>
         </div>
       </div>
@@ -1404,11 +1621,19 @@ function resizeCells(scene, w, h, floor) {
   return Array.from({ length: h }, (_, y) => String(rows[y] || '').padEnd(w, pad).slice(0, w));
 }
 
-function findFreeCell(scene) {
-  const cx = Math.floor(scene.grid.w / 2);
-  const cy = Math.floor(scene.grid.h / 2);
+// Where a creature added from the library lands: a couple of squares from
+// the party, so it shows up where the action is (or where the DM is looking).
+function nearParty(scene) {
+  const heroes = scene.tokens.filter((t) => t.kind === 'pc' && !t.dead);
+  if (!heroes.length) return viewCell(scene);
+  return { x: Math.round(heroes.reduce((n, t) => n + t.x, 0) / heroes.length), y: Math.round(heroes.reduce((n, t) => n + t.y, 0) / heroes.length) };
+}
+
+function findFreeCell(scene, from = null, minR = 0) {
+  const cx = from ? from.x : Math.floor(scene.grid.w / 2);
+  const cy = from ? from.y : Math.floor(scene.grid.h / 2);
   const taken = new Set(scene.tokens.map((t) => `${t.x},${t.y}`));
-  for (let r = 0; r < 15; r++) {
+  for (let r = minR; r < 15; r++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         const x = cx + dx;

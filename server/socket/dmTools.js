@@ -26,6 +26,7 @@ const KINDS = {
   zone: { name: 'Event', hidden: true, trigger: 'step', dc: 0, effects: [{ type: 'text', text: 'Something happens...' }] },
 };
 
+const { cleanItem } = require('../rules/items');
 const clampInt = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
 const str = (v, n) => String(v ?? '').slice(0, n);
 const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
@@ -44,6 +45,7 @@ function cleanEffect(e = {}) {
   if (type === 'goto') out.toScene = e.toScene ? str(e.toScene, 64) : null;
   if (type === 'spawn') out.monsters = (Array.isArray(e.monsters) ? e.monsters : []).slice(0, 8).map((m) => ({ index: str(m.index, 60), count: clampInt(m.count || 1, 1, 6) }));
   if (type === 'reveal') out.radius = clampInt(e.radius || 4, 1, 15);
+  if (type === 'loot') out.items = (Array.isArray(e.items) ? e.items : []).slice(0, 12).map(cleanItem);
   return out;
 }
 
@@ -122,7 +124,13 @@ function fire(room, scene, obj, who, api) {
       if (e.private && who?.ownerId) api.privateTo(who.ownerId, { title: obj.name, text: e.text });
       else if (e.text) api.say(e.text, { kind: 'narration' });
     } else if (e.type === 'loot') {
-      api.say(`${name} finds: ${e.text || 'something'}`, { kind: 'reward' });
+      // items go to whoever opened it (or, set off by the DM, the nearest hero)
+      const taker = who || heroesOn(room, scene).sort((a, b) => cheb(a, obj) - cheb(b, obj))[0];
+      const got = e.items?.length && taker && api.giveItems?.(taker, e.items);
+      const list = got ? e.items.map((it) => `${it.qty > 1 ? `${it.qty} × ` : ''}${it.name}`).join(', ') : '';
+      const finder = got ? taker.label : name;
+      api.say(`${finder} finds: ${[e.text, list].filter(Boolean).join(' ') || 'something'}${got ? ' (added to their gear)' : ''}`, { kind: 'reward' });
+      if (got && obj.once !== false) e.items = []; // taken: a reset chest doesn't hand them out twice
     } else if (e.type === 'damage') {
       const victims = who ? [who] : heroesOn(room, scene).filter((t) => cheb(t, obj) <= 1);
       if (e.text) api.say(e.text, { kind: 'narration' });

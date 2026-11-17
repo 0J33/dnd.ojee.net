@@ -1,0 +1,171 @@
+/* ================================================================
+   Explanations: what every ability, feature, spell and action does.
+   Summaries with "more", the (i) that opens a note on tap, the facts
+   of a spell. The note is a slip of paper (it is read, not pressed).
+   ================================================================ */
+
+.more-text { margin: 4px 0 2px; white-space: pre-line; }
+.more-btn { font-size: 0.92em; margin-left: 2px; color: var(--gold-bright); }
+.paper .more-btn, :is(.sheet, .builder, .guide-modal) .more-btn { color: #7a3f0c; }
+
+/* features: the summary is always there, the rest one tap away */
+.feature-item .feature-item-head { line-height: 1.3; }
+.feature-item .more-text { color: var(--text-mid); font-size: 0.92em; }
+.feature-options { margin-top: 6px; }
+.feature-options summary { cursor: pointer; color: var(--gold-bright); font-size: 0.88em; font-style: italic; padding: 4px 0; }
+.feature-option { padding: 6px 0 4px 12px; border-left: 2px solid var(--border-soft); margin: 4px 0 6px; }
+.feature-option .more-text { font-size: 0.88em; color: var(--text-mid); margin: 2px 0 0; }
+
+/* the (i): a quiet ink mark beside the thing it explains; a 32px target on touch */
+.link-btn.info-tip {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; flex-shrink: 0; vertical-align: middle;
+  color: var(--text-dim); text-decoration: none; font-style: normal; border-radius: 50%; cursor: help;
+}
+.link-btn.info-tip::after { content: ''; position: absolute; inset: -6px; }
+.link-btn.info-tip:hover:not(:disabled), .link-btn.info-tip.on { color: var(--gold-bright); }
+.link-btn.info-tip:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+.info-pop {
+  position: fixed; z-index: 5000; max-height: min(70vh, 460px); overflow-y: auto;
+  padding: 10px 14px 12px; border-radius: 3px; text-align: left;
+  font-family: var(--font-body); font-size: 0.95rem; font-weight: 400; letter-spacing: 0; text-transform: none; line-height: 1.4;
+  color: #2a1b0f;
+  background:
+    radial-gradient(ellipse 120% 100% at 50% 40%, transparent 62%, rgba(120, 78, 30, 0.22) 100%),
+    var(--tex-paper, none) 0 0 / 512px auto,
+    #e9dcbc;
+  border: 1px solid #b89a68;
+  box-shadow: 0 2px 3px rgba(20, 10, 4, 0.35), 0 18px 34px -12px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 250, 235, 0.35);
+  animation: fadeIn 0.12s ease;
+  --text: #2a1b0f; --text-mid: #4b3520; --text-dim: #6a5034; --gold: #8c5418; --gold-bright: #7a3f0c; --border-soft: rgba(96, 66, 32, 0.2);
+}
+.info-pop-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.info-pop-head strong { font-family: 'IM Fell English SC', 'IM Fell English', Georgia, serif; font-weight: 400; font-size: 1.08em; color: #7a2a14; letter-spacing: 0.02em; }
+.info-pop-close {
+  background: none !important; border: none !important; box-shadow: none !important; padding: 2px; min-height: 0;
+  color: #6a5034; cursor: pointer; line-height: 0;
+}
+.info-pop-close:hover { color: #7a2a14; }
+.info-pop-body p { margin: 4px 0; }
+.info-pop .muted { color: #6a5034; }
+.info-pop .small { font-size: 0.92em; }
+
+/* a spell's facts: a little ruled table */
+.spell-facts { margin: 6px 0 8px; }
+.spell-facts dl { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0; font-size: 0.92em; }
+.spell-facts dt { font-family: var(--font-label, 'Alegreya Sans SC', sans-serif); font-weight: 700; letter-spacing: 0.04em; color: var(--text-dim); }
+.spell-facts dd { margin: 0; color: var(--text); }
+.spell-fact-note { font-size: 0.86em; font-style: italic; color: var(--text-mid); margin: 6px 0 0; }
+
+/* spells you pick: what they do in numbers and in a sentence */
+.spell-pick-wrap { position: relative; display: flex; }
+.spell-pick-wrap .spell-pick { flex: 1; min-width: 0; padding-right: 34px; }
+.spell-pick-wrap .spell-pick-info { position: absolute; top: 7px; right: 8px; }
+.spell-pick-line { font-size: 0.82em; color: var(--ember-bright); font-weight: 500; }
+.spell-pick-brief { font-size: 0.82em; color: var(--text-mid); line-height: 1.3; }
+:is(.paper, .sheet, .builder, .guide-modal) .spell-pick.on :is(.spell-pick-line, .spell-pick-brief) { color: #f6ead0 !important; }
+:is(.paper, .sheet, .builder, .guide-modal) .spell-pick-wrap.on .spell-pick-info { color: #f6ead0; }
+
+/* skills and scores you pick, each with its one line */
+.skill-pick-grid.with-briefs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.skill-pick-grid.with-briefs .skill-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; border-radius: var(--radius-sm); padding: 7px 11px; }
+.skill-pick-brief { font-size: 0.8em; color: var(--text-dim); line-height: 1.28; font-weight: 400; }
+:is(.paper, .sheet, .builder, .guide-modal) .skill-pick.on .skill-pick-brief { color: #f6ead0 !important; }
+
+/* weapon properties: each chip says what it means on tap */
+.prop-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+.chip.prop-chip { display: inline-flex; align-items: center; gap: 2px; text-transform: none; padding-right: 3px; }
+.chip.prop-chip .info-tip { width: 16px; height: 16px; }
+
+/* the class step: what a level-1 hero of this class gets */
+.class-preview { margin-top: 14px; }
+.class-preview .feature-list { margin-top: 8px; }
+.class-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 4px; font-size: 0.92em; }
+.class-facts dt { font-family: var(--font-label); font-weight: 700; color: var(--text-dim); }
+.class-facts dd { margin: 0; }
+.bg-feature { margin: 6px 0 8px; font-size: 0.88em; color: var(--text-mid); }
+.bg-feature strong { color: var(--text); }
+
+/* the sheet's explain switch and the notes it turns on */
+.sheet-tabs .explain-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
+.sheet-tabs .explain-toggle.on { color: #7a2a14 !important; }
+.explain-note { font-size: 0.86em; font-style: italic; color: var(--text-dim); margin: 2px 0 6px; line-height: 1.32; }
+.skill-row.explained, .save-row.explained { flex-wrap: wrap; row-gap: 0; }
+.row-brief { flex-basis: 100%; padding-left: 17px; font-size: 0.8em; color: var(--text-dim); font-style: italic; line-height: 1.25; }
+.ability-tile .row-brief { padding: 2px 0 0; text-align: center; flex-basis: auto; }
+.vital .vital-note { display: block; font-size: 0.72em; font-style: italic; color: var(--text-dim); line-height: 1.2; margin-top: 2px; max-width: 22ch; font-family: var(--font-body); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.cond-chip .row-brief { display: block; padding: 2px 0 0; font-size: max(0.78em, 12px); max-width: 30ch; white-space: normal; text-align: left; }
+.cond-grid.explained .cond-chip { border-radius: var(--radius-sm); text-align: left; }
+.attack-explain { flex-basis: 100%; font-size: 0.84em; color: var(--text-dim); font-style: italic; padding-left: 4px; }
+.spell-row-main { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
+.spell-row-line { font-size: 0.8em; color: var(--ember-bright); }
+.spell-row-brief { font-size: 0.8em; color: var(--text-dim); font-style: italic; line-height: 1.25; }
+.action-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px 14px; margin-top: 6px; }
+.action-list p { margin: 0; font-size: 0.9em; color: var(--text-mid); }
+.action-list p strong { color: var(--text); }
+.gear-note { display: block; font-size: 0.8em; font-style: italic; color: var(--text-dim); }
+
+/* the attack menu over the map: what each attack does, on tap */
+.w3-menu-row { position: relative; }
+.w3-menu-row .w3-menu-item { padding-right: 34px; }
+.w3-menu-row .w3-menu-odds { margin-right: 4px; }
+.w3-menu-why {
+  position: absolute; right: 6px; top: 8px; width: 24px; height: 24px; padding: 0; line-height: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; border-radius: 50%; color: var(--text-dim); cursor: help;
+}
+.w3-menu-why::after { content: ''; position: absolute; inset: -6px; }
+.w3-menu-why:hover, .w3-menu-why.on { color: var(--gold-bright); }
+.w3-menu-info { padding: 2px 10px 8px 10px; font-size: 12px; line-height: 1.38; color: var(--text-mid); }
+.w3-menu-info p { margin: 3px 0; }
+.w3-menu-cond { padding: 0 8px 6px; font-size: 11.5px; color: var(--text-mid); line-height: 1.35; }
+.w3-menu-cond b { color: var(--ember-bright); font-weight: 600; }
+
+/* "What can I do?" beside the hero bar */
+.turn-help {
+  position: fixed; z-index: 60; width: min(380px, calc(100vw - 16px)); max-height: min(70vh, 560px); overflow-y: auto;
+  padding: 12px 16px 14px; border-radius: 3px;
+  box-shadow: 0 2px 3px rgba(20, 10, 4, 0.35), 0 18px 34px -12px rgba(0, 0, 0, 0.8);
+  animation: fadeIn 0.12s ease;
+  left: 50%; bottom: calc(var(--hero-h, 64px) + 24px); transform: translateX(-50%);
+}
+.turn-help .feature-list { display: flex; flex-direction: column; gap: 6px; }
+.turn-help .prop-chips { font-size: 0.92em; }
+.hud-hero-btn.on { color: var(--gold-bright); border-color: var(--gold-dim); }
+.turn-help h4 { font-family: var(--font-display); font-weight: 400; color: #7a2a14; font-size: 1.05rem; margin: 8px 0 4px; }
+.turn-help h4:first-of-type { margin-top: 0; }
+.turn-help p { margin: 3px 0; font-size: 0.9em; color: var(--text-mid); line-height: 1.35; }
+.turn-help p strong { color: var(--text); }
+.turn-help-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+
+@media (max-width: 640px) {
+  .skill-pick-grid.with-briefs { grid-template-columns: 1fr 1fr; }
+  .link-btn.info-tip::after { inset: -8px; }
+  .action-list { grid-template-columns: 1fr; }
+  .vital .vital-note { max-width: none; }
+}
+@media (max-width: 400px) {
+  .skill-pick-grid.with-briefs { grid-template-columns: 1fr; }
+}
+.review-attacks { margin: 4px 0 6px; padding-left: 18px; }
+.review-attacks li { margin: 4px 0; }
+/* a long menu (a caster's spells, an open explanation) scrolls rather than leaving the screen */
+.w3-menu { max-height: calc(100dvh - 16px); overflow-y: auto; }
+/* the tick on a picked skill card sits in its corner, not on a line of its own */
+.skill-pick-grid.with-briefs .skill-pick { position: relative; padding-right: 26px; }
+:is(.paper, .sheet, .builder, .guide-modal) .skill-pick-grid.with-briefs .skill-pick.on::before { position: absolute; top: 7px; right: 9px; }
+.spell-pick :is(.spell-pick-line, .spell-pick-brief, .spell-pick-meta), .skill-pick .skill-pick-brief { font-weight: 400; }
+.ability-tile .row-brief, .cond-chip .row-brief, .skill-row .row-brief { font-family: var(--font-body); font-weight: 400; letter-spacing: 0; text-transform: none; }
+/* phones: the numbers' notes fold into one "What these numbers mean" */
+.vitals-explain { display: none; margin: 0 12px 8px; font-size: 0.88em; }
+.vitals-explain summary { cursor: pointer; font-style: italic; color: var(--gold-bright); padding: 4px 0; }
+.vitals-explain dl { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; margin: 4px 0 0; }
+.vitals-explain dt { font-family: var(--font-label); font-weight: 700; color: var(--text-dim); }
+.vitals-explain dd { margin: 0; color: var(--text-mid); }
+@media (max-width: 640px) {
+  .vitals-explain { display: block; }
+  .sheet-vitals .vital-note { display: none; }
+}
+/* the attack menu sits over the phone's dice and step buttons, not under them */
+.game-board .w3-menu { z-index: 55; }

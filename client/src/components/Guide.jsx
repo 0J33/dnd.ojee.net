@@ -121,6 +121,8 @@ const PAGES = [
         <ul>
           <li><strong>Move</strong>: drag your token. Scroll to zoom, drag empty space to pan.</li>
           <li><strong>Ping</strong>: double-click a spot to flash it for everyone.</li>
+          <li><strong>Select</strong>: click a creature to select it, double-click it for its sheet, right-click anything (a creature, a lever, a door) for its menu. Right-drag turns the 3D camera.</li>
+          <li><strong>Keys</strong>: every shortcut is listed, and can be changed, under ⋯ &gt; Controls &amp; keys.</li>
           <li><strong>Measure</strong>: distance in feet (1 square = 5 ft).</li>
           <li><strong>Draw</strong>: sketch on the map. <strong>Dice tray</strong>: roll anything – tap a die, or type <kbd>2d6+3</kbd>.</li>
           <li><strong>Chat</strong>: talk in character; type <kbd>/r 1d20+5</kbd> to roll inline, and whisper the DM privately.</li>

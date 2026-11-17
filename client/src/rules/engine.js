@@ -367,8 +367,11 @@ export function deriveSheet(sheet) {
 
   const meta = CLASS_META[sheet.classIndex] || {};
   const profSaves = sheet.profSaves || meta.saves || [];
+  // worn relics (a cloak of protection, a ring): + to every save and to AC
+  const worn = (sheet.equipment || []).filter((e) => e && e.kind === 'relic' && e.equipped !== false);
+  const relicSaves = worn.reduce((n, e) => n + Math.max(0, Math.min(3, Number(e.stats?.saves) || 0)), 0);
   const saves = {};
-  for (const a of ABILITIES) saves[a] = mods[a] + (profSaves.includes(a) ? pb : 0);
+  for (const a of ABILITIES) saves[a] = mods[a] + (profSaves.includes(a) ? pb : 0) + relicSaves;
 
   const profSkills = sheet.profSkills || [];
   const expertise = sheet.expertiseSkills || [];
@@ -389,6 +392,7 @@ export function deriveSheet(sheet) {
     if (category === 'heavy') ac = acBase;
     else if (category === 'medium') ac = acBase + Math.min(mods.dex, maxDex ?? 2);
     else ac = acBase + mods.dex;
+    ac += Math.max(0, Math.min(3, Number(armor.stats?.bonus) || 0)); // +1 armor
   } else if (SUBCLASS_RULES[subclassOf(sheet)]?.unarmoredAc) {
     ac = SUBCLASS_RULES[subclassOf(sheet)].unarmoredAc + mods.dex;
   } else if (sheet.classIndex === 'barbarian') {
@@ -398,7 +402,8 @@ export function deriveSheet(sheet) {
   } else {
     ac = 10 + mods.dex;
   }
-  if (shield && !(sheet.classIndex === 'monk' && !armor)) ac += 2;
+  if (shield && !(sheet.classIndex === 'monk' && !armor)) ac += 2 + Math.max(0, Math.min(3, Number(shield.stats?.bonus) || 0));
+  for (const e of worn) ac += Math.max(0, Math.min(3, Number(e.stats?.ac) || 0));
   if (sheet.acBonus) ac += sheet.acBonus; // e.g. mage armor toggle / magic items
   if (sheet.acOverride) ac = sheet.acOverride;
 
@@ -414,11 +419,12 @@ export function deriveSheet(sheet) {
     if (isRanged) ability = 'dex';
     else if (finesse) ability = mods.dex > mods.str ? 'dex' : 'str';
     const abilityMod = mods[ability];
+    const magic = Math.max(0, Math.min(3, Number(stats.bonus) || 0)); // a +1 weapon: to hit and to damage
     attacks.push({
       name: item.name,
-      bonus: abilityMod + pb,
+      bonus: abilityMod + pb + magic,
       damage: stats.damage || '1d4',
-      damageMod: abilityMod,
+      damageMod: abilityMod + magic,
       damageType: stats.damageType || 'bludgeoning',
       range: stats.range || null,
       properties: props,

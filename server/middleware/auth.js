@@ -50,9 +50,39 @@ async function authMiddleware(req, res, next) {
   }
 }
 
+// The same login for the table's socket: who you are comes from the
+// ojeeSession cookie on the handshake, never from what the client says.
+// An unknown cookie still connects (the lobby needs no socket identity), but
+// every table message then answers "Not logged in".
+function readCookie(header, name) {
+  for (const part of String(header || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === name) {
+      try { return decodeURIComponent(part.slice(i + 1).trim()); } catch { return null; }
+    }
+  }
+  return null;
+}
+
+async function socketAuth(socket, next) {
+  try {
+    const token = readCookie(socket.handshake.headers.cookie, SESSION_COOKIE);
+    if (token) {
+      const session = await Session.findOne({ sessionToken: token });
+      if (session && session.expiresAt >= new Date()) {
+        const user = await User.findById(session.userId);
+        if (user) socket.data.user = { id: String(user._id), username: user.username };
+      }
+    }
+  } catch (err) {
+    /* treated as signed out */
+  }
+  next();
+}
+
 function requireAuth(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Not logged in' });
   next();
 }
 
-module.exports = { authMiddleware, requireAuth, setSessionCookie, clearSessionCookies, SESSION_COOKIE };
+module.exports = { authMiddleware, socketAuth, requireAuth, setSessionCookie, clearSessionCookies, SESSION_COOKIE };

@@ -14,6 +14,7 @@
 // Monsters are SRD (open-licensed) only. Places reuse the built-in maps.
 import { sceneFromBuiltin } from './scenes';
 import { buildTutorialScenes, TUTORIAL_STEPS } from './tutorialScript';
+import { DAWNBLADE, dawnbladeBeats } from './dawnblade';
 
 const S = (key, id, { entry, tokens = [], fogEnabled = false, name } = {}) => {
   const b = sceneFromBuiltin(key);
@@ -248,7 +249,12 @@ export const ADVENTURES = [
     ],
     steps: GREYWATER_STEPS,
   },
+  // Long, DM-run only (no guided mode): see data/dawnblade.js.
+  DAWNBLADE,
 ];
+
+/** Adventures the app can narrate on its own (no DM). */
+export const GUIDED_ADVENTURES = ADVENTURES.filter((a) => !a.dmOnly);
 
 export const adventureByKey = (key) => ADVENTURES.find((a) => a.key === key) || ADVENTURES[0];
 
@@ -261,6 +267,7 @@ export const forParty = (tokens, heroes) => tokens.filter((t) => !t.minHeroes ||
  * small one), and the step's instructions and choices as notes.
  */
 export function adventureBeats(adv, sceneIdFor) {
+  if (adv.key === 'dawnblade') return dawnbladeBeats(sceneIdFor);
   let sceneId = null;
   return adv.steps.map((st) => {
     const fx = st.effectsOnEnter || [];

@@ -1,6 +1,56 @@
-export const VERSION = '1.2.1';
+export const VERSION = '1.4.0';
 
 export const CHANGELOG = [
+  {
+    version: '1.4.0',
+    date: '2026-10-31',
+    notes: [
+      'Items you can make on the spot: weapons, armor and shields with +1 to +3 magic, healing potions, worn relics that add to AC and saves, and anything else with its own words. "Add item" on the Gear tab opens the maker',
+      'The magic item list: every open-licensed magic item, searchable, one click to start from',
+      'DM: right-click a hero, then Give an item. It lands in their gear and the table hears about it',
+      'Potions: Drink on the Gear tab rolls the healing and uses one up',
+      'Chests hold real items: whoever opens one gets them in their gear (the Secrets editor: Loot, then Put an item in it)',
+      'Merchants: right-click an NPC, then Make them a merchant, and stock it with prices and stock. Players double-click (or right-click) them to shop, and the coins come out of their purse',
+      'Magic weapons add to hit and damage, magic armor and shields to AC, everywhere attacks are rolled',
+    ],
+  },
+  {
+    version: '1.3.2',
+    date: '2026-10-31',
+    notes: [
+      'DM: a new "Adding visible / Adding hidden" switch beside Quick. With it on, every creature, NPC and object you add mid-game starts hidden from the players until you reveal it',
+      'DM: hidden creatures and objects carry a purple "Hidden" badge, and creatures the players can\'t see through the fog say "In the dark", so you can tell at a glance without Player view',
+      'DM: drag a chest, lever, trap or any other object to move it, or right-click it and pick Move it',
+      'Click a selected creature or hero again to let it go',
+      'New "Walls: cut / up" button by the camera buttons: keep every wall standing instead of dropping the ones between you and the room',
+      'Fog now stays dark from every camera angle: walls, furniture and fires in unseen squares no longer show from the side when walls drop',
+    ],
+  },
+  {
+    version: '1.3.1',
+    date: '2026-10-31',
+    notes: [
+      'The quest board fits on one screen again: four quests sit two by two, with no scrollbar',
+      'Click a picked race, class, background, fighting style, subclass or Prep map again to unpick it',
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: '2026-10-31',
+    notes: [
+      'New long campaign for a DM: The Dawnblade. A beginner town, three relic quests in any order, hard choices that come back at the end, and a Demon King in a dark castle. 17 places, 20 story beats with read-aloud and DM notes, levels 1 to 7',
+      'Walls sit on top of the floor: erasing a wall brings back the floor under it, repainting a floor keeps the walls and furniture, and painting never removes levers, traps or creatures. New eraser in Build',
+      'Floor levels: paint a platform or upper floor on top of the map, and show or hide it (also just for players)',
+      'Undo and redo cover every map edit, one step per stroke, including drawings',
+      'Pointer tool, first in the rail: left-drag moves the map, right-drag turns it, middle-drag selects. Click a creature to select it, double-click opens its sheet, Ctrl+click selects several, then act on all of them at once',
+      'Right-click a lever, door, chest or creature for its menu. The browser\'s own right-click menu no longer opens over the game',
+      'Every key can be changed: More > Controls & keys',
+      'Monsters: one-click add next to the party, drag from the list onto the map, or Place on map to put down several',
+      'DM-only notes on each hero and creature',
+      'Player view button for the DM: see the table as your players do',
+      'Panels no longer overlap or push each other, clicking a tool again closes its menu, and the tutorial highlight stays inside its panel when you scroll',
+    ],
+  },
   {
     version: '1.2.1',
     date: '2026-09-22',

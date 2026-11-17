@@ -32,7 +32,7 @@
 /* your hero, bottom centre */
 .game-board:not(.is-mobile) .hud-hero {
   position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 27;
-  display: flex; align-items: center; gap: 12px; width: min(640px, calc(100% - 200px)); padding: 8px 10px;
+  display: flex; align-items: center; gap: 12px; width: min(740px, calc(100% - 200px)); padding: 8px 10px; /* room for name + stats beside four buttons on your turn */
   background: rgba(20, 17, 12, 0.9); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-pop); backdrop-filter: blur(6px);
 }
 .hud-hero.my-turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 22px var(--gold-glow); }
@@ -60,7 +60,7 @@
   pointer-events: none;
 }
 .dice-wrap > * { pointer-events: auto; }
-.game-board:not(.is-mobile) .dice-wrap { left: 50%; bottom: calc(12px + var(--hero-h, 62px) + 10px); width: min(640px, calc(100% - 200px)); transform: translateX(-50%); } /* 10px above the hero bar = the gap above the button */
+.game-board:not(.is-mobile) .dice-wrap { left: 50%; bottom: calc(12px + var(--hero-h, 62px) + 10px); width: min(740px, calc(100% - 200px)); transform: translateX(-50%); } /* 10px above the hero bar = the gap above the button */
 .game-board.is-mobile .dice-wrap { right: 10px; bottom: 74px; left: 10px; }
 .dice-wrap .dice-tray { position: static; transform: none; max-width: 100%; align-self: stretch; }
 .dice-toggle {
@@ -87,15 +87,16 @@
 /* overflow menu */
 .hud-more { position: relative; }
 .hud-more-menu {
-  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 250px; padding: 6px;
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 272px; padding: 6px;
   display: flex; flex-direction: column; box-shadow: var(--shadow-pop);
 }
 .hud-more-menu button {
   display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: transparent; color: var(--text);
-  text-align: left; font-size: 0.86em; border-radius: var(--radius-sm); text-transform: none; letter-spacing: 0;
+  text-align: left; font-size: 0.95em; border-radius: var(--radius-sm); text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body); font-weight: 500; box-shadow: none; /* menu rows, like the right-click menu: not pegs */
 }
-.hud-more-menu button:hover { background: var(--bg-hover); }
-.hud-more-menu em { margin-left: auto; font-style: normal; color: var(--text-dim); font-size: 0.85em; letter-spacing: 1px; }
+.hud-more-menu button:hover:not(:disabled) { background: var(--bg-hover); border-color: transparent; box-shadow: none; color: var(--gold-bright); }
+.hud-more-menu em { margin-left: auto; font-style: normal; color: var(--text-dim); font-size: 0.85em; letter-spacing: 0.02em; font-weight: 400; white-space: nowrap; }
 
 /* the 3D camera buttons sit under the chat bubble */
 .game-board:not(.is-mobile) .w3-view { top: 64px; }
@@ -114,7 +115,7 @@
 .game-board.is-mobile .hud-topleft { position: absolute; top: 8px; left: 8px; z-index: 28; display: flex; gap: 6px; max-width: calc(100% - 150px); overflow-x: auto; }
 .game-board.is-mobile .hud-party-chip { padding: 3px 3px 4px; }
 .game-board.is-mobile .w3-view { top: 8px; right: 8px; flex-direction: row; gap: 4px; }
-.game-board.is-mobile .w3-view button { padding: 7px 8px; font-size: 10px; letter-spacing: 0.5px; }
+.game-board.is-mobile .w3-view button { padding: 7px 8px; font-size: 11.5px; letter-spacing: 0.02em; }
 .game-board.is-mobile .initiative-bar {
   left: 8px; right: 8px; top: 64px; transform: none; max-width: none; padding: 6px 8px; gap: 6px;
   flex-wrap: wrap; row-gap: 6px;
@@ -135,7 +136,7 @@
 }
 .dm-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0 6px; border-bottom: 1px solid var(--border-soft); }
 .dm-panel-body { padding: 10px 12px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
-.dm-panel-body h5, .dm-obj h5 { margin: 8px 0 0; font: 700 0.72em var(--font-display); letter-spacing: 1.4px; color: var(--gold); text-transform: uppercase; }
+.dm-panel-body h5, .dm-obj h5 { margin: 8px 0 0; font: 700 0.8em var(--font-label); letter-spacing: 0.06em; color: var(--gold); }
 .dm-panel-body textarea, .dm-obj textarea { width: 100%; resize: vertical; font-size: 0.86em; }
 .dm-panel-row, .dm-obj-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.84em; color: var(--text-mid); }
 .dm-chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -167,7 +168,7 @@
 .dm-banner.title { font: 700 clamp(1.4rem, 3vw, 2.2rem)/1.25 var(--font-display); font-style: normal; letter-spacing: 0.1em; color: var(--gold-bright); top: 30%; }
 .dm-banner.whisper { color: #c8b8ff; border-color: #6a5aa8; }
 .dm-banner.alert { color: #ffb0a0; border-color: #a8443a; font-style: normal; font-weight: 700; }
-.dm-banner-tag { display: block; font: 700 0.65rem var(--font-display); letter-spacing: 0.2em; color: #9a8ad8; margin-bottom: 4px; font-style: normal; text-transform: uppercase; }
+.dm-banner-tag { display: block; font: 700 0.76rem var(--font-label); letter-spacing: 0.08em; color: #a898e4; margin-bottom: 4px; font-style: normal; }
 @keyframes dm-banner { from { opacity: 0; transform: translate(-50%, -8px); } }
 .dm-requests { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .dm-request { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; font-size: 0.9em; border-color: var(--gold-dim); box-shadow: var(--shadow-pop); animation: w3-pop 0.2s ease-out; }
@@ -187,7 +188,7 @@
 /* sound settings */
 .sound-panel { position: absolute; right: 12px; top: 56px; z-index: 62; width: 300px; padding: 10px 14px 14px; box-shadow: var(--shadow-pop); display: flex; flex-direction: column; gap: 12px; }
 .sound-head { display: flex; align-items: center; justify-content: space-between; }
-.sound-head h4 { margin: 0; font: 700 0.8em var(--font-display); letter-spacing: 1.5px; color: var(--gold); text-transform: uppercase; }
+.sound-head h4 { margin: 0; font: 700 0.86em var(--font-label); letter-spacing: 0.06em; color: var(--gold); text-transform: none; }
 .sound-row { display: flex; flex-direction: column; gap: 4px; }
 .sound-top { display: flex; justify-content: space-between; font-size: 0.88em; color: var(--text); }
 .sound-val { color: var(--text-dim); font-size: 0.9em; }

@@ -58,7 +58,7 @@
   .pregen-grid { grid-template-columns: 1fr; }
   .spell-pick-list { grid-template-columns: 1fr; }
   .builder .tab-row { flex-wrap: wrap; }
-  .builder .tab-row button { padding: 8px 10px; font-size: 0.72em; }
+  .builder .tab-row button { padding: 8px 10px; font-size: max(0.72em, 12px); }
 
   /* ---------------- Character sheet ---------------- */
   .sheet { width: 100%; height: 100%; max-width: none; border-radius: 0; }
@@ -75,9 +75,11 @@
   .hp-vital { min-width: 100%; }
   /* all five tabs on one line: Story used to sit off the right edge */
   .sheet-tabs { padding: 0 6px; overflow-x: auto; }
-  .sheet-tabs button { flex: 1 0 auto; padding: 9px 6px; font-size: 0.7em; letter-spacing: 1px; }
+  .sheet-tabs button { flex: 1 0 auto; padding: 9px 6px; font-size: max(0.7em, 12px); letter-spacing: 0.02em; }
   .sheet-body { padding: 12px 12px 20px; }
   .ability-grid { gap: 6px; }
+  /* the tiles' small print stays at 12px on a phone (it fell to 11px) */
+  .ability-tile-label, .ability-tile-score, .ability-tile .row-brief { font-size: 12px; }
   .attack-name { min-width: 0; }
 
   /* ---------------- Game board ---------------- */
@@ -108,7 +110,7 @@
 
 /* Very narrow phones */
 @media (max-width: 380px) {
-  .board-topbar .small-btn { font-size: 0.55em; padding: 4px 6px; }
+  .board-topbar .small-btn { font-size: 11px; padding: 4px 6px; }
   .vital { min-width: 64px; }
   .die-btn svg { width: 28px; height: 28px; }
 }

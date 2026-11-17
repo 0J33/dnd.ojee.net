@@ -128,8 +128,8 @@ button:disabled { opacity: 0.35; cursor: default; }
 .ghost-btn { background: transparent; border-color: var(--border-soft); color: var(--text-mid); }
 .ghost-btn:hover:not(:disabled) { color: var(--text); }
 
-.small-btn { padding: 5px 11px; font-size: 0.68em; letter-spacing: 1px; }
-.big-btn { padding: 14px 28px; font-size: 0.95em; letter-spacing: 3px; }
+.small-btn { padding: 5px 11px; font-size: max(0.76em, 12px); letter-spacing: 0.04em; }
+.big-btn { padding: 14px 28px; font-size: 0.95em; letter-spacing: 0.08em; }
 
 .icon-btn {
   width: 32px; height: 32px; padding: 0;
@@ -347,7 +347,7 @@ label.field-label .field-hint, label.field-label .muted { font-size: 0.95rem; ma
 /* ================= Badges / chips ================= */
 .chip {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 0.78em; padding: 2px 9px; border-radius: 10px;
+  font-size: max(0.78em, 12px); padding: 2px 9px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--bg-elev); color: var(--text-mid);
   white-space: nowrap;
 }

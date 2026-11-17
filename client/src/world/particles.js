@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FOGU } from './kit';
 
 // Every particle in the world — flames, embers, dust, spores, snow, hit
 // sparks, healing motes — lives in ONE additive point cloud: one draw call,
@@ -9,8 +10,17 @@ attribute float size;
 attribute vec4 tint;
 varying vec4 vTint;
 uniform float scale;
+uniform sampler2D fogPrev; uniform sampler2D fogNext; uniform float fogMix; uniform vec2 fogSize; uniform float fogAlpha; uniform float fogOn;
 void main() {
   vTint = tint;
+  // a fire or a spell in squares the players haven't seen stays out of sight
+  if (fogOn > 0.5) {
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vec2 fm = vec2(w.x / fogSize.x, w.z / fogSize.y);
+    float inside = step(0.0, fm.x) * step(fm.x, 1.0) * step(0.0, fm.y) * step(fm.y, 1.0);
+    float seen = mix(texture2D(fogPrev, fm).r, texture2D(fogNext, fm).r, smoothstep(0.0, 1.0, fogMix));
+    vTint.a *= 1.0 - inside * smoothstep(0.45, 0.9, 1.0 - seen) * fogAlpha;
+  }
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_PointSize = size * scale / -mv.z;
   gl_Position = projectionMatrix * mv;
@@ -51,13 +61,15 @@ export default class Particles {
     g.setAttribute('tint', new THREE.BufferAttribute(this.tint, 4).setUsage(THREE.DynamicDrawUsage));
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: FRAG,
-      uniforms: { scale: { value: 600 } },
+      uniforms: { scale: { value: 600 }, ...FOGU },
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
     });
     this.points = new THREE.Points(g, this.material);
     this.points.frustumCulled = false;
     this.points.renderOrder = 10;
     this.emitters = [];
+    this.density = 1; // the engine's quality tier thins ambient effects and bursts
+    this._top = 0;
   }
 
   setViewportHeight(h) { this.material.uniforms.scale.value = h * 0.9; }
@@ -81,6 +93,7 @@ export default class Particles {
 
   // A burst: n particles from a point, random directions.
   burst(x, y, z, n, o = {}) {
+    n = Math.max(1, Math.round(n * this.density));
     for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.3) * Math.PI * 0.6;
       const sp = (o.speed || 2) * (0.4 + Math.random() * 0.8);
@@ -99,10 +112,11 @@ export default class Particles {
   update(dt, t) {
     for (const e of this.emitters) {
       if (e.paused) continue;
-      e.acc += dt * (EMIT[e.kind]?.rate || 0) * (e.size || 1);
+      e.acc += dt * (EMIT[e.kind]?.rate || 0) * (e.size || 1) * this.density;
       while (e.acc >= 1) { e.acc -= 1; EMIT[e.kind]?.spawn(this, e, t); }
     }
     const { pos, vel, life, age, drag, grav, size, size0, tint, from, to, alpha } = this;
+    let top = 0;
     for (let i = 0; i < this.max; i++) {
       if (life[i] <= 0) continue;
       age[i] += dt;
@@ -118,11 +132,16 @@ export default class Particles {
       tint[i * 4 + 1] = from[i * 3 + 1] + (to[i * 3 + 1] - from[i * 3 + 1]) * k;
       tint[i * 4 + 2] = from[i * 3 + 2] + (to[i * 3 + 2] - from[i * 3 + 2]) * k;
       tint[i * 4 + 3] = a;
+      top = i + 1;
     }
+    // Draw and upload only up to the last live particle (live ones sit low:
+    // the free list hands out low slots first), not all six thousand.
     const g = this.points.geometry;
-    g.attributes.position.needsUpdate = true;
-    g.attributes.size.needsUpdate = true;
-    g.attributes.tint.needsUpdate = true;
+    if (!top && !this._top) return;
+    g.setDrawRange(0, top);
+    const up = (a, n) => { a.clearUpdateRanges(); a.addUpdateRange(0, Math.max(top, 1) * n); a.needsUpdate = true; };
+    up(g.attributes.position, 3); up(g.attributes.size, 1); up(g.attributes.tint, 4);
+    this._top = top;
   }
 
   dispose() { this.points.geometry.dispose(); this.material.dispose(); }

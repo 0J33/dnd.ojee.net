@@ -155,6 +155,9 @@ button:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2
 
 .close-btn { background: none; border: none; box-shadow: none; color: var(--text-dim); }
 .close-btn:hover:not(:disabled) { background: none; box-shadow: none; color: var(--gold-bright); }
+/* an icon in a button sits on the label's centre line, not on its baseline
+   (most buttons are inline text, where an SVG otherwise rides 2-3px high) */
+button > svg, button > span > svg { vertical-align: middle; }
 
 /* ---------- fields: dark inlay in the oak ---------- */
 input, select, textarea {
@@ -184,7 +187,9 @@ input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b
 }
 .modal { border-color: #5a3b25; box-shadow: var(--shadow-modal); }
 .context-menu { box-shadow: var(--shadow-pop); }
-.modal-overlay { background: rgba(6, 3, 1, 0.72); backdrop-filter: blur(2px); }
+/* no blur behind dialogs: under this scrim it hardly shows, and over the moving
+   3D board it would be redrawn every frame */
+.modal-overlay { background: rgba(6, 3, 1, 0.75); backdrop-filter: none; }
 .panel-header, .modal-header { border-bottom-color: rgba(207, 167, 91, 0.18); }
 .modal-actions { border-top-color: rgba(207, 167, 91, 0.18); }
 .panel-header h3, .modal-header h3 {
@@ -195,7 +200,7 @@ input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b
   color: var(--gold-bright);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
 }
-.ctx-item { font-family: var(--font-body); }
+.ctx-item { font-family: var(--font-body); font-weight: 500; box-shadow: none; } /* a menu row, not a peg: no lit edge or drop shadow per item */
 .ctx-header { font-family: var(--font-label); font-weight: 700; font-size: 0.78em; letter-spacing: 0.08em; text-transform: none; }
 .ornament-line { background: linear-gradient(90deg, transparent, rgba(207, 167, 91, 0.55), transparent); }
 
@@ -299,7 +304,8 @@ input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b
 .topbar, .board-topbar,
 .hud-hero, .hud-party-chip, .hud-pill, .hud-more-menu,
 .tool-dock-main, .dice-toggle, .dice-tray, .chat-panel,
-.w3-view button, .w3-switch, .w3-toast, .w3-hint {
+.w3-view button, .w3-switch, .w3-toast, .w3-hint, .w3-menu,
+.caption-btn, .scene-caption {
   background: var(--board);
   border-color: #4a3020;
   backdrop-filter: none !important; /* solid boards: no blur, which would be redone every frame over the moving board */
@@ -310,7 +316,8 @@ input[type='checkbox']:checked { background: linear-gradient(180deg, #ebcb88, #b
 .hud-hero { border-radius: 8px; }
 .hud-hero.my-turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 24px -2px var(--gold-glow), var(--shadow-pop); }
 .hud-party-chip { border-radius: 8px; }
-.hud-pill, .w3-toast, .w3-hint { border-radius: 6px; }
+.hud-pill, .w3-toast, .w3-hint, .caption-btn, .scene-caption { border-radius: 6px; }
+.caption-btn, .scene-caption { box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.07), 0 3px 8px -2px rgba(0, 0, 0, 0.7); }
 .w3-view button, .w3-switch { font-family: var(--font-label); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em; box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.08), 0 3px 8px -2px rgba(0, 0, 0, 0.7); }
 .dice-toggle { color: var(--gold-bright); border-color: var(--gold-dim); box-shadow: inset 0 1px 0 rgba(255, 214, 160, 0.1), var(--shadow-pop); }
 .hud-pill b { font-family: var(--font-label); }

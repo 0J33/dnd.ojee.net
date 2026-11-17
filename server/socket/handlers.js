@@ -11,26 +11,59 @@ const {
   isDMStrict,
   addLog,
   addChat,
-  viewForUser,
-  fullStateForUser,
   saveRoom,
+  saveAll,
+  seenSeq,
+  markSeen,
+  markDirty,
+  hooks,
   startAutoSave,
   stopAutoSave,
   loadRoomFromDb,
   uuidv4,
+  padCharFor,
 } = require('./roomState');
 const { executeRoll } = require('./dice');
-const { revealForHeroes, resolveAttack, toggleDoor, saveBonus, applyDamage } = require('./world');
+const { resolveAttack, toggleDoor, saveBonus, applyDamage, applyHealing, moveCost, lineClear } = require('./world');
+const { createSync } = require('./sync');
+const { heroAttack, attacksPerAction, spendSlot, healingSpell, heroFeature } = require('../rules/attacks');
+const { socketAuth } = require('../middleware/auth');
 const tools = require('./dmTools');
+const sceneTools = require('./sceneTools');
+const layers = require('./layers');
+const training = require('./training');
 const { runMonsterTurn } = require('./autoDm');
 const Character = require('../models/Character');
+const items = require('../rules/items');
 
-const BROADCAST_DEBOUNCE_MS = 80;
 const EVICT_CHECK_MS = 10 * 60 * 1000;
 const EVICT_AFTER_MS = 30 * 60 * 1000;
 
 function registerSocketHandlers(io) {
-  const pendingBroadcasts = new Map(); // code -> timeout
+  const api = {};
+  // Who you are at the table comes from your login cookie (middleware/auth.js).
+  io.use(socketAuth);
+  const sync = createSync(io); // versioned per-viewer patches (sync.js)
+
+  // Once a room is written, each tab at it hears how far its own edits are
+  // safe (`saved { seq }`), so it can stop keeping them for a resend.
+  hooks.onSaved = (room, seen) => {
+    const ids = io.sockets.adapter.rooms.get(room.code);
+    if (!ids) return;
+    for (const id of ids) {
+      const sock = io.sockets.sockets.get(id);
+      const cid = sock?.data.cid;
+      const seq = cid && seen[cid]?.s;
+      if (!seq || seq <= (sock.data.savedSent || 0)) continue;
+      sock.data.savedSent = seq;
+      sock.emit('saved', { seq });
+    }
+  };
+
+  // Shutting down (index.js): nothing more is applied, so nothing applied
+  // can miss the last save. A tab keeps what it sends meanwhile and sends it
+  // again to the next process.
+  let closing = false;
 
   function emitToMember(room, member, event, payload) {
     if (!member.socketId) return;
@@ -38,25 +71,10 @@ function registerSocketHandlers(io) {
     if (sock) sock.emit(event, payload);
   }
 
-  function broadcastRoomImmediate(code) {
-    const room = activeRooms.get(code);
-    if (!room) return;
-    // Fogged scenes fill in from what the heroes can see, wherever they moved.
-    revealForHeroes(room, getActiveScene(room));
-    for (const member of room.members) {
-      emitToMember(room, member, 'gameState', viewForUser(room, member.userId));
-    }
-  }
-
+  // A change to the room: every member gets what changed for them on the
+  // next tick (several changes in one action are one message).
   function broadcastRoom(code) {
-    if (pendingBroadcasts.has(code)) return;
-    pendingBroadcasts.set(
-      code,
-      setTimeout(() => {
-        pendingBroadcasts.delete(code);
-        broadcastRoomImmediate(code);
-      }, BROADCAST_DEBOUNCE_MS)
-    );
+    sync.schedule(code);
   }
 
   function broadcastEvent(code, event, payload, filter = null) {
@@ -74,10 +92,23 @@ function registerSocketHandlers(io) {
     return item;
   }
 
+  // A line already in the log, to whoever may read it.
+  function sendLog(room, item) {
+    if (item) broadcastEvent(room.code, 'logEntry', item, item.dmOnly ? (m) => isDMStrict(room, m.userId) : null);
+  }
+
+  // A log line only the DM may read (a hidden creature's doings).
+  function dmLog(room, entry) {
+    const item = addLog(room, { ...entry, dmOnly: true });
+    broadcastEvent(room.code, 'logEntry', item, (m) => isDMStrict(room, m.userId));
+    return item;
+  }
+
   // ---------- turns ----------
 
   // Move to the next living creature in the order. Returns the new entry.
   function advanceTurn(r) {
+    r.combat.spent = {}; // a fresh turn: full movement, an action
     let guard = 0;
     do {
       r.combat.turnIndex += 1;
@@ -89,7 +120,8 @@ function registerSocketHandlers(io) {
       guard++;
     } while (guard < 50 && isEntryDead(r, r.combat.order[r.combat.turnIndex]));
     const next = r.combat.order[r.combat.turnIndex];
-    logAndBroadcast(r, { type: 'combat', text: `It's ${next.name}'s turn.` });
+    if (findToken(r, next.tokenId).token?.hidden) dmLog(r, { type: 'combat', text: `It's ${next.name}'s turn (hidden).` });
+    else logAndBroadcast(r, { type: 'combat', text: `It's ${next.name}'s turn.` });
     return next;
   }
 
@@ -112,11 +144,7 @@ function registerSocketHandlers(io) {
     setTimeout(() => {
       const r2 = activeRooms.get(code);
       if (!r2 || !r2.combat?.active || `${r2.combat.round}:${r2.combat.turnIndex}` !== at) return;
-      const scene = getActiveScene(r2);
-      const result = runMonsterTurn(r2, scene, tok.id);
-      for (const ev of result.events) broadcastEvent(code, 'combatEvent', ev);
-      for (const entry2 of r2.log.slice(-3)) broadcastEvent(code, 'logEntry', entry2);
-      broadcastRoom(code);
+      playMonsterTurn(r2, tok.id);
       setTimeout(() => {
         const r3 = activeRooms.get(code);
         if (!r3 || !r3.combat?.active || `${r3.combat.round}:${r3.combat.turnIndex}` !== at) return;
@@ -129,6 +157,44 @@ function registerSocketHandlers(io) {
         scheduleMonsterTurn(code);
       }, MONSTER_WATCH_MS);
     }, MONSTER_LEAD_MS);
+  }
+
+  // A monster's turn, sent as it happened: its events, then only the log
+  // lines it wrote.
+  // A hidden creature stays secret while it only creeps about: its turn goes
+  // to the DM alone. The moment it attacks, it is revealed - the table sees it
+  // step out (the reveal reaches every screen before the blow lands).
+  function playMonsterTurn(r, tokenId) {
+    const before = r.log.length ? r.log[r.log.length - 1].id : null;
+    const tok = findToken(r, tokenId).token;
+    const wasHidden = !!tok?.hidden;
+    const result = runMonsterTurn(r, getActiveScene(r), tokenId);
+    const from = before ? r.log.findIndex((l) => l.id === before) + 1 : 0;
+    const lines = r.log.slice(from);
+    const attacked = result.events.some((ev) => ev.kind === 'monsterAttackRoll');
+    const dmOnly = (m) => isDMStrict(r, m.userId);
+    if (wasHidden && !attacked) {
+      for (const entry of lines) entry.dmOnly = true;
+      for (const ev of result.events) broadcastEvent(r.code, 'combatEvent', ev, dmOnly);
+      for (const entry of lines) broadcastEvent(r.code, 'logEntry', entry, dmOnly);
+      broadcastRoom(r.code);
+      return result;
+    }
+    if (wasHidden && attacked) {
+      tok.hidden = false;
+      const c = r.combat;
+      if (c?.active && c.round > 0 && !c.order.some((o) => o.tokenId === tok.id)) {
+        // it joins the fight it just started
+        rollMissingInitiative(r, { heroes: false, only: tok.id });
+      }
+      const item = addLog(r, { type: 'combat', text: `${tok.label} leaps out of hiding!` });
+      lines.unshift(item);
+      sync.flush(r.code); // players get the creature before its attack
+    }
+    for (const ev of result.events) broadcastEvent(r.code, 'combatEvent', ev);
+    for (const entry of lines) sendLog(r, entry);
+    broadcastRoom(r.code);
+    return result;
   }
 
   // ---------- the DM's map tools: objects, patrols ----------
@@ -151,6 +217,14 @@ function registerSocketHandlers(io) {
       hp(ev) { broadcastEvent(r.code, 'combatEvent', { kind: 'hp', ...ev }); },
       saveBonus: (t, ab) => saveBonus(r, t, ab),
       applyDamage: (t, n) => applyDamage(r, t, n),
+      // a chest's items go into the gear of the hero who opened it
+      giveItems(t, list) {
+        const sheet = t?.characterId && r.charSheets[t.characterId];
+        if (!sheet || !list?.length) return false;
+        items.addToSheet(sheet, list);
+        persistSheet(t.characterId, sheet);
+        return true;
+      },
       heal(t, n) {
         if (t.characterId && r.charSheets[t.characterId]) {
           const sh = r.charSheets[t.characterId];
@@ -160,15 +234,12 @@ function registerSocketHandlers(io) {
         if (t.hp != null) { t.hp = Math.min(t.maxHp || t.hp + n, t.hp + n); return { hp: t.hp }; }
         return null;
       },
-      doors(scene) { broadcastEvent(r.code, 'scenePainted', { sceneId: scene.id, cells: [] }); },
+      doors() { broadcastRoom(r.code); }, // the cells travel in the next patch
       goto(sceneId, text) {
         const to = sceneId && findScene(r, sceneId);
         if (!to) return;
-        const from = getActiveScene(r);
-        // the party walks through together: heroes leave the old scene
-        if (from && from !== to) from.tokens = from.tokens.filter((t) => t.kind !== 'pc');
         r.activeSceneId = to.id;
-        ensurePartyTokens(r, to);
+        ensurePartyTokens(r, to); // the party walks through together
         logAndBroadcast(r, { type: 'scene', text: text || `The party moves on: ${to.name}` });
       },
       fired(o) { broadcastEvent(r.code, 'objectFired', o); },
@@ -196,6 +267,9 @@ function registerSocketHandlers(io) {
     }
   }, 900);
 
+  // The DM training ground and the group practice round (training.js).
+  const practice = training.create({ broadcastRoom, broadcastEvent, logAndBroadcast, advanceTurn, scheduleMonsterTurn, ensurePartyTokens, placeFree });
+
   // Evict rooms with no connected members from memory (they stay in Mongo).
   setInterval(() => {
     const now = Date.now();
@@ -214,8 +288,51 @@ function registerSocketHandlers(io) {
   }, EVICT_CHECK_MS);
 
   io.on('connection', (socket) => {
+    if (closing) return void socket.disconnect(true);
     let currentRoom = null; // room code
     let currentUserId = null;
+    const authed = socket.data.user || null; // { id, username } from the login cookie
+
+    // Which tab this is (socket.js), for telling a resend from a new edit.
+    const cid = typeof socket.handshake.auth?.cid === 'string' && /^[\w-]{6,40}$/.test(socket.handshake.auth.cid) ? socket.handshake.auth.cid : null;
+    socket.data.cid = cid;
+
+    // Optimistic actions carry `_seq`; the next patch to this socket says it
+    // includes them (sync.js), even when the action changed nothing. From a
+    // tab with an id, the number is also remembered with the room (roomState
+    // syncSeen): an edit it already has is acknowledged and skipped, so a
+    // resend after a lost connection or a restart applies nothing twice. An
+    // edit that arrives before the tab is back at its table is dropped
+    // unseen; the tab sends it again once it has rejoined.
+    socket.use((packet, next) => {
+      if (closing) return;
+      const payload = packet[1];
+      if (payload && typeof payload === 'object' && Number.isInteger(payload._seq)) {
+        if (cid) {
+          const r = room();
+          if (!r) return;
+          if (payload._seq <= seenSeq(r, cid)) {
+            if (payload._seq > (socket.data.seq || 0)) socket.data.seq = payload._seq;
+            markDirty(r); // a write soon tells the tab it's safe (`saved`), even if this one was saved already
+            sync.scheduleAck(currentRoom);
+            const cb = packet[packet.length - 1];
+            if (typeof cb === 'function') cb({ duplicate: true });
+            return;
+          }
+          markSeen(r, cid, payload._seq);
+        }
+        if (payload._seq > (socket.data.seq || 0)) {
+          socket.data.seq = payload._seq;
+          sync.scheduleAck(currentRoom);
+        }
+      }
+      next();
+    });
+    // Say no to the sender (their optimistic copy is rolled back by the ack).
+    const refuse = (cb, error) => {
+      if (cb) cb({ error });
+      else socket.emit('actionRejected', { error });
+    };
 
     const room = () => (currentRoom ? activeRooms.get(currentRoom) : null);
     const me = () => {
@@ -227,25 +344,32 @@ function registerSocketHandlers(io) {
       if (r) r.lastActivity = Date.now();
     };
 
+    // Undo / redo, prepared state and reset, clearing layers, groups of creatures.
+    sceneTools.register(socket, { room, uid: () => currentUserId, touch, broadcastRoom, broadcastEvent, placeFree });
+    practice.register(socket, { room, uid: () => currentUserId, touch });
+
     // ---------- Room lifecycle ----------
 
-    socket.on('createCampaign', async ({ name, mode, userId, username, adventureKey }, cb) => {
-      if (!userId || !username) return cb && cb({ error: 'Not logged in' });
+    socket.on('createCampaign', async ({ name, mode, adventureKey } = {}, cb) => {
+      if (!authed) return cb && cb({ error: 'Not logged in' });
+      const { id: userId, username } = authed;
       const newRoom = createRoom({ name, mode, hostId: userId, hostName: username });
       if (/^[a-z0-9-]{1,40}$/.test(adventureKey || '')) newRoom.adventureKey = adventureKey; // which premade a guided table plays
       const member = newRoom.members[0];
       member.socketId = socket.id;
       currentRoom = newRoom.code;
       currentUserId = userId;
+      if (cid) { socket.data.seq = 0; socket.data.savedSent = 0; }
       socket.join(newRoom.code);
       startAutoSave(newRoom.code);
       addLog(newRoom, { type: 'info', text: `${username} founded the campaign "${newRoom.name}".` });
       await saveRoom(newRoom);
-      cb && cb({ code: newRoom.code, state: fullStateForUser(newRoom, userId) });
+      cb && cb({ code: newRoom.code, state: sync.fullState(socket, newRoom, userId) });
     });
 
-    socket.on('joinCampaign', async ({ code, userId, username }, cb) => {
-      if (!userId || !username) return cb && cb({ error: 'Not logged in' });
+    socket.on('joinCampaign', async ({ code } = {}, cb) => {
+      if (!authed) return cb && cb({ error: 'Not logged in' });
+      const { id: userId, username } = authed;
       code = (code || '').toUpperCase().trim();
       let r = activeRooms.get(code);
       if (!r) r = await loadRoomFromDb(code);
@@ -256,20 +380,42 @@ function registerSocketHandlers(io) {
       member.socketId = socket.id;
       currentRoom = code;
       currentUserId = userId;
+      // What this tab sent before (a reload, a reconnect, a restarted
+      // server) and the room has: its next full state acknowledges it.
+      // A write soon after says which of those are safe (`saved`), so the tab
+      // can stop keeping them even if nothing else changes.
+      if (cid) {
+        socket.data.seq = seenSeq(r, cid);
+        socket.data.savedSent = 0;
+        if (socket.data.seq) markDirty(r);
+      }
       socket.join(code);
       startAutoSave(code);
       touch();
       if (!existing) logAndBroadcast(r, { type: 'info', text: `${username} joined the party!` });
       broadcastRoom(code);
-      cb && cb({ code, state: fullStateForUser(r, userId) });
+      cb && cb({ code, state: sync.fullState(socket, r, userId) });
     });
 
+    // The whole state again (a client that missed a patch, or asked).
     socket.on('requestState', (cb) => {
       const r = room();
-      if (!r) return cb && cb({ error: 'Not in a campaign' });
-      const state = fullStateForUser(r, currentUserId);
-      if (cb) cb({ state });
+      if (!r) return typeof cb === 'function' && cb({ error: 'Not in a campaign' });
+      const state = sync.fullState(socket, r, currentUserId);
+      if (typeof cb === 'function') cb({ state });
       else socket.emit('gameState', state);
+    });
+
+    // An idle client checking it is still in step: a version number each
+    // way, and the full state only if it is behind.
+    socket.on('syncCheck', ({ v } = {}, cb) => {
+      const r = room();
+      if (typeof cb !== 'function') return;
+      if (!r) return cb({ error: 'Not in a campaign' });
+      const s = socket.data.sync;
+      // (a second tab of the same player no longer gets patches: it gets the state)
+      if (s && s.code === r.code && s.v === v && me()?.socketId === socket.id) return cb({ ok: true });
+      cb({ state: sync.fullState(socket, r, currentUserId) });
     });
 
     socket.on('leaveCampaign', () => {
@@ -278,6 +424,7 @@ function registerSocketHandlers(io) {
       const member = me();
       if (member) member.socketId = null;
       socket.leave(r.code);
+      socket.data.sync = null;
       currentRoom = null;
       broadcastRoom(r.code);
     });
@@ -291,6 +438,7 @@ function registerSocketHandlers(io) {
         if (sock) {
           sock.emit('kicked');
           sock.leave(r.code);
+          sock.data.sync = null;
         }
       }
       r.members = r.members.filter((m) => m.userId !== userId);
@@ -303,7 +451,7 @@ function registerSocketHandlers(io) {
       const r = room();
       if (!r || r.mode !== 'dm' || r.dmId !== currentUserId) return;
       const target = r.members.find((m) => m.userId === userId);
-      if (!target) return;
+      if (!target || target.bot) return; // a practice hero (training.js) can't run the table
       r.dmId = userId;
       logAndBroadcast(r, { type: 'info', text: `${target.username} is now the Dungeon Master.` });
       broadcastRoom(r.code);
@@ -318,8 +466,13 @@ function registerSocketHandlers(io) {
 
     socket.on('updateSettings', (patch) => {
       const r = room();
-      if (!r || !isDM(r, currentUserId)) return;
-      r.settings = { ...r.settings, ...patch };
+      if (!r || !isDM(r, currentUserId) || !patch || typeof patch !== 'object') return;
+      const { _seq, ...rest } = patch;
+      if (rest.leveling !== undefined) {
+        if (!['xp', 'milestone'].includes(rest.leveling)) delete rest.leveling;
+        else rest.levelingChosen = true;
+      }
+      r.settings = { ...r.settings, ...rest };
       broadcastRoom(r.code);
     });
 
@@ -364,6 +517,20 @@ function registerSocketHandlers(io) {
       const snapshot = r.charSheets[characterId];
       const isOwner = snapshot && snapshot.ownerId === currentUserId;
       if (!isOwner && !isDMStrict(r, currentUserId)) return;
+      // A player's own sheet: what only the table gives (XP, a granted level,
+      // a rage, an inspiration die) stays as the server has it; a level comes
+      // only with the XP for it (or the DM's say-so); mid-fight, spent slots
+      // and class features don't come back.
+      if (snapshot && !(r.mode === 'dm' && r.dmId === currentUserId)) {
+        const prot = playerSheetGuard(r, snapshot, sheet);
+        if (prot.error) {
+          socket.emit('actionRejected', { error: prot.error });
+          sync.scheduleAck(r.code); // the sender's guess is rolled back
+          return;
+        }
+        sheet = prot.sheet;
+      }
+      if (snapshot?.levelGrant && (sheet.level || 1) >= snapshot.levelGrant) sheet = { ...sheet, levelGrant: null };
       r.charSheets[characterId] = { ...sheet, ownerId: snapshot ? snapshot.ownerId : currentUserId, name: sheet.name || (snapshot && snapshot.name) };
       touch();
       broadcastRoom(r.code);
@@ -377,7 +544,7 @@ function registerSocketHandlers(io) {
 
     // ---------- Scenes ----------
 
-    const buildScene = ({ name, floor, w, h, bgUrl, cells, fogEnabled, notes, entry, tokens }) => {
+    const buildScene = ({ name, floor, w, h, bgUrl, cells, ground, levels, fogEnabled, notes, entry, tokens }) => {
       const scene = createScene({
         name: (name || 'New Scene').slice(0, 60),
         bg: bgUrl ? { kind: 'url', url: bgUrl, floor: floor || 'stone' } : { kind: cells ? 'builtin' : 'blank', floor: floor || 'stone' },
@@ -387,6 +554,7 @@ function registerSocketHandlers(io) {
         notes: (notes || '').slice(0, 4000),
       });
       if (entry && Number.isInteger(entry.x) && Number.isInteger(entry.y)) scene.entry = { x: entry.x, y: entry.y };
+      if (cells) { scene.ground = ground; scene.levels = levels; layers.fitLayers(scene); }
       // Premade scenes come with their people already in place (NPCs, markers).
       if (Array.isArray(tokens)) {
         for (const t of tokens.slice(0, 30)) {
@@ -460,33 +628,27 @@ function registerSocketHandlers(io) {
     // The DM paints terrain and objects straight onto the live map. Edits
     // arrive as a sparse list of {x, y, ch} so a brush stroke is one message.
 
-    socket.on('paintScene', ({ sceneId, cells }, cb) => {
+    // `level`: paint on that level instead of the base. `replace`: a floor
+    // clears what stood on the square (stamps); else it goes under it.
+    socket.on('paintScene', ({ sceneId, cells, level, replace }, cb) => {
       const r = room();
       if (!r || !isDM(r, currentUserId) || !Array.isArray(cells)) return;
       const scene = findScene(r, sceneId) || getActiveScene(r);
       if (!scene) return;
-      const rows = scene.cells.map((row) => row.split(''));
-      let changed = 0;
-      for (const c of cells.slice(0, 6000)) {
-        const x = clampInt(c.x, 0, scene.grid.w - 1);
-        const y = clampInt(c.y, 0, scene.grid.h - 1);
-        const ch = typeof c.ch === 'string' && c.ch.length === 1 ? c.ch : null;
-        if (!ch || !rows[y] || rows[y][x] === ch) continue;
-        rows[y][x] = ch;
-        changed++;
-      }
+      const changed = layers.paint(scene, cells.slice(0, 6000), {
+        level: typeof level === 'string' ? level : null,
+        replace: !!replace,
+        pad: padCharFor(scene.bg && scene.bg.floor),
+      });
       if (!changed) return cb && cb({ changed: 0 });
-      scene.cells = rows.map((row) => row.join(''));
       touch();
-      // Painting is high-frequency: push the delta straight to everyone and let
-      // the debounced full state follow.
-      broadcastEvent(r.code, 'scenePainted', { sceneId: scene.id, cells });
-      broadcastRoom(r.code);
+      broadcastRoom(r.code); // the changed rows go out in the next patch
       cb && cb({ changed });
     });
 
     // Replace the whole grid - resize, fill, or swap in a different built-in map.
-    socket.on('reshapeScene', ({ sceneId, w, h, cells, floor }, cb) => {
+    // `fresh`: a new map (generated), so the old floors under things go.
+    socket.on('reshapeScene', ({ sceneId, w, h, cells, floor, fresh }, cb) => {
       const r = room();
       if (!r || !isDM(r, currentUserId)) return;
       const scene = findScene(r, sceneId) || getActiveScene(r);
@@ -495,11 +657,13 @@ function registerSocketHandlers(io) {
       if (floor) scene.bg = { ...scene.bg, floor };
       scene.grid = grid;
       scene.cells = normaliseCells(cells || scene.cells, grid, scene.bg && scene.bg.floor);
+      if (fresh) delete scene.ground;
+      layers.fitLayers(scene);
       // keep every token inside the new bounds, and out of any new rock or furniture
       for (const t of scene.tokens) {
         t.x = clampInt(t.x, 0, grid.w - 1);
         t.y = clampInt(t.y, 0, grid.h - 1);
-        const ch = (scene.cells[t.y] || '')[t.x];
+        const ch = (layers.walkRows(scene)[t.y] || '')[t.x];
         if (t.kind !== 'marker' && (BLOCKING.has(ch) || BULKY.has(ch))) Object.assign(t, placeFree(scene, t.x, t.y, t.id));
       }
       for (const o of scene.objects || []) { o.x = clampInt(o.x, 0, grid.w - 1); o.y = clampInt(o.y, 0, grid.h - 1); }
@@ -525,6 +689,7 @@ function registerSocketHandlers(io) {
           ? scene.tokens.filter((t) => t.kind !== 'pc').map((t) => ({ ...t, id: uuidv4(), characterId: null, ownerId: null }))
           : [],
       };
+      delete copy.prep; // the copy gets its own prepared state when it goes live
       const at = r.scenes.findIndex((s) => s.id === sceneId);
       r.scenes.splice(at + 1, 0, copy);
       touch();
@@ -549,7 +714,8 @@ function registerSocketHandlers(io) {
       if (!findScene(r, sceneId)) return;
       r.activeSceneId = sceneId;
       const scene = findScene(r, sceneId);
-      ensurePartyTokens(r, scene); // PCs travel with the party to the new scene
+      if (!scene.prep) sceneTools.capturePrep(scene); // how it looked when the party first arrived
+      ensurePartyTokens(r, scene); // PCs travel with the party (and leave the old scene)
       logAndBroadcast(r, { type: 'scene', text: `Scene: ${scene.name}` });
       broadcastRoom(r.code);
     });
@@ -646,7 +812,7 @@ function registerSocketHandlers(io) {
       if (beat.sceneId && findScene(r, beat.sceneId)) {
         r.activeSceneId = beat.sceneId;
         const scene = findScene(r, beat.sceneId);
-        ensurePartyTokens(r, scene);
+        ensurePartyTokens(r, scene); // the party travels (their tokens leave the old scene)
         logAndBroadcast(r, { type: 'scene', text: `Scene: ${scene.name}` });
       }
 
@@ -655,7 +821,10 @@ function registerSocketHandlers(io) {
       if (spawn && Array.isArray(monsters)) {
         // The client resolves stat blocks from the SRD and hands us ready tokens.
         for (const token of monsters.slice(0, 24)) {
-          const at = findSpawn(scene);
+          // where the client says they wait (the far side of the map), else by the way in
+          const at = Number.isInteger(token.x) && Number.isInteger(token.y)
+            ? placeFree(scene, clampInt(token.x, 0, scene.grid.w - 1), clampInt(token.y, 0, scene.grid.h - 1))
+            : findSpawn(scene);
           scene.tokens.push({
             id: uuidv4(),
             kind: 'monster',
@@ -694,6 +863,7 @@ function registerSocketHandlers(io) {
         broadcastEvent(r.code, 'chatMessage', item);
         logAndBroadcast(r, { type: 'story', text });
       }
+      if (!scene.prep) sceneTools.capturePrep(scene); // the beat's creatures are part of the prepared state
       touch();
       broadcastRoom(r.code);
       cb && cb({ ok: true, placed });
@@ -739,38 +909,176 @@ function registerSocketHandlers(io) {
       cb && cb({ tokenId: newToken.id });
     });
 
-    socket.on('moveToken', ({ tokenId, x, y }) => {
+    // Moves are checked here, so every screen agrees and nobody walks
+    // through a wall, past their speed, out of turn or onto someone else.
+    // The DM (in a DM game) moves anything anywhere.
+    socket.on('moveToken', ({ tokenId, x, y } = {}, cb) => {
       const r = room();
       if (!r) return;
       const { scene, token } = findToken(r, tokenId);
       if (!token) return;
       const mine = token.ownerId === currentUserId;
-      if (!mine && !isDM(r, currentUserId) && !r.settings.playersCanMoveAny) return;
+      if (!mine && !isDM(r, currentUserId) && !r.settings.playersCanMoveAny) return refuse(cb, 'That isn\'t yours to move');
+      const to = { x: clampInt(x, 0, scene.grid.w - 1), y: clampInt(y, 0, scene.grid.h - 1) };
       const from = { x: token.x, y: token.y };
-      token.x = clampInt(x, 0, scene.grid.w - 1);
-      token.y = clampInt(y, 0, scene.grid.h - 1);
-      // Never left standing inside a wall, a rock, a table or a chair (2D drags included).
-      const ch = (scene.cells?.[token.y] || '')[token.x];
-      if (token.kind !== 'marker' && (BLOCKING.has(ch) || BULKY.has(ch))) Object.assign(token, placeFree(scene, token.x, token.y, token.id));
+      const checked = token.kind !== 'marker' && !(r.mode === 'dm' && r.dmId === currentUserId) && (mine || !isDM(r, currentUserId));
+      let cost = 0;
+      if (checked) {
+        const c = r.combat;
+        const turns = c?.active && c.round > 0 && scene.id === r.activeSceneId && c.order.some((o) => o.tokenId === token.id);
+        if (turns) {
+          if (c.order[c.turnIndex]?.tokenId !== token.id) return refuse(cb, 'Wait for your turn');
+          const used = c.spent?.[token.id]?.move || 0;
+          cost = moveCost(scene, from, to, Math.max(0, speedCells(r, token) - used));
+          if (cost === null) return refuse(cb, 'Too far for this turn');
+        } else if (moveCost(scene, from, to, 400) === null) {
+          return refuse(cb, 'Can\'t get there');
+        }
+      }
+      token.x = to.x;
+      token.y = to.y;
+      // Never left standing inside a wall, a table, or on someone else.
+      if (token.kind !== 'marker') Object.assign(token, placeFree(scene, token.x, token.y, token.id));
+      if (cost) {
+        const c = r.combat;
+        c.spent = c.spent || {};
+        c.spent[token.id] = { ...(c.spent[token.id] || {}), move: (c.spent[token.id]?.move || 0) + cost };
+      }
       if (token.kind === 'pc' && scene.objects?.length) tools.onHeroMoved(r, scene, token, from, toolsApi(r));
       touch();
-      broadcastEvent(r.code, 'tokenMoved', { tokenId, x: token.x, y: token.y });
       broadcastRoom(r.code);
+      cb && cb({ ok: true, x: token.x, y: token.y });
     });
 
     // A hero's attack or damaging spell, resolved here so the dice are fair.
-    socket.on('attackToken', ({ attackerTokenId, targetTokenId, attack }, cb) => {
+    socket.on('attackToken', ({ attackerTokenId, targetTokenId, attack } = {}, cb) => {
       const r = room();
-      if (!r || !attack) return cb && cb({ error: 'Not at a table' });
+      if (!r || !attack) return refuse(cb, 'Not at a table');
       const { scene, token: attacker } = findToken(r, attackerTokenId);
       const target = scene && scene.tokens.find((t) => t.id === targetTokenId);
-      if (!attacker || !target) return cb && cb({ error: 'No such creature' });
-      if (attacker.ownerId !== currentUserId && !isDM(r, currentUserId)) return cb && cb({ error: 'That isn\'t yours' });
-      if (target.dead) return cb && cb({ error: `${target.label} is already down` });
-      const { ev, text } = resolveAttack(r, attacker, target, attack);
+      if (!attacker || !target) return refuse(cb, 'No such creature');
+      if (attacker.ownerId !== currentUserId && !isDM(r, currentUserId)) return refuse(cb, 'That isn\'t yours');
+      if (target.dead) return refuse(cb, `${target.label} is already down`);
+      const realDM = r.mode === 'dm' && r.dmId === currentUserId;
+      // A hero's numbers come from their sheet here, never from the message.
+      let a = attack;
+      const sheet = attacker.kind === 'pc' && attacker.characterId ? r.charSheets[attacker.characterId] : null;
+      if (sheet) {
+        a = heroAttack(sheet, attack);
+        if (a.error) return refuse(cb, a.error);
+      } else if (!realDM) return refuse(cb, 'Only the DM runs that creature');
+      if (sheet && !realDM) {
+        // Reach and range, and a clear line for anything thrown, shot or cast.
+        const dist = Math.max(Math.abs(attacker.x - target.x), Math.abs(attacker.y - target.y)) - Math.max(0, (target.size || 1) - 1);
+        let mode = 'normal';
+        if (a.spell) {
+          if (dist > Math.max(1, Math.floor(a.rangeFt / 5))) return refuse(cb, `${target.label} is out of range (${a.rangeFt} ft)`);
+        } else if (a.range && (a.style === 'ranged' || (a.thrown && dist > 1))) {
+          if (dist > Math.floor(a.range.long / 5)) return refuse(cb, `${target.label} is out of range (${a.range.long} ft)`);
+          if (dist > Math.floor(a.range.normal / 5)) mode = 'disadvantage';
+        } else if (dist > (a.reach || 1)) return refuse(cb, `${target.label} is out of reach`);
+        if (dist > 1 && !lineClear(scene, attacker.x, attacker.y, target.x, target.y)) return refuse(cb, `You can't see ${target.label} from there`);
+        a = { ...a, mode };
+        // a thrown weapon is a ranged attack once it leaves your hand: no rage bonus
+        if (a.rage && a.thrown && dist > 1) a = { ...a, damage: a.damage.replace(new RegExp(`\\+${a.rage}$`), ''), rage: 0 };
+        // In a fight: on your turn, with your action left.
+        const c = r.combat;
+        if (c?.active && c.round > 0 && c.order.some((o) => o.tokenId === attacker.id)) {
+          if (c.order[c.turnIndex]?.tokenId !== attacker.id) return refuse(cb, 'Wait for your turn');
+          const used = c.spent?.[attacker.id] || {};
+          if (a.spell && a.bonusAction) {
+            if (used.bonus) return refuse(cb, 'You have used your bonus action this turn');
+          } else if (used.cast || used.action || (a.spell ? used.attacks > 0 : (used.attacks || 0) >= attacksPerAction(sheet))) return refuse(cb, 'You have used your action this turn');
+          c.spent = c.spent || {};
+          c.spent[attacker.id] = { ...used, ...(a.spell ? (a.bonusAction ? { bonus: true } : { cast: true }) : { attacks: (used.attacks || 0) + 1 }) };
+        }
+      }
+      // A levelled spell burns its slot here, on the sheet the server holds.
+      if (sheet && a.slotKey) spendSlot(sheet, a.slotKey);
+      const { ev, text } = resolveAttack(r, attacker, target, a);
       touch();
       broadcastEvent(r.code, 'combatEvent', ev);
       logAndBroadcast(r, { type: 'combat', text, roll: ev.roll || ev.damageRoll || null });
+      broadcastRoom(r.code);
+      cb && cb({ ok: true, event: ev });
+    });
+
+    // A hero's healing spell or class feature (Rage, Second Wind, Lay on
+    // Hands, Bardic Inspiration), resolved here like an attack: the numbers
+    // and what's left come from the sheet the server holds.
+    socket.on('heroAction', ({ actorTokenId, targetTokenId, action } = {}, cb) => {
+      const r = room();
+      if (!r || !action) return refuse(cb, 'Not at a table');
+      const { scene, token: actor } = findToken(r, actorTokenId);
+      if (!actor || actor.kind !== 'pc' || !actor.characterId) return refuse(cb, 'No such hero');
+      const sheet = r.charSheets[actor.characterId];
+      if (!sheet) return refuse(cb, 'No such hero');
+      if (actor.ownerId !== currentUserId && !isDM(r, currentUserId)) return refuse(cb, 'That isn\'t yours');
+      const target = targetTokenId ? scene.tokens.find((t) => t.id === targetTokenId) : actor;
+      if (!target) return refuse(cb, 'No such creature');
+      const ref = String(action.ref || '');
+      const a = ref.startsWith('s:') ? healingSpell(sheet, ref.slice(2), action.slot) : ref.startsWith('f:') ? heroFeature(sheet, ref.slice(2)) : { error: 'Unknown action' };
+      if (a.error) return refuse(cb, a.error);
+      if (a.self && target.id !== actor.id) return refuse(cb, `${a.name} is only for yourself`);
+      if (a.notSelf && target.id === actor.id) return refuse(cb, `${a.name} goes to someone else`);
+      if (a.feature === 'bardic-inspiration' && target.kind !== 'pc') return refuse(cb, 'Only a hero can use an inspiration die');
+      if (a.friendly && target.kind === 'monster') return refuse(cb, `${a.name} is for your friends`);
+      if (target.dead && target.kind !== 'pc') return refuse(cb, `${target.label} is beyond help`);
+      const tSheet = target.kind === 'pc' && target.characterId ? r.charSheets[target.characterId] : null;
+      if (a.feature === 'bardic-inspiration' && tSheet?.bardicDie) return refuse(cb, `${target.label} is already inspired`);
+      const realDM = r.mode === 'dm' && r.dmId === currentUserId;
+      if (!realDM) {
+        const dist = Math.max(Math.abs(actor.x - target.x), Math.abs(actor.y - target.y)) - Math.max(0, (target.size || 1) - 1);
+        if (dist > Math.max(1, Math.floor(a.rangeFt / 5))) return refuse(cb, a.rangeFt <= 5 ? `Walk up to ${target.label} first (touch)` : `${target.label} is out of range (${a.rangeFt} ft)`);
+        if (dist > 1 && !lineClear(scene, actor.x, actor.y, target.x, target.y)) return refuse(cb, `You can't see ${target.label} from there`);
+        const c = r.combat;
+        if (c?.active && c.round > 0 && c.order.some((o) => o.tokenId === actor.id)) {
+          if (c.order[c.turnIndex]?.tokenId !== actor.id) return refuse(cb, 'Wait for your turn');
+          const used = c.spent?.[actor.id] || {};
+          if (a.bonusAction ? used.bonus : used.cast || used.action || used.attacks > 0) return refuse(cb, `You have used your ${a.bonusAction ? 'bonus action' : 'action'} this turn`);
+          c.spent = c.spent || {};
+          c.spent[actor.id] = { ...used, ...(a.bonusAction ? { bonus: true } : { action: true }) };
+        }
+      }
+      const who = sheet.name || actor.label;
+      const ev = { kind: 'ability', ability: a.feature || a.index, name: a.name, attackerTokenId: actor.id, targetTokenId: target.id };
+      let text;
+      let roll = null;
+      if (a.spell) spendSlot(sheet, a.slotKey);
+      if (a.feature) sheet.uses = { ...(sheet.uses || {}), [a.feature]: (sheet.uses?.[a.feature] || 0) + 1 };
+      if (a.kind === 'heal' || a.feature === 'second-wind' || a.feature === 'lay-on-hands') {
+        let amount;
+        if (a.feature === 'lay-on-hands') {
+          // from the pool: what the friend is missing, as far as the pool goes
+          const hp = tSheet ? tSheet.currentHp ?? 0 : target.hp ?? 0;
+          const max = tSheet ? tSheet.maxHp ?? hp : target.maxHp ?? hp;
+          amount = Math.max(1, Math.min(a.left, max - hp));
+          if (max - hp <= 0) { sheet.uses['lay-on-hands'] -= 1; return refuse(cb, `${target.label} is unhurt`); }
+          sheet.uses['lay-on-hands'] += amount - 1; // the pool counts hit points
+        } else {
+          roll = executeRoll(a.dice || '1d4', 'normal');
+          amount = Math.max(1, roll.total);
+        }
+        const after = applyHealing(r, target, amount);
+        const got = after ? after.healed : 0;
+        Object.assign(ev, { kind: 'heal', amount: got, targetHp: after?.hp, targetMaxHp: after?.max, roll });
+        text = target.id === actor.id
+          ? `${who} uses ${a.name} and regains ${got} HP${after ? ` (${after.hp}/${after.max})` : ''}.`
+          : `${who} ${a.spell ? 'casts' : 'uses'} ${a.name} on ${target.label}: +${got} HP${after ? ` (${after.hp}/${after.max})` : ''}.`;
+        if (a.feature === 'lay-on-hands') text += ` ${Math.max(0, a.left - amount)} left in the pool.`;
+        if (target.kind === 'pc' && target.characterId) broadcastEvent(r.code, 'combatEvent', { kind: 'hp', characterId: target.characterId, delta: got, hp: after?.hp });
+        else if (got) broadcastEvent(r.code, 'combatEvent', { kind: 'hp', tokenId: target.id, delta: got, hp: after?.hp }, target.hidden ? (m) => isDM(r, m.userId) : null);
+      } else if (a.feature === 'rage') {
+        sheet.raging = true;
+        text = `${who} flies into a RAGE! +${a.rageBonus} damage with Strength melee attacks, half damage from blows, stabs and cuts.`;
+      } else if (a.feature === 'bardic-inspiration') {
+        tSheet.bardicDie = a.die;
+        Object.assign(ev, { die: a.die });
+        text = `${who} inspires ${target.label}: a d${a.die} to add to an attack that would miss.`;
+      }
+      touch();
+      broadcastEvent(r.code, 'combatEvent', ev, target.hidden ? (m) => isDM(r, m.userId) : null);
+      logAndBroadcast(r, { type: 'combat', text, roll });
       broadcastRoom(r.code);
       cb && cb({ ok: true, event: ev });
     });
@@ -785,8 +1093,7 @@ function registerSocketHandlers(io) {
       const to = toggleDoor(scene, clampInt(x, 0, scene.grid.w - 1), clampInt(y, 0, scene.grid.h - 1));
       if (!to) return cb && cb({ error: 'Not a door' });
       touch();
-      broadcastEvent(r.code, 'scenePainted', { sceneId: scene.id, cells: scene.cells });
-      broadcastRoom(r.code);
+      broadcastRoom(r.code); // the door's row goes out in the next patch
       cb && cb({ ok: true, open: to === 'd' });
     });
 
@@ -799,8 +1106,99 @@ function registerSocketHandlers(io) {
       if (!mine && !isDM(r, currentUserId)) return;
       const allowed = ['label', 'color', 'size', 'hp', 'maxHp', 'ac', 'conditions', 'hidden', 'dead', 'letter', 'art', 'note'];
       for (const key of allowed) if (patch[key] !== undefined) token[key] = patch[key];
+      // a merchant's wares (the DM's to set)
+      if (patch.shop !== undefined && isDM(r, currentUserId)) { const shop = items.cleanShop(patch.shop); if (shop) token.shop = shop; else delete token.shop; }
       if (token.hp !== null && token.hp <= 0 && token.kind === 'monster') token.dead = true;
       if (token.hp !== null && token.hp > 0) token.dead = false;
+      touch();
+      broadcastRoom(r.code);
+    });
+
+    // ---------- Items: given, drunk, bought ----------
+
+    // The DM hands one or more items to a hero.
+    socket.on('giveItem', ({ characterId, items: list } = {}, cb) => {
+      const r = room();
+      if (!r || !isDMStrict(r, currentUserId)) return cb && cb({ error: 'Only the DM gives items' });
+      const sheet = r.charSheets[characterId];
+      if (!sheet || !Array.isArray(list) || !list.length) return cb && cb({ error: 'Nothing to give' });
+      const given = list.slice(0, 20).map(items.cleanItem);
+      items.addToSheet(sheet, given);
+      persistSheet(characterId, sheet);
+      touch();
+      logAndBroadcast(r, { type: 'reward', text: `${sheet.name || 'A hero'} receives ${given.map(itemLine).join(', ')}.` });
+      broadcastRoom(r.code);
+      cb && cb({ ok: true });
+    });
+
+    // Drink a potion (its healing rolled here), or use up a plain consumable.
+    socket.on('useItem', ({ characterId, index } = {}, cb) => {
+      const r = room();
+      const sheet = r && r.charSheets[characterId];
+      if (!sheet) return cb && cb({ error: 'No such hero' });
+      if (sheet.ownerId !== currentUserId && !isDMStrict(r, currentUserId)) return cb && cb({ error: 'Not your hero' });
+      const eq = Array.isArray(sheet.equipment) ? sheet.equipment : [];
+      const it = eq[index];
+      if (!it || it.kind !== 'potion') return cb && cb({ error: 'That can\'t be drunk' });
+      let text = `${sheet.name} drinks ${it.name}.`;
+      if (it.stats?.heal) {
+        const roll = executeRoll(it.stats.heal, 'normal');
+        const before = sheet.currentHp || 0;
+        sheet.currentHp = Math.min(sheet.maxHp || 0, before + (roll?.total || 0));
+        const got = sheet.currentHp - before;
+        text = `${sheet.name} drinks ${it.name} and heals ${got} HP (${it.stats.heal}: ${roll?.total || 0}).`;
+        if (got) broadcastEvent(r.code, 'combatEvent', { kind: 'hp', characterId, delta: got, hp: sheet.currentHp });
+      } else if (it.desc) text += ` ${it.desc.split(/(?<=\.)\s/)[0]}`;
+      if ((it.qty || 1) > 1) it.qty -= 1; else eq.splice(index, 1);
+      sheet.equipment = eq;
+      persistSheet(characterId, sheet);
+      touch();
+      logAndBroadcast(r, { type: 'reward', text });
+      broadcastRoom(r.code);
+      cb && cb({ ok: true, text });
+    });
+
+    // A hero buys from a merchant (an NPC the DM gave a shop).
+    socket.on('buyItem', ({ tokenId, index } = {}, cb) => {
+      const r = room();
+      const member = me();
+      if (!r || !member) return cb && cb({ error: 'Not at a table' });
+      const { token } = findToken(r, tokenId);
+      const ware = token?.shop?.items?.[index];
+      if (!token || !ware || token.shop.open === false || token.hidden) return cb && cb({ error: 'Nothing for sale' });
+      const characterId = member.characterId;
+      const sheet = characterId && r.charSheets[characterId];
+      if (!sheet) return cb && cb({ error: 'Pick a hero first' });
+      if (ware.stock === 0) return cb && cb({ error: 'Sold out' });
+      const purse = items.pay(sheet.coins || {}, ware.price);
+      if (!purse) return cb && cb({ error: `Not enough coin: it costs ${ware.price} gp` });
+      sheet.coins = purse;
+      items.addToSheet(sheet, [{ ...ware.item, qty: 1 }]);
+      if (ware.stock != null) ware.stock -= 1;
+      persistSheet(characterId, sheet);
+      touch();
+      logAndBroadcast(r, { type: 'reward', text: `${sheet.name} buys ${ware.item.name} from ${token.label} for ${ware.price} gp.` });
+      broadcastRoom(r.code);
+      cb && cb({ ok: true });
+    });
+
+    // The DM's private notes on a hero (by character) or a creature (by
+    // token). viewForUser never sends them to anyone else.
+    socket.on('setDmNote', ({ characterId, tokenId, text } = {}) => {
+      const r = room();
+      if (!r || r.mode !== 'dm' || r.dmId !== currentUserId) return;
+      const note = String(text || '').slice(0, 2000);
+      if (characterId) {
+        if (!r.charSheets[characterId]) return;
+        if (!r.dmNotes || typeof r.dmNotes !== 'object') r.dmNotes = {};
+        if (note) r.dmNotes[characterId] = note;
+        else delete r.dmNotes[characterId];
+      } else {
+        const { token } = findToken(r, tokenId);
+        if (!token) return;
+        if (note) token.dmNote = note;
+        else delete token.dmNote;
+      }
       touch();
       broadcastRoom(r.code);
     });
@@ -853,11 +1251,14 @@ function registerSocketHandlers(io) {
       const r = room();
       if (!r || !stroke) return;
       const scene = findScene(r, sceneId) || getActiveScene(r);
-      const item = { id: uuidv4(), userId: currentUserId, ...stroke };
+      // the drawer names the stroke (so it can undo or erase it at once)
+      const id = typeof stroke.id === 'string' && /^[\w-]{6,64}$/.test(stroke.id) && !scene.strokes.some((st) => st.id === stroke.id) ? stroke.id : uuidv4();
+      const item = sceneTools.cleanStroke({ ...stroke, id, userId: currentUserId });
+      if (!item) return;
       scene.strokes.push(item);
       if (scene.strokes.length > 500) scene.strokes = scene.strokes.slice(-500);
-      broadcastEvent(r.code, 'strokeAdded', { sceneId: scene.id, stroke: item });
       touch();
+      broadcastRoom(r.code); // the stroke goes out in the next patch (the drawer already shows it)
     });
 
     socket.on('eraseStrokes', ({ sceneId, ids }) => {
@@ -895,6 +1296,17 @@ function registerSocketHandlers(io) {
     socket.on('startCombat', () => {
       const r = room();
       if (!r || !isDM(r, currentUserId)) return;
+      // Already fighting (a fight dropped in mid-combat): the newcomers roll
+      // and join the order; the round and whose turn it is stay as they were.
+      if (r.combat?.active && r.combat.round > 0) {
+        const before = r.log.length;
+        rollMissingInitiative(r, { heroes: false });
+        for (const entry of r.log.slice(before)) sendLog(r, entry);
+        broadcastRoom(r.code);
+        return;
+      }
+      const fightScene = getActiveScene(r);
+      if (fightScene && !fightScene.prep) sceneTools.capturePrep(fightScene); // Reset goes back to before the fight
       r.combat = { active: true, order: [], turnIndex: 0, round: 0 };
       logAndBroadcast(r, { type: 'combat', text: 'Combat begins - roll initiative!' });
       broadcastRoom(r.code);
@@ -913,11 +1325,25 @@ function registerSocketHandlers(io) {
       broadcastRoom(r.code);
     });
 
+    // Friendly folk stay out of the order unless the DM brings one in.
+    socket.on('addToInitiative', ({ tokenId } = {}, cb) => {
+      const r = room();
+      if (!r || !r.combat?.active || !isDM(r, currentUserId)) return refuse(cb, 'No fight to join');
+      const { token } = findToken(r, tokenId);
+      if (!token || token.dead || token.kind === 'marker') return refuse(cb, 'No such creature');
+      if (r.combat.order.some((o) => o.tokenId === token.id)) return refuse(cb, `${token.label} is already in the order`);
+      const before = r.log.length;
+      rollMissingInitiative(r, { heroes: true, only: token.id });
+      for (const entry of r.log.slice(before)) sendLog(r, entry);
+      broadcastRoom(r.code);
+      cb && cb({ ok: true });
+    });
+
     socket.on('rollMonsterInitiative', () => {
       const r = room();
       if (!r || !r.combat.active || !isDM(r, currentUserId)) return;
       rollMissingInitiative(r, { heroes: false });
-      broadcastEvent(r.code, 'logEntry', r.log[r.log.length - 1]);
+      sendLog(r, r.log[r.log.length - 1]);
       broadcastRoom(r.code);
     });
 
@@ -929,6 +1355,7 @@ function registerSocketHandlers(io) {
       if (!r.combat.order.length) return;
       r.combat.round = 1;
       r.combat.turnIndex = 0;
+      r.combat.spent = {};
       const first = r.combat.order[0];
       logAndBroadcast(r, { type: 'combat', text: `Round 1 - ${first.name} goes first!` });
       broadcastRoom(r.code);
@@ -945,7 +1372,8 @@ function registerSocketHandlers(io) {
       const num = (v, lo, hi) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.round(+v))) : undefined);
       const sv = {};
       for (const k of ['str', 'dex', 'con', 'int', 'wis', 'cha']) if (saves && saves[k] !== undefined) sv[k] = num(saves[k], -10, 30);
-      r.charSheets[characterId].derived = { ac: num(ac, 1, 40), initiative: num(initiative, -10, 30), saves: sv, perception: num(perception, -10, 30), passivePerception: num(passivePerception, 0, 40) };
+      r.charSheets[characterId].derived = { ...(r.charSheets[characterId].derived || {}), ac: num(ac, 1, 40), initiative: num(initiative, -10, 30), saves: sv, perception: num(perception, -10, 30), passivePerception: num(passivePerception, 0, 40) };
+      broadcastRoom(r.code);
     });
 
     // DM switch: monsters take their own turns (guided games always do).
@@ -975,6 +1403,7 @@ function registerSocketHandlers(io) {
       const r = room();
       if (!r || !isDM(r, currentUserId)) return;
       r.combat = { active: false, order: [], turnIndex: 0, round: 0 };
+      for (const sh of Object.values(r.charSheets)) if (sh?.raging) sh.raging = false; // rages end with the fight
       logAndBroadcast(r, { type: 'combat', text: 'Combat ends.' });
       broadcastRoom(r.code);
     });
@@ -982,11 +1411,19 @@ function registerSocketHandlers(io) {
     socket.on('autoMonsterTurn', ({ tokenId }) => {
       const r = room();
       if (!r || !isDM(r, currentUserId)) return;
-      const scene = getActiveScene(r);
-      const result = runMonsterTurn(r, scene, tokenId);
-      for (const ev of result.events) broadcastEvent(r.code, 'combatEvent', ev);
-      for (const entry of r.log.slice(-3)) broadcastEvent(r.code, 'logEntry', entry);
-      broadcastRoom(r.code);
+      playMonsterTurn(r, tokenId);
+      // Its turn in the order: once the table has watched it, play moves on.
+      const c = r.combat;
+      if (c?.active && c.round > 0 && c.order[c.turnIndex]?.tokenId === tokenId) {
+        const at = `${c.round}:${c.turnIndex}`;
+        setTimeout(() => {
+          const r2 = activeRooms.get(r.code);
+          if (!r2 || !r2.combat?.active || `${r2.combat.round}:${r2.combat.turnIndex}` !== at) return;
+          advanceTurn(r2);
+          broadcastRoom(r2.code);
+          scheduleMonsterTurn(r2.code);
+        }, MONSTER_WATCH_MS);
+      }
     });
 
     // ---------- HP / dice / chat ----------
@@ -1012,7 +1449,8 @@ function registerSocketHandlers(io) {
         if (setTo !== undefined) token.hp = clampInt(setTo, 0, token.maxHp || 999);
         else if (delta !== undefined) token.hp = clampInt((token.hp || 0) + delta, 0, token.maxHp || 999);
         token.dead = token.hp <= 0;
-        if (token.hp !== before) broadcastEvent(r.code, 'combatEvent', { kind: 'hp', tokenId, delta: token.hp - before, hp: token.hp });
+        // a hidden creature's HP is the DM's business only
+        if (token.hp !== before) broadcastEvent(r.code, 'combatEvent', { kind: 'hp', tokenId, delta: token.hp - before, hp: token.hp }, token.hidden ? (m) => isDM(r, m.userId) : null);
         broadcastRoom(r.code);
       }
     });
@@ -1043,7 +1481,7 @@ function registerSocketHandlers(io) {
       cb && cb({ roll: result });
     });
 
-    socket.on('sendChatMessage', ({ text, whisperTo }) => {
+    socket.on('sendChatMessage', ({ text, whisperTo, cid }) => {
       const r = room();
       const member = me();
       if (!r || !member || !text || !text.trim()) return;
@@ -1053,6 +1491,8 @@ function registerSocketHandlers(io) {
         username: member.username,
         text: text.trim().slice(0, 1000),
         whisperTo: whisperTo || null,
+        // the sender's own copy, shown before this arrived, is matched by it
+        ...(typeof cid === 'string' && /^[a-z0-9]{4,24}$/.test(cid) ? { cid } : {}),
       });
       touch();
       if (whisperTo) {
@@ -1075,6 +1515,26 @@ function registerSocketHandlers(io) {
       }
       logAndBroadcast(r, { type: 'reward', text: `The party gains ${xp} XP each!` });
       broadcastRoom(r.code);
+    });
+
+    // Milestone levelling (or a level as a reward in an XP game): every hero
+    // at the table may go up one level, from their sheet's Level button.
+    socket.on('grantLevel', ({ characterId } = {}, cb) => {
+      const r = room();
+      if (!r || !isDM(r, currentUserId)) return refuse(cb, 'Only the DM grants levels');
+      const names = [];
+      for (const member of r.members) {
+        if (!member.characterId || (characterId && member.characterId !== characterId)) continue;
+        const sheet = r.charSheets[member.characterId];
+        if (!sheet || (sheet.level || 1) >= 20) continue;
+        sheet.levelGrant = Math.max(sheet.levelGrant || 0, (sheet.level || 1) + 1);
+        names.push(sheet.name || member.username);
+      }
+      if (!names.length) return refuse(cb, 'No heroes to level');
+      logAndBroadcast(r, { type: 'reward', text: `Level up! ${names.join(', ')} can go up a level: open your sheet and press the Level button.` });
+      touch();
+      broadcastRoom(r.code);
+      cb && cb({ ok: true, count: names.length });
     });
 
     socket.on('announce', ({ text, type }) => {
@@ -1267,7 +1727,7 @@ function registerSocketHandlers(io) {
       r.combat = { active: false, order: [], turnIndex: 0, round: 0 };
       ensurePartyTokens(r, r.scenes[0]); // place PC tokens on the opening scene
       logAndBroadcast(r, { type: 'story', text: 'The adventure begins...' });
-      broadcastRoomImmediate(r.code);
+      broadcastRoom(r.code);
     });
 
     socket.on('tutorialAdvance', ({ step, flags }) => {
@@ -1309,6 +1769,7 @@ function registerSocketHandlers(io) {
       if (r.tutorial.applied === step) return cb && cb({ ok: false });
       r.tutorial.applied = step;
       touch();
+      broadcastRoom(r.code);
       cb && cb({ ok: true });
     });
 
@@ -1325,7 +1786,7 @@ function registerSocketHandlers(io) {
       const r = room();
       if (!r) return;
       const member = me();
-      if (member) member.socketId = null;
+      if (member && member.socketId === socket.id) member.socketId = null;
       const anyConnected = r.members.some((m) => m.socketId);
       if (!anyConnected) {
         saveRoom(r);
@@ -1333,6 +1794,52 @@ function registerSocketHandlers(io) {
       broadcastRoom(r.code);
     });
   });
+
+  // Before the process goes (index.js): stop applying anything and write
+  // every room. Connections stay up until the process exits; whatever tabs
+  // send meanwhile isn't acknowledged, so they keep it and send it again.
+  api.shutdown = () => {
+    closing = true;
+    return saveAll();
+  };
+  // Write every room now and carry on.
+  api.saveAll = saveAll;
+  return api;
+}
+
+const SRD_XP = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+const levelForXp = (xp) => { let lv = 1; for (let i = 2; i <= 20; i++) if ((xp || 0) >= SRD_XP[i]) lv = i; return lv; };
+const levelingOf = (r) => (r.mode === 'guided' ? 'xp' : r.settings?.leveling === 'milestone' ? 'milestone' : 'xp');
+
+// A player's sheet update, checked against the one the server holds:
+// { sheet } to store, or { error }.
+// A hero's sheet changed on the server: keep the owner's character document in step.
+function persistSheet(characterId, sheet) {
+  if (!/^[a-f0-9]{24}$/.test(String(characterId))) return;
+  const { ownerId, derived, ...rest } = sheet;
+  Character.updateOne({ _id: characterId }, { $set: { sheet: rest, updatedAt: new Date() } }).catch(() => {});
+}
+const itemLine = (it) => `${it.qty > 1 ? `${it.qty} × ` : ''}${it.name}`;
+
+function playerSheetGuard(r, old, sheet) {
+  const out = { ...sheet, xp: old.xp ?? 0, levelGrant: old.levelGrant ?? null };
+  const level = Number(sheet.level) || 1, had = Number(old.level) || 1;
+  if (level > had) {
+    const allowed = Math.max(had, levelingOf(r) === 'xp' ? levelForXp(old.xp) : 0, old.levelGrant || 0);
+    if (level > allowed) {
+      return { error: levelingOf(r) === 'xp' ? `Level ${level} needs ${SRD_XP[Math.min(20, level)]} XP (you have ${old.xp || 0})` : 'Your DM decides when you level up' };
+    }
+  }
+  // only the table starts a rage or hands out an inspiration die; a rest may end them
+  out.raging = sheet.raging ? !!old.raging : false;
+  out.bardicDie = sheet.bardicDie ? old.bardicDie ?? null : null;
+  const c = r.combat;
+  if (c?.active && c.round > 0) {
+    const keepMax = (a = {}, b = {}) => { const m = { ...b }; for (const [k, n] of Object.entries(a)) m[k] = Math.max(Number(n) || 0, Number(m[k]) || 0); return m; };
+    if (old.spellcasting && out.spellcasting) out.spellcasting = { ...out.spellcasting, slotsUsed: keepMax(old.spellcasting.slotsUsed, out.spellcasting.slotsUsed) };
+    out.uses = keepMax(old.uses, out.uses);
+  }
+  return { sheet: out };
 }
 
 function clampInt(v, min, max) {
@@ -1342,13 +1849,16 @@ function clampInt(v, min, max) {
 
 // Roll initiative for every creature on the scene not yet in the order:
 // monsters (and NPCs) by their DEX, heroes (when asked) by their sheet.
-function rollMissingInitiative(r, { heroes }) {
+// Friendly NPCs (innkeepers, merchants) only when the DM adds one (`only`).
+function rollMissingInitiative(r, { heroes, only = null }) {
   const scene = getActiveScene(r);
   const srdStore = require('../srd/store');
   for (const token of scene?.tokens || []) {
+    if (only && token.id !== only) continue;
     if (token.dead || token.kind === 'marker') continue;
     if (token.kind === 'pc' && !heroes) continue;
-    if (token.kind !== 'pc' && token.hidden) continue;
+    if (!only && token.kind === 'npc') continue;
+    if (!only && token.kind !== 'pc' && token.hidden) continue;
     if (r.combat.order.some((o) => o.tokenId === token.id)) continue;
     let mod = 1;
     if (token.kind === 'pc') {
@@ -1359,9 +1869,21 @@ function rollMissingInitiative(r, { heroes }) {
     }
     const roll = executeRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, 'normal');
     r.combat.order.push({ tokenId: token.id, initiative: roll.total, name: token.label });
-    addLog(r, { type: 'combat', text: `${token.label} rolls initiative: ${roll.total}` });
+    addLog(r, { type: 'combat', text: `${token.label} rolls initiative: ${roll.total}`, ...(token.hidden ? { dmOnly: true } : {}) });
   }
+  const current = r.combat.round > 0 ? r.combat.order[r.combat.turnIndex]?.tokenId : null;
   r.combat.order.sort((a, b) => b.initiative - a.initiative);
+  if (current) r.combat.turnIndex = Math.max(0, r.combat.order.findIndex((o) => o.tokenId === current)); // same creature's turn
+}
+
+// How many squares a creature walks in a turn (5 ft each).
+function speedCells(room, token) {
+  if (token.kind === 'pc' && token.characterId) {
+    const sh = room.charSheets[token.characterId];
+    const ft = sh?.derived?.speed || parseInt(sh?.speed, 10) || 30;
+    return clampInt(Math.floor(ft / 5), 1, 24);
+  }
+  return clampInt(token.speedCells || 6, 1, 24);
 }
 
 function isEntryDead(room, entry) {
@@ -1385,7 +1907,7 @@ const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));
 function placeFree(scene, x, y, ignoreId = null) {
   const ok = (cx, cy) => {
     if (cx < 0 || cy < 0 || cx >= scene.grid.w || cy >= scene.grid.h) return false;
-    const ch = (scene.cells?.[cy] || '')[cx] || '.';
+    const ch = (layers.walkRows(scene)[cy] || '')[cx] || '.';
     if (BLOCKING.has(ch) || BULKY.has(ch)) return false;
     return !scene.tokens.some((t) => t.id !== ignoreId && !t.dead && t.x === cx && t.y === cy);
   };
@@ -1402,7 +1924,8 @@ function findSpawn(scene) {
   const cy = scene.entry ? scene.entry.y : Math.floor(scene.grid.h - 3);
   const free = (x, y) => {
     if (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h) return false;
-    if (scene.cells && (BLOCKING.has((scene.cells[y] || '')[x] || '.') || BULKY.has((scene.cells[y] || '')[x]))) return false;
+    const ch = scene.cells ? (layers.walkRows(scene)[y] || '')[x] || '.' : '.';
+    if (BLOCKING.has(ch) || BULKY.has(ch)) return false;
     return !scene.tokens.some((t) => !t.dead && t.x === x && t.y === y);
   };
   for (let radius = 0; radius < 14; radius++) {
@@ -1416,15 +1939,33 @@ function findSpawn(scene) {
   return { x: 1, y: 1 };
 }
 
-// Ensure every party member's PC token exists on the given scene (so the party
-// "travels" when the DM/adventure switches scenes). Spawns missing tokens near
-// the entrance; leaves existing ones where they are.
+// Bring every party member's hero onto the given scene (the party "travels"
+// when the DM or the adventure switches scenes). A hero standing on another
+// scene moves over, keeping its id, and is gone from there, so no scene keeps
+// a stale copy anyone could move. Arrivals land near the entrance; heroes
+// already here stay where they are.
 function ensurePartyTokens(room, scene) {
   if (!scene) return;
   for (const member of room.members) {
     if (!member.characterId) continue;
-    if (scene.tokens.some((t) => t.characterId === member.characterId)) continue;
-    const sheet = room.charSheets[member.characterId];
+    const id = member.characterId;
+    let token = scene.tokens.find((t) => t.characterId === id && t.kind === 'pc');
+    for (const other of room.scenes) {
+      if (other === scene) continue;
+      const mine = other.tokens.filter((t) => t.characterId === id && t.kind === 'pc');
+      if (!mine.length) continue;
+      other.tokens = other.tokens.filter((t) => !(t.characterId === id && t.kind === 'pc'));
+      if (!token) {
+        token = { ...mine[0] };
+        const spawn = findSpawn(scene);
+        token.x = spawn.x;
+        token.y = spawn.y;
+        delete token.patrol;
+        scene.tokens.push(token);
+      }
+    }
+    if (token) continue;
+    const sheet = room.charSheets[id];
     const spawn = findSpawn(scene);
     scene.tokens.push({
       id: uuidv4(),
@@ -1435,7 +1976,7 @@ function ensurePartyTokens(room, scene) {
       x: spawn.x,
       y: spawn.y,
       size: 1,
-      characterId: member.characterId,
+      characterId: id,
       ownerId: member.userId,
       conditions: [],
       hidden: false,

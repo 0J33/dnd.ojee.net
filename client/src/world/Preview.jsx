@@ -5,12 +5,20 @@ import Particles from './particles';
 import { CUTAWAY } from './kit';
 import { buildWorld, applyEnvironment } from './world';
 import { sceneFromBuiltin } from '../data/scenes';
-import { heroFigure, creatureFigure } from './figures';
+import { heroFigure, creatureFigure, figureSize } from './figures';
 import { resolveLook } from '../components/Portrait';
 import { PREGENS } from '../data/pregens';
+import FigureQA from './FigureQA';
 
-// Dev-only: ?world3d=<builtin scene key> renders that place with a free camera.
+// Dev-only: ?world3d=<builtin scene key> renders that place with a free camera;
+// ?world3d=qa&figqa=<set>&page=N shows the hero figures' contact sheets instead.
 export default function Preview({ sceneKey }) {
+  const q = new URLSearchParams(window.location.search);
+  if (q.get('figqa')) return <FigureQA set={q.get('figqa')} page={Number(q.get('page')) || 0} faces={!!q.get('faces')} big={!!q.get('big')} />;
+  return <ScenePreview sceneKey={sceneKey} />;
+}
+
+function ScenePreview({ sceneKey }) {
   const host = useRef(null);
   useEffect(() => {
     const b = sceneFromBuiltin(sceneKey) || sceneFromBuiltin('taproom');
@@ -31,7 +39,7 @@ export default function Preview({ sceneKey }) {
       const sheets = PREGENS.map((p) => p.sheet || p);
       sheets.forEach((sh, i) => {
         const look = resolveLook(sh);
-        const f = heroFigure(look, { seed: sh.name, size: /halfling|gnome/i.test(sh.raceIndex || sh.race || '') ? 'small' : 'medium' });
+        const f = heroFigure(look, { seed: sh.name, size: figureSize(sh) });
         f.place(4 + i * 1.4, 4.5); f.yawGoal = f.yaw = 0.3;
         figs.push(f);
       });

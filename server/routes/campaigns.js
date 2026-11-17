@@ -25,6 +25,7 @@ router.get('/', async (req, res) => {
         online: live ? live.members.filter((m) => m.socketId).length : 0,
         tutorialActive: state.tutorial && state.tutorial.active,
         adventureKey: (state.tutorial && state.tutorial.adventure) || state.adventureKey || null,
+        training: state.training ? state.training.kind : null, // the DM training ground (socket/training.js)
         lastActivity: d.lastActivity,
       };
     })

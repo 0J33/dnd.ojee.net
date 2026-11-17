@@ -83,7 +83,7 @@ export function SubclassPicker({ classIndex, value, onChange }) {
           <SourceHead source={source} sources={sources} />
           <div className="choice-grid">
             {items.map((sc) => (
-              <div key={sc.index} className={`choice-card slim ${value === sc.index ? 'selected' : ''}`} aria-pressed={value === sc.index} {...pressable(() => onChange(sc))}>
+              <div key={sc.index} className={`choice-card slim ${value === sc.index ? 'selected' : ''}`} aria-pressed={value === sc.index} {...pressable(() => onChange(value === sc.index ? null : sc))}>
                 <h4>{sc.name}</h4>
                 <p>{sc.blurb}</p>
                 {sc.restriction && <p className="choice-restriction">{sc.restriction}</p>}

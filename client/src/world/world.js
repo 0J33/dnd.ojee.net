@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TILES, FLOOR_THEMES, cellRandom, tileAt } from '../data/tiles';
 import Kit, { MATS, meshOf, seeded } from './kit';
 import { floorBones, PROPS, WALLS, WALL_H, isWallChar } from './props';
+import { groundAt, drawnLevels } from '../data/layers';
 
 // Builds a scene's place: floor, walls, props, water, lava, lights and the
 // environment around it, all from the scene's tile grid. 1 unit = 5 ft:
@@ -84,7 +85,9 @@ function floorTexture(scene, maxAniso, dmView) {
     return null;
   };
   const paint = [];
-  for (let y = 0; y < h; y++) { paint.push([]); for (let x = 0; x < w; x++) paint[y].push(own(charAt(scene, x, y))); }
+  // (a floor painted under a wall or furniture is known: data/layers.js)
+  const known = (x, y) => { const g = groundAt(scene, x, y); return g && own(g) ? g : null; };
+  for (let y = 0; y < h; y++) { paint.push([]); for (let x = 0; x < w; x++) paint[y].push(own(charAt(scene, x, y)) || known(x, y)); }
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (paint[y][x]) continue;
     const votes = {};
@@ -185,6 +188,35 @@ function floorTexture(scene, maxAniso, dmView) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = Math.min(8, maxAniso);
   return tex;
+}
+
+// A level's top: its floor tiles in a texture, see-through where it has none.
+function levelTop(scene, level, lift, maxAniso) {
+  const { w, h } = scene.grid;
+  const cell = Math.max(16, Math.min(64, Math.floor(2048 / Math.max(w, h))));
+  const cv = document.createElement('canvas');
+  cv.width = w * cell; cv.height = h * cell;
+  const ctx = cv.getContext('2d');
+  const theme = FLOOR_THEMES[scene.bg?.floor] || FLOOR_THEMES.stone;
+  const at = (x, y) => level.cells[y]?.[x] || ' ';
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const ch = at(x, y);
+    if (ch === ' ') continue;
+    let floor = tileAt(ch).cat === 'floor' ? ch : null;
+    // under a wall or furniture: the level's floor next to it
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!floor && tileAt(at(x + dx, y + dy)).cat === 'floor' && at(x + dx, y + dy) !== ' ') floor = at(x + dx, y + dy);
+    tileAt(floor || '.').draw(ctx, x * cell, y * cell, cell, cellRandom(x + 31, y + 17), theme);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.strokeRect(x * cell + 0.5, y * cell + 0.5, cell - 1, cell - 1);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = Math.min(8, maxAniso);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(w, h).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 0.93 }));
+  top.position.set(w / 2, lift + 0.001, h / 2);
+  top.receiveShadow = true;
+  top.name = 'level';
+  return top;
 }
 
 /* ---------------- moving surfaces ---------------- */
@@ -396,6 +428,33 @@ export function buildWorld(scene, { dmView = false, maxAniso = 8 } = {}) {
     }
   }
 
+  // Levels (data/layers.js): raised slabs with their own floor on top, and
+  // whatever walls and furniture stand on them.
+  for (const { level, lift } of drawnLevels(scene)) {
+    const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? ' ' : level.cells[y]?.[x] || ' ');
+    let any = false;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const ch = at(x, y);
+      if (ch === ' ') continue;
+      any = true;
+      const tile = tileAt(ch);
+      const cx = x + 0.5, cz = y + 0.5;
+      solid.box(1, lift, 1, '#5d554b', { x: cx, y: lift / 2 - 0.002, z: cz, vary: 0.04 });
+      if (tile.cat === 'floor') continue;
+      const c = {
+        x0: x, z0: y, x, y, cx, cz, dmView,
+        rnd: seeded(cellRandom(x + 31, y + 17)(0) * 0.999 + 0.0005),
+        at: (dx, dy) => (at(x + dx, y + dy) !== ' ' ? at(x + dx, y + dy) : charAt(scene, x + dx, y + dy)),
+        emit: (e) => emitters.push({ ...e, y: (e.y || 0) + lift }),
+      };
+      walls.liftY = solid.liftY = metal.liftY = glow.liftY = lift;
+      if (tile.cat === 'wall') (WALLS[ch] || WALLS['#'])(c, walls, metal, glow);
+      else PROPS[ch]?.(c, solid, metal, glow);
+      walls.liftY = solid.liftY = metal.liftY = glow.liftY = 0;
+    }
+    if (any) group.add(levelTop(scene, level, lift, maxAniso));
+  }
+
   for (const [kit, mat] of [[walls, MATS.wall], [solid, MATS.solid], [metal, MATS.metal], [glow, MATS.glow]]) {
     const m = meshOf(kit, mat);
     if (m) group.add(m);
@@ -575,5 +634,6 @@ export function applyEnvironment(engine, env, bounds, particles, mood = {}) {
     particles.addEmitter({ kind: 'mist', ambient: true, ...box, size: Math.max(1, (w * h) / 150) });
   }
   engine.envObjects = objs;
+  engine.fitShadows?.(); // the key light's map at the quality tier's size
   return { key };
 }

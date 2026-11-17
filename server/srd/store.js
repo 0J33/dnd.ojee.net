@@ -65,6 +65,22 @@ const monsterSummaries = raw.monsters.map((m) => ({
   speed: m.speed && m.speed.walk ? m.speed.walk : '30 ft.',
 }));
 
+// The opening of an SRD text, cut at a sentence end: a beginner's one-line
+// answer to "what does it do?" before they open the whole entry.
+function briefOf(paragraphs, max = 190) {
+  const text = (Array.isArray(paragraphs) ? paragraphs : [paragraphs]).join(' ').replace(/\*+/g, '').replace(/\s+/g, ' ').trim(); // no markdown marks
+  const sentences = text.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [text];
+  let out = '';
+  for (const s of sentences) {
+    if (out && (out + s).length > max) break;
+    out += s;
+  }
+  return out.length > max + 60 ? `${out.slice(0, max).replace(/\s+\S*$/, '')}…` : out.trim();
+}
+
+// A spell's base dice: damage at its own slot (or a cantrip's at level 1), or healing.
+const baseDice = (table, key) => (table ? (table[key] || table[Object.keys(table)[0]] || '').replace(/\s*\+\s*MOD/, ' + mod') : null);
+
 const spellSummaries = raw.spells.map((s) => ({
   index: s.index,
   name: s.name,
@@ -73,9 +89,17 @@ const spellSummaries = raw.spells.map((s) => ({
   classes: (s.classes || []).map((c) => c.index),
   casting_time: s.casting_time,
   range: s.range,
+  duration: s.duration,
+  components: s.components || [],
   concentration: s.concentration,
   ritual: s.ritual,
+  attack_type: s.attack_type || null,
+  save: s.dc ? { ability: s.dc.dc_type.index, success: s.dc.dc_success } : null,
+  damage: s.damage ? baseDice(s.damage.damage_at_slot_level || s.damage.damage_at_character_level, s.damage.damage_at_slot_level ? s.level : 1) : null,
+  heal: baseDice(s.heal_at_slot_level, s.level),
+  area: s.area_of_effect ? `${s.area_of_effect.size} ft ${s.area_of_effect.type}` : null,
   damage_type: s.damage && s.damage.damage_type ? s.damage.damage_type.name : null,
+  brief: briefOf(s.desc),
 }));
 
 const equipmentSummaries = raw.equipment.map((e) => ({
@@ -108,13 +132,28 @@ function classDetail(index) {
   return { ...cls, subclasses };
 }
 
+// The choices inside a feature (Fighting Style, Metamagic, Eldritch
+// Invocations...), each with its own text, so level-up can explain them.
+function featureOptions(f) {
+  const fs = f.feature_specific || {};
+  const refs = [...(fs.subfeature_options?.from?.options || []).map((o) => o.item), ...(fs.invocations || [])];
+  return refs
+    .map((r) => r && byIndex.features.get(r.index))
+    .filter(Boolean)
+    .map((o) => ({ name: o.name.replace(/^.*?:\s*/, ''), desc: (o.desc || []).join(' ') }));
+}
+
 function classLevels(index) {
   return raw.levels
     .filter((l) => l.class && l.class.index === index && !l.subclass)
     .sort((a, b) => a.level - b.level)
     .map((l) => ({
       ...l,
-      features: (l.features || []).map((f) => byIndex.features.get(f.index) || f),
+      features: (l.features || []).map((f) => {
+        const feat = byIndex.features.get(f.index) || f;
+        const options = featureOptions(feat);
+        return options.length ? { ...feat, options } : feat;
+      }),
     }));
 }
 
@@ -356,6 +395,7 @@ function subclassesFor(cls) {
 
 module.exports = {
   raw,
+  briefOf,
   byIndex,
   monsterSummaries,
   spellSummaries,

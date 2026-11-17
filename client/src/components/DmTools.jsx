@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { socket } from '../socket';
 import { SKILLS, ABILITIES, ABILITY_NAMES } from '../rules/engine';
 import { XIcon, ScrollIcon, SparkleIcon, D20Icon, EyeIcon, ImageIcon, TrashIcon, LightningIcon, CheckIcon } from './Icons';
+import { useAutoSave, SaveStatus } from '../autosave';
+import { useLocalStorage } from '../utils';
+import { restoreUi, useUiContext } from '../uiContext';
+import { ItemListField } from './Items';
 
 // The DM's table tools, and what players see of them.
 //   OBJECT_KINDS   the things a DM can place on a map (the Secrets tool)
@@ -9,6 +13,10 @@ import { XIcon, ScrollIcon, SparkleIcon, D20Icon, EyeIcon, ImageIcon, TrashIcon,
 //   DmPanel        talk to the table (narrate, whisper, handouts, ask for a
 //                  roll) and set the mood (time, weather, light, music)
 //   TableMessages  what players get: banners, handouts, roll requests
+//
+// An object's edits save as you make them (its name a moment after you stop
+// typing); what the DM is writing to the table (narration, a handout) is
+// kept in localStorage until it's sent, so a reload doesn't eat it.
 
 export const OBJECT_KINDS = [
   { key: 'trap', name: 'Trap', hint: 'Hidden. Springs when someone walks over it.' },
@@ -34,11 +42,12 @@ export function ObjectEditor({ object: o, scenes, sceneId, pickingDoors, onPickD
     socket.emit('updateObject', { sceneId, id: o.id, patch });
   };
   const setEffect = (i, patch) => save({ effects: draft.effects.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
+  const [name, setName, flushName] = useAutoSave({ value: o.name, save: (v) => socket.emit('updateObject', { sceneId, id: o.id, patch: { name: v } }) });
   const kind = OBJECT_KINDS.find((k) => k.key === draft.kind);
   return (
     <div className="dm-obj panel" onPointerDown={(e) => e.stopPropagation()}>
       <div className="dm-obj-head">
-        <input className="dm-obj-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} onBlur={() => save({ name: draft.name })} aria-label="Name" />
+        <input className="dm-obj-name" value={name} onChange={(e) => setName(e.target.value)} onBlur={flushName} aria-label="Name" />
         <button className="close-btn" onClick={onClose} aria-label="Close"><XIcon size={14} /></button>
       </div>
       <p className="dm-obj-hint">{kind?.hint}</p>
@@ -74,6 +83,7 @@ export function ObjectEditor({ object: o, scenes, sceneId, pickingDoors, onPickD
           {['text', 'damage', 'loot', 'doors', 'goto', 'spawn', 'reveal', 'heal'].includes(e.type) && (
             <textarea rows={2} placeholder={e.type === 'loot' ? 'What they find' : 'What the table hears (optional)'} value={e.text || ''} onChange={(ev) => setEffect(i, { text: ev.target.value })} />
           )}
+          {e.type === 'loot' && <ItemListField items={e.items || []} onChange={(list) => setEffect(i, { items: list })} />}
           {e.type === 'text' && <label className="small"><input type="checkbox" checked={!!e.private} onChange={(ev) => setEffect(i, { private: ev.target.checked })} /> Only the hero who set it off sees it</label>}
           {e.type === 'damage' && (
             <div className="dm-obj-row">
@@ -99,23 +109,13 @@ export function ObjectEditor({ object: o, scenes, sceneId, pickingDoors, onPickD
               {scenes.filter((s) => s.id !== sceneId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          {e.type === 'spawn' && (
-            <input
-              placeholder="goblin, goblin, wolf"
-              defaultValue={(e.monsters || []).flatMap((m) => Array(m.count).fill(m.index)).join(', ')}
-              onBlur={(ev) => {
-                const counts = {};
-                for (const n of ev.target.value.split(',').map(slug).filter(Boolean)) counts[n] = (counts[n] || 0) + 1;
-                setEffect(i, { monsters: Object.entries(counts).map(([index, count]) => ({ index, count })) });
-              }}
-              aria-label="Monsters (SRD names, comma separated)"
-            />
-          )}
+          {e.type === 'spawn' && <SpawnField monsters={e.monsters} onChange={(monsters) => setEffect(i, { monsters })} />}
           {e.type === 'reveal' && <div className="dm-obj-row">Radius <input type="number" min="1" max="15" value={e.radius} onChange={(ev) => setEffect(i, { radius: +ev.target.value })} style={{ width: 54 }} /> squares</div>}
         </div>
       ))}
       <button className="small-btn ghost-btn" onClick={() => save({ effects: [...draft.effects, { type: 'text', text: '' }] })}>+ Add something that happens</button>
       <div className="dm-obj-foot">
+        <SaveStatus />
         <button className="small-btn" onClick={() => socket.emit('triggerObject', { id: o.id })}><LightningIcon size={13} /> Set it off now</button>
         {o.used && <button className="small-btn ghost-btn" onClick={() => socket.emit('triggerObject', { id: o.id, reset: true })}>Reset</button>}
         <span className="grow" />
@@ -123,6 +123,19 @@ export function ObjectEditor({ object: o, scenes, sceneId, pickingDoors, onPickD
       </div>
     </div>
   );
+}
+
+// "goblin, goblin, wolf": saved a moment after you stop typing, as counts.
+function SpawnField({ monsters, onChange }) {
+  const text = (monsters || []).flatMap((m) => Array(m.count).fill(m.index)).join(', ');
+  const parse = (v) => {
+    const counts = {};
+    for (const n of v.split(',').map(slug).filter(Boolean)) counts[n] = (counts[n] || 0) + 1;
+    return Object.entries(counts).map(([index, count]) => ({ index, count }));
+  };
+  // Only a change in what it means is sent; the text you typed stays as typed.
+  const [draft, setDraft, flush] = useAutoSave({ value: text, save: (v) => { const next = parse(v); if (JSON.stringify(next) !== JSON.stringify(monsters || [])) onChange(next); } });
+  return <input placeholder="goblin, goblin, wolf" value={draft} onChange={(ev) => setDraft(ev.target.value)} onBlur={flush} aria-label="Monsters (SRD names, comma separated)" />;
 }
 
 /* ---------------- the DM's table panel ---------------- */
@@ -134,11 +147,13 @@ const CHECKS = [
 export const MUSIC_MOODS = { auto: 'Automatic', explore: 'Exploring', tavern: 'Tavern', sneak: 'Sneaking', tension: 'Tension', combat: 'Battle', boss: 'Boss fight', rest: 'Resting', silence: 'Silence' };
 
 export function DmPanel({ state, scene, onClose, onLookHere }) {
-  const [tab, setTab] = useState('talk');
+  const [tab, setTab] = useState(() => restoreUi('dmPanel')?.tab || 'talk');
+  useUiContext('dmPanel', () => ({ tab }));
   const [to, setTo] = useState('all');
-  const [text, setText] = useState('');
-  const [title, setTitle] = useState('');
-  const [image, setImage] = useState(null);
+  // Unsent words survive a reload (they're only the DM's until sent).
+  const [text, setText] = useLocalStorage(`dnd.dmText.${state.code}`, '');
+  const [title, setTitle] = useLocalStorage(`dnd.dmHandout.${state.code}`, '');
+  const [image, setImage] = useLocalStorage(`dnd.dmHandoutImage.${state.code}`, null);
   const [check, setCheck] = useState('perception');
   const [dc, setDc] = useState(12);
   const fileRef = useRef(null);

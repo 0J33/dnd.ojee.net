@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Avatar } from './Portrait';
 import { ChevronRight, HeartIcon, ShieldIcon, ScrollIcon, SkullIcon, MenuIcon, BookIcon, GearIcon, CopyIcon, MapIcon, EyeIcon } from './Icons';
+import TurnHelp from './TurnHelp';
 
 // The table's heads-up display, after the mtg table: what you need every
 // turn sits on the table itself; everything else is one tap away and out of
@@ -19,17 +20,19 @@ export function PartyStrip({ state, charSheets, userId, onOpenSheet, turnTokenId
         const k = Math.max(0, Math.min(1, (sh.currentHp ?? 0) / Math.max(1, sh.maxHp || 1)));
         const tok = tokens.find((t) => t.characterId === m.characterId);
         const turn = tok && tok.id === turnTokenId;
+        const note = state.dmNotes?.[m.characterId]; // only the DM's state has these
         return (
           <button
             key={m.userId}
             role="listitem"
-            className={`hud-party-chip ${m.userId === userId ? 'me' : ''} ${turn ? 'turn' : ''} ${sh.currentHp === 0 ? 'down' : ''} ${m.socketId ? '' : 'away'}`}
+            className={`hud-party-chip ${m.userId === userId ? 'me' : ''} ${turn ? 'turn' : ''} ${sh.currentHp === 0 ? 'down' : ''} ${(m.online ?? m.socketId) ? '' : 'away'}`}
             onClick={() => onOpenSheet(m.characterId)}
-            title={`${sh.name} (${m.username}) - ${sh.currentHp}/${sh.maxHp} HP, AC ${sh.derived?.ac ?? '?'}. Open sheet`}
+            title={`${sh.name} (${m.username}) - ${sh.currentHp}/${sh.maxHp} HP, AC ${sh.derived?.ac ?? '?'}.${note ? ` Your note: ${note}` : ''} Open sheet`}
           >
             <Avatar sheet={sh} name={sh.name} color={m.color} size={34} />
             <span className="hud-party-hp"><i style={{ width: `${k * 100}%` }} className={k <= 0.25 ? 'low' : k <= 0.5 ? 'mid' : ''} /></span>
             {sh.currentHp === 0 && <span className="hud-party-down"><SkullIcon size={12} /></span>}
+            {note && <span className="hud-party-note" aria-label="You have a note on this hero"><ScrollIcon size={10} /></span>}
           </button>
         );
       })}
@@ -76,6 +79,7 @@ function HeroBarInner({ sheet, color, combat, myTurn, monsterActing, isGuided, o
         <span className="hud-hero-hint">{hint}</span>
       </div>
       {onSearch && <button className="hud-hero-btn" onClick={onSearch} title="Search around you for hidden things (Perception)"><EyeIcon size={15} /> <span>Search</span></button>}
+      <TurnHelp sheet={sheet} onSheet={onSheet} />
       <button className="hud-hero-btn" onClick={onSheet} title="Your character sheet"><ScrollIcon size={15} /> <span>Sheet</span></button>
       {inFight && myTurn && (
         <button className="hud-hero-end primary-btn" onClick={onEndTurn} title="Finish your turn (Enter)">End turn <ChevronRight size={13} /></button>

@@ -44,7 +44,7 @@ router.put('/:id', async (req, res) => {
     if (sheet) char.sheet = sheet;
     char.updatedAt = new Date();
     await char.save();
-    res.json({ id: char._id, name: char.name, sheet: char.sheet });
+    res.json({ id: char._id, name: char.name, sheet: char.sheet, updatedAt: char.updatedAt }); // the sheet's drafts compare against it (CharacterSheet.jsx)
   } catch (err) {
     console.error('update character error', err);
     res.status(500).json({ error: 'Failed to save character' });

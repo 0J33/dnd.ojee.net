@@ -5,10 +5,11 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import Engine from './engine';
 import CameraRig from './cameraRig';
 import Particles from './particles';
-import Kit, { CUTAWAY, MATS, meshOf } from './kit';
+import Kit, { CUTAWAY, DETAIL, FOGU, MATS, meshOf } from './kit';
 import { buildWorld, applyEnvironment } from './world';
-import { heroFigure, creatureFigure } from './figures';
+import { heroFigure, creatureFigure, figureSize } from './figures';
 import { TILES } from '../data/tiles';
+import { walkCharAt, levelLift } from '../data/layers';
 import { resolveLook, artForToken } from '../components/Portrait';
 
 // The 3D table for one campaign: keeps the place, the figures, the fog and
@@ -16,7 +17,6 @@ import { resolveLook, artForToken } from '../components/Portrait';
 // intents (move here, attack that, open this door), and plays combat out.
 // React (Map3D.jsx) owns the menus and labels; this owns the 3D.
 
-const SMALL_RACES = /halfling|gnome|kobold|derro|erina/i;
 const DAMAGE_COLORS = {
   fire: ['#ffd27a', '#ff4a10'], cold: ['#e0f6ff', '#5ab8ff'], lightning: ['#ffffff', '#8aa8ff'], thunder: ['#e8ecff', '#7a8aff'],
   radiant: ['#fff6c8', '#ffc84a'], necrotic: ['#d8a8ff', '#5a1a8a'], poison: ['#d8ff9a', '#3a8a2a'], acid: ['#efffa0', '#7ab82a'],
@@ -27,16 +27,16 @@ const colorsFor = (type, style) => DAMAGE_COLORS[type] || (style === 'spell' ? D
 
 const isBlocked = (scene, x, y) => {
   if (x < 0 || y < 0 || x >= scene.grid.w || y >= scene.grid.h) return true;
-  return !!TILES[(scene.cells?.[y] || '')[x]]?.blocked;
+  return !!TILES[walkCharAt(scene, x, y)]?.blocked; // the top level everyone sees, else the base
 };
-const isDifficult = (scene, x, y) => !!TILES[(scene.cells?.[y] || '')[x]]?.difficult;
+const isDifficult = (scene, x, y) => !!TILES[walkCharAt(scene, x, y)]?.difficult;
 
 // Reachable squares and shortest paths on the grid (8-way, 5 ft each,
 // difficult terrain costs double, no cutting wall corners).
 // Furniture and objects you can squeeze past but not stand in (a figure
 // would stand inside the table). Mirrors BULKY in server/socket/handlers.js.
 export const BULKY = new Set('t21ERJ)BbC!cGKMN?}$'.split(''));
-export const isBulky = (scene, x, y) => BULKY.has((scene.cells?.[y] || '')[x]);
+export const isBulky = (scene, x, y) => BULKY.has(walkCharAt(scene, x, y));
 
 // The figure walks straight between corners of its route: skip any waypoint
 // it can reach in a straight line without touching a blocked square.
@@ -120,6 +120,11 @@ export default class WorldView {
     this.rig = new CameraRig(this.engine.camera, { minDist: 2.5, minPitch: 0.22 });
     this.rig.enableTiltCurve();
     this.particles = new Particles();
+    this.particles.density = this.engine.q.particles;
+    this.engine.onTier.add((q) => { this.particles.density = q.particles; this._fitLights(); });
+    // Two lights for spells in flight, always in the scene (dark when idle):
+    // adding and removing lights would recompile every lit material.
+    this.spellLights = [0, 1].map(() => { const l = new THREE.PointLight('#ffffff', 0, 4, 1.5); l.userData.free = true; this.engine.scene.add(l); return l; });
     this.engine.scene.add(this.particles.points);
     this.figures = new Map();   // tokenId -> { fig, sig, token }
     this.fx = new THREE.Group();
@@ -141,7 +146,11 @@ export default class WorldView {
   /* ---------------- place ---------------- */
 
   setScene(scene, { dmView }) {
-    const sig = `${scene.id}|${scene.bg?.kind}|${scene.bg?.floor}|${scene.bg?.url || ''}|${dmView}|${(scene.cells || []).join('')}`;
+    // Patches keep the same cells array when the map didn't change: skip
+    // building the signature (every row joined) for a token move.
+    const prev = this.scene;
+    if (prev && prev.id === scene.id && prev.cells === scene.cells && prev.ground === scene.ground && prev.levels === scene.levels && prev.bg === scene.bg && this.dmView === dmView && this.sceneSig) { this.scene = scene; return; }
+    const sig = `${scene.id}|${scene.bg?.kind}|${scene.bg?.floor}|${scene.bg?.url || ''}|${dmView}|${(scene.cells || []).join('')}|${(scene.ground || []).join('')}|${JSON.stringify(scene.levels || [])}`;
     const sameScene = this.scene && this.scene.id === scene.id;
     this.scene = scene; // always the latest (tokens, doors, fog), even when the layout is unchanged
     if (sig === this.sceneSig) return;
@@ -154,18 +163,27 @@ export default class WorldView {
     this.particles.emitters = this.particles.emitters.filter((e) => e.ambient);
     for (const e of this.world.emitters) this.particles.addEmitter(e);
     applyEnvironment(this.engine, this.world.env, this.world.bounds, this.particles, this.mood);
+    this._fitLights();
     this._moodKey = null;
     const { w, h } = scene.grid;
     this.rig.setLimits({ box: { x0: -1, x1: w + 1, z0: -1, z1: h + 1 }, maxDist: Math.max(w, h) * 2.2 });
     if (!sameScene) {
       // A new place: clear the figures (they're rebuilt for its tokens) and frame it.
-      for (const { fig } of this.figures.values()) this.engine.scene.remove(fig.root);
+      for (const { fig } of this.figures.values()) { this.engine.scene.remove(fig.root); disposeFigure(fig); }
       this.figures.clear();
       this._framed = false;
       this.cb.onSceneChange?.();
     }
     this._fogKey = null;
     this._buildFog(true);
+    this.engine.settle(); // new shaders and buffers: the next frames are slow for a reason
+  }
+
+  // The place's brightest point lights, as many as the quality tier keeps.
+  _fitLights() {
+    const n = this.engine.q.lights ?? 14;
+    (this.world?.lights || []).forEach((l, i) => { l.visible = i < n; });
+    for (const l of this.spellLights || []) l.visible = this.engine.tier < 3; // the lower tiers fly spells unlit
   }
 
   frame(instant = false) {
@@ -208,12 +226,12 @@ export default class WorldView {
       const sig = figureSig(t, sheet);
       let rec = this.figures.get(t.id);
       if (!rec || rec.sig !== sig) {
-        if (rec) this.engine.scene.remove(rec.fig.root);
+        if (rec) { this.engine.scene.remove(rec.fig.root); disposeFigure(rec.fig); }
         const fig = makeFigure(t, sheet);
         if (rec) { fig.root.position.copy(rec.fig.root.position); fig.yaw = fig.yawGoal = rec.fig.yaw; fig.path = rec.fig.path; }
         else { fig.place(t.x + sizeOff(t), t.y + sizeOff(t)); fig.yaw = fig.yawGoal = this._facingIn(t); }
         this.engine.scene.add(fig.root);
-        rec = rec ? { ...rec, fig, sig, token: t } : { fig, sig, token: t, x: t.x, y: t.y };
+        rec = rec ? { ...rec, fig, sig, token: t, lo: false, noLod: false } : { fig, sig, token: t, x: t.x, y: t.y };
         this.figures.set(t.id, rec);
       }
       // Moved: walk there along the real path (or snap if it's far / blocked).
@@ -242,7 +260,7 @@ export default class WorldView {
       if (t.hidden && ctx.isDM) rec.fig.setOpacity(0.45);
     }
     for (const [id, rec] of this.figures) {
-      if (!seen.has(id)) { this.engine.scene.remove(rec.fig.root); this.figures.delete(id); if (this.selected === id) this.select(null); }
+      if (!seen.has(id)) { this.engine.scene.remove(rec.fig.root); disposeFigure(rec.fig); this.figures.delete(id); if (this.selected === id) this.select(null); }
     }
     if (!this._framed && this.scene) { this._framed = true; this.frame(true); }
     this._refreshOverlay();
@@ -259,6 +277,8 @@ export default class WorldView {
   /* ---------------- fog ---------------- */
 
   setFog(scene, isDM) {
+    if (this._fogSrc && this._fogSrc.id === scene.id && this._fogSrc.revealed === scene.revealed && this._fogSrc.fogEnabled === scene.fogEnabled && this._fogDM === isDM) return;
+    this._fogSrc = { id: scene.id, revealed: scene.revealed, fogEnabled: scene.fogEnabled };
     const key = `${scene.id}|${scene.fogEnabled}|${isDM}|${(scene.revealed || []).join(';')}`;
     if (key === this._fogKey && this.scene === scene) return;
     const changed = key !== this._fogKey;
@@ -305,6 +325,7 @@ export default class WorldView {
         this.fog.u.prev.value?.dispose(); this.fog.u.next.value?.dispose();
         this.fog = null;
       }
+      FOGU.fogOn.value = 0; FOGU.fogPrev.value = null; FOGU.fogNext.value = null;
       if (!on) return;
     }
     const tex = this._fogMask();
@@ -317,7 +338,11 @@ export default class WorldView {
     }
     const { w, h } = scene.grid;
     const dm = !!this._fogDM;
-    const u = { prev: { value: tex }, next: { value: tex }, mixK: { value: 1 }, t: { value: 0 }, alpha: { value: dm ? 0.42 : 1 }, size: { value: new THREE.Vector2(w, h) } };
+    // shared with the world's materials (kit.js FOGU), so walls and props in the unknown go dark too
+    // (the DM sees through it: the lid dims, and things inside only darken a little)
+    const u = { prev: FOGU.fogPrev, next: FOGU.fogNext, mixK: FOGU.fogMix, t: { value: 0 }, alpha: { value: dm ? 0.42 : 1 }, size: FOGU.fogSize };
+    u.prev.value = tex; u.next.value = tex; u.mixK.value = 1; u.size.value.set(w, h);
+    FOGU.fogAlpha.value = dm ? 0.18 : 1; FOGU.fogOn.value = 1;
     const vert = 'varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }';
     const common = `uniform sampler2D prev; uniform sampler2D next; uniform float mixK; uniform float t; uniform float alpha; uniform vec2 size; varying vec2 vUv; varying vec3 vW;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
@@ -419,6 +444,14 @@ export default class WorldView {
   }
 
   _refreshOverlay() {
+    // Rebuilt only when something it shows changed (who's where is followed
+    // per frame by the rings themselves).
+    if (this.reachInfo !== this._sigReach) { this._sigReach = this.reachInfo; this._reachN = (this._reachN || 0) + 1; }
+    const mk = this.marked || { tokens: new Set(), objects: new Set() };
+    let sig = `${this.selected}|${this.ctx?.turnTokenId}|${this._reachN}:${this.reachBudget}|${this.ctx?.combat?.active && this.ctx.combat.round > 0}|${[...mk.tokens]}|${[...mk.objects]}|${this._objKey}|`;
+    for (const [id, rec] of this.figures) sig += `${id}:${rec.fig.root.visible ? 1 : 0}${rec.token.dead ? 1 : 0}${rec.token.size || 1}${rec.token.kind[0]}${rec.token.ownerId === this.ctx?.userId ? 1 : 0},`;
+    if (sig === this._overlaySig) return;
+    this._overlaySig = sig;
     for (const o of [...this.overlay.children]) { if (o === this.pathPreview) continue; this.overlay.remove(o); o.geometry?.dispose(); o.material?.dispose(); }
     // A ring under every creature: gold for yours, red for foes, soft for
     // others; the creature whose turn it is gets a brighter, pulsing one.
@@ -427,11 +460,20 @@ export default class WorldView {
       if (!rec.fig.root.visible || rec.token.dead) continue;
       const t = rec.token;
       const s = t.size || 1;
-      const color = id === this.selected ? '#ffe08a' : t.kind === 'monster' ? '#e06050' : t.ownerId === this.ctx?.userId ? '#d4a94f' : t.kind === 'pc' ? '#7fb0d8' : '#b0a890';
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.36 * s, 0.44 * s, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: id === this.selected || id === turnId ? 0.95 : 0.5, toneMapped: false, depthWrite: false }));
+      const picked = id === this.selected || mk.tokens.has(id);
+      const color = picked ? '#ffe08a' : t.kind === 'monster' ? '#e06050' : t.ownerId === this.ctx?.userId ? '#d4a94f' : t.kind === 'pc' ? '#7fb0d8' : '#b0a890';
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.36 * s, 0.44 * s, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: picked || id === turnId ? 0.95 : 0.5, toneMapped: false, depthWrite: false }));
       ring.userData = { follow: id, pulse: id === turnId };
       ring.renderOrder = 3;
       this.overlay.add(ring);
+    }
+    // Selected things (secrets, levers, chests): a gold square under each.
+    for (const o of this.objects || []) {
+      if (!mk.objects.has(o.id)) continue;
+      const sq = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 4, 1, Math.PI / 4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffe08a', transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false }));
+      sq.position.set(o.x + 0.5, 0.05, o.y + 0.5);
+      sq.renderOrder = 3;
+      this.overlay.add(sq);
     }
     // Reachable squares for the selected creature.
     // Reachable squares only matter in a fight (your movement for the turn);
@@ -448,6 +490,13 @@ export default class WorldView {
       tiles.renderOrder = 2;
       this.overlay.add(tiles);
     }
+  }
+
+  // The multi-selection (mapSelection.js): rings on every picked creature and thing.
+  setMarked(tokenIds, objectIds) {
+    this.marked = { tokens: new Set(tokenIds || []), objects: new Set(objectIds || []) };
+    this._refreshOverlay();
+    this.engine.poke();
   }
 
   showPath(cells) {
@@ -469,6 +518,8 @@ export default class WorldView {
   }
 
   _groundAt(p) {
+    const lift = this.scene ? levelLift(this.scene, Math.floor(p.x), Math.floor(p.z)) : 0;
+    if (lift) return lift; // standing on a level
     const ch = (this.scene?.cells?.[Math.floor(p.z)] || '')[Math.floor(p.x)];
     if (ch === '/') return 0.125;
     if (ch === '^') return 0.22;
@@ -682,16 +733,17 @@ export default class WorldView {
     this.fx.add(mesh);
     const dist = start.distanceTo(end);
     const dur = Math.max(0.18, dist / (spell ? 9 : 16));
-    const light = spell ? new THREE.PointLight(c1, 3, 4, 1.5) : null;
-    if (light) mesh.add(light);
+    const light = spell && this.engine.tier < 3 ? this.spellLights.find((l) => l.userData.free) : null;
+    if (light) { light.userData.free = false; light.color.set(c1); light.intensity = 3; light.position.copy(start); }
     this.flying.push({
       mesh, t: 0, dur,
       update: (k) => {
         mesh.position.lerpVectors(start, end, k);
         mesh.position.y += Math.sin(k * Math.PI) * (spell ? 0.2 : 0.35);
+        if (light) light.position.copy(mesh.position);
         if (spell) this.particles.spawn({ x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, vx: (Math.random() - 0.5) * 0.3, vy: 0.2, vz: (Math.random() - 0.5) * 0.3, life: 0.35, size: 0.16, from: c0, to: c1, drag: 2 });
       },
-      done: onHit,
+      done: () => { if (light) { light.intensity = 0; light.userData.free = true; } onHit?.(); },
     });
   }
 
@@ -763,10 +815,11 @@ export default class WorldView {
   _tick(dt, t) {
     // Keyboard camera.
     const k = this.keys;
-    const f = (k.has('w') || k.has('arrowup') ? 1 : 0) - (k.has('s') || k.has('arrowdown') ? 1 : 0);
-    const s = (k.has('d') || k.has('arrowright') ? 1 : 0) - (k.has('a') || k.has('arrowleft') ? 1 : 0);
+    // (held actions from keybinds.js, not raw keys)
+    const f = (k.has('cam.forward') ? 1 : 0) - (k.has('cam.back') ? 1 : 0);
+    const s = (k.has('cam.right') ? 1 : 0) - (k.has('cam.left') ? 1 : 0);
     if (f || s) { this.rig.nudge(f, s, dt); this.follow = false; }
-    const turn = (k.has('e') ? 1 : 0) - (k.has('q') ? 1 : 0);
+    const turn = (k.has('cam.turnRight') ? 1 : 0) - (k.has('cam.turnLeft') ? 1 : 0);
     if (turn) this.rig.orbit(turn * 1.6 * dt, 0);
     // Follow my hero while they walk.
     const mine = this.myTokenId && this.figures.get(this.myTokenId);
@@ -777,9 +830,9 @@ export default class WorldView {
     }
     // Keep rendering smoothly while anything moves.
     const g = this.rig.goal, c0 = this.rig.cur;
-    const moving = k.size || this.shake > 0 || (this.flying && this.flying.length)
-      || Math.abs(g.tx - c0.tx) + Math.abs(g.tz - c0.tz) + Math.abs(g.yaw - c0.yaw) + Math.abs(g.pitch - c0.pitch) + Math.abs(g.dist - c0.dist) > 0.002
-      || [...this.figures.values()].some((r) => r.fig.path.length || r.fig.action || r.lifted || (r.fig.dead && r.fig.deadT < 1.5));
+    let moving = k.size || this.shake > 0 || (this.flying && this.flying.length)
+      || Math.abs(g.tx - c0.tx) + Math.abs(g.tz - c0.tz) + Math.abs(g.yaw - c0.yaw) + Math.abs(g.pitch - c0.pitch) + Math.abs(g.dist - c0.dist) > 0.002;
+    if (!moving) for (const r of this.figures.values()) if (r.fig.path.length || r.fig.action || r.lifted || (r.fig.dead && r.fig.deadT < 1.5)) { moving = true; break; }
     if (moving) this.engine.poke(400);
     this.rig.update(dt);
     if (this.shake > 0) {
@@ -794,7 +847,19 @@ export default class WorldView {
     this.world?.update(t);
     this.particles.setViewportHeight(this.engine.size.h);
     this.particles.update(dt, t);
-    for (const rec of this.figures.values()) rec.fig.update(dt, t);
+    // Figures standing far off (on their simple build) and only breathing
+    // are posed every other frame, half of them each frame: at that size the
+    // difference can't be seen, and posing is most of the frame's own work.
+    this._frame = (this._frame || 0) + 1;
+    let n = 0;
+    for (const rec of this.figures.values()) {
+      const f = rec.fig;
+      rec.dtAcc = (rec.dtAcc || 0) + dt;
+      if (rec.lo && !f.path.length && !f.action && !rec.lifted && !f.dead && (this._frame + n++) % 2) continue;
+      f.update(rec.dtAcc, t);
+      rec.dtAcc = 0;
+    }
+    this._lod();
     for (const ring of this.overlay.children) {
       const id = ring.userData?.follow;
       if (!id) continue;
@@ -802,13 +867,15 @@ export default class WorldView {
       if (rec) ring.position.set(rec.fig.root.position.x, 0.03, rec.fig.root.position.z);
       if (ring.userData.pulse) ring.material.opacity = 0.6 + Math.sin(t * 5) * 0.35;
     }
-    this.flying = this.flying.filter((p) => {
-      p.t += dt;
-      const kk = Math.min(1, p.t / p.dur);
-      p.update?.(kk);
-      if (kk >= 1) { this.fx.remove(p.mesh); p.mesh.geometry?.dispose(); p.mesh.material?.dispose(); p.done?.(); return false; }
-      return true;
-    });
+    if (this.flying.length) {
+      this.flying = this.flying.filter((p) => {
+        p.t += dt;
+        const kk = Math.min(1, p.t / p.dur);
+        p.update?.(kk);
+        if (kk >= 1) { this.fx.remove(p.mesh); p.mesh.geometry?.dispose(); p.mesh.material?.dispose(); p.done?.(); return false; }
+        return true;
+      });
+    }
     if (this.fogMesh) this.fogMesh.material.uniforms.t.value = t;
     this._tickRoute(dt);
     if (this.objGroup) this.objGroup.traverse((m) => { if (m.userData.pulse) m.material.opacity = 0.25 + Math.abs(Math.sin(t * 2.5)) * 0.35; });
@@ -833,6 +900,32 @@ export default class WorldView {
       }
     }
     this.cb.onFrame?.();
+  }
+
+  // Figures only a few dozen pixels tall wear their simple build (half the
+  // segments: at that size nobody can count them); slower quality tiers
+  // switch a little sooner. The simple build is made the first time it's
+  // wanted, one figure a frame, and the swap has some slack so a figure at
+  // the threshold doesn't flicker between the two.
+  _lod() {
+    const cam = this.engine.camera;
+    const perUnit = this.engine.size.h / (2 * Math.tan((cam.fov * Math.PI) / 360));
+    const limit = 80 * (this.engine.q.lod || 1);
+    let built = false;
+    for (const rec of this.figures.values()) {
+      if (rec.noLod) continue;
+      const p = rec.fig.root.position;
+      const px = ((rec.token.size || 1) * 1.1 * (rec.fig.scale || 1) * perUnit) / Math.max(0.1, cam.position.distanceTo(p));
+      const want = px < (rec.lo ? limit * 1.2 : limit);
+      if (want === !!rec.lo) continue;
+      if (want && !rec.fig.lodMeshes) {
+        if (built) continue;
+        built = true;
+        if (!simpleBuild(rec)) { rec.noLod = true; continue; }
+      }
+      for (const [m, hi, lo] of rec.fig.lodMeshes) m.geometry = want ? lo : hi;
+      rec.lo = want;
+    }
   }
 
   project(x, y, z) { return this.engine.project(new THREE.Vector3(x, y, z)); }
@@ -968,7 +1061,12 @@ export default class WorldView {
       this.objGroup.add(g);
     }
     this.engine.scene.add(this.objGroup);
+    if (this.marked?.objects.size) this._refreshOverlay();
   }
+  // A DM dragging an object: it follows the pointer until the server moves it.
+  _objMesh(id) { return this.objGroup?.children.find((g) => g.userData.obj?.id === id) || null; }
+  dragObject(id, x, z) { const g = this._objMesh(id); if (g) { g.position.set(x, 0.12, z); this.engine.poke(); } }
+  dropObject(id) { const g = this._objMesh(id); if (g) { const o = g.userData.obj; g.position.set(o.x + 0.5, 0, o.y + 0.5); this.engine.poke(); } }
   objectAt(cx, cy) {
     const c = this.cellAt(cx, cy);
     if (!c) return null;
@@ -1005,10 +1103,39 @@ export default class WorldView {
   }
 
   dispose() {
+    FOGU.fogOn.value = 0; FOGU.fogPrev.value = null; FOGU.fogNext.value = null;
+    for (const { fig } of this.figures.values()) disposeFigure(fig);
     this.world?.dispose();
     this.particles.dispose();
     this.engine.dispose();
   }
+}
+
+// The figure again at half the segments, paired with the full one mesh for
+// mesh (the build is the same apart from segment counts). False if the two
+// don't line up, and the figure keeps its one build.
+function simpleBuild(rec) {
+  let lo;
+  DETAIL.k = 0.5;
+  try { lo = makeFigure(rec.token, rec.sheet); } catch { lo = null; } finally { DETAIL.k = 1; }
+  if (!lo) return false;
+  const a = [], b = [];
+  rec.fig.root.traverse((o) => { if (o.isMesh) a.push(o); });
+  lo.root.traverse((o) => { if (o.isMesh) b.push(o); });
+  for (const m of Object.values(lo.mats)) m.dispose();
+  if (a.length !== b.length) { for (const m of b) if (!a.some((x) => x.geometry === m.geometry)) m.geometry.dispose(); return false; }
+  rec.fig.lodMeshes = a.map((m, i) => [m, m.geometry, b[i].geometry]);
+  return true;
+}
+
+// Figures own their geometry (and a set of materials, so one can fade
+// without the rest): free them when a figure leaves the table.
+function disposeFigure(fig) {
+  const seen = new Set();
+  const drop = (g) => { if (g && !seen.has(g)) { seen.add(g); g.dispose(); } };
+  fig.root.traverse((o) => { if (o.isMesh) drop(o.geometry); });
+  for (const [, hi, lo] of fig.lodMeshes || []) { drop(hi); drop(lo); }
+  for (const m of Object.values(fig.mats || {})) m.dispose();
 }
 
 const sizeOff = (t) => (t.size || 1) / 2;
@@ -1025,7 +1152,7 @@ function makeFigure(t, sheet) {
   let fig;
   if (t.kind === 'pc' && sheet) {
     const look = resolveLook(sheet);
-    fig = heroFigure(look, { seed: sheet.name, size: SMALL_RACES.test(sheet.raceIndex || sheet.race || '') ? 'small' : 'medium' });
+    fig = heroFigure(look, { seed: sheet.name, size: figureSize(sheet) });
   } else {
     const art = t.kind === 'npc' ? 'humanoid' : artForToken(t) || 'humanoid';
     fig = creatureFigure(art, { seed: t.label || t.id, color: t.color, label: t.label || '', body: t.body, resolveLook });
