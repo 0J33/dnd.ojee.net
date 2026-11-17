@@ -43,11 +43,11 @@ function ScenePreview({ sceneKey }) {
         f.place(4 + i * 1.4, 4.5); f.yawGoal = f.yaw = 0.3;
         figs.push(f);
       });
-      const marla = creatureFigure('humanoid', { seed: 'Marla', label: 'Marla', body: 'feminine', resolveLook });
+      const marla = creatureFigure('humanoid', { seed: 'Marla', label: 'Marla', body: 'feminine' });
       marla.place(13.5, 4.5); figs.push(marla);
       const arts = ['rat', 'wolf', 'bear', 'boar', 'spider', 'snake', 'bat', 'bird', 'insect', 'goblinoid', 'orc', 'skeleton', 'zombie', 'ghost', 'dragon', 'ooze', 'elemental', 'golem', 'giant', 'fiend', 'celestial', 'fey', 'plant', 'aberration', 'construct', 'monstrosity', 'swarm'];
       arts.forEach((a, i) => {
-        const f = creatureFigure(a, { seed: a + i, label: a === 'goblinoid' && i % 2 ? 'Skarn the Bugbear' : a, resolveLook });
+        const f = creatureFigure(a, { seed: a + i, label: a === 'goblinoid' && i % 2 ? 'Skarn the Bugbear' : a });
         f.place(2.5 + (i % 9) * 2, 7 + Math.floor(i / 9) * 2); figs.push(f);
       });
       for (const f of figs) engine.scene.add(f.root);

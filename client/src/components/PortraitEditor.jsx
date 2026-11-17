@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useRef, useState } from 'react';
+import { TWO_HANDED } from '../look/catalog';
 import { Avatar, resolveLook, lookOptions, safePortraitImage, randomLook } from './Portrait';
 import { D20Icon, UploadIcon, TrashIcon } from './Icons';
 
@@ -82,6 +83,28 @@ function Chips({ label, options, value, onPick, note }) {
   );
 }
 
+// Several at once (things carried or worn): each chip toggles.
+function Toggles({ label, options, value = [], onPick }) {
+  return (
+    <div className="pe-row">
+      <span className="pe-label">{label}</span>
+      <div className="pe-chips" role="group" aria-label={label}>
+        {Object.entries(options).map(([k, name]) => {
+          const on = value.includes(k);
+          return (
+            <button key={k} type="button" className={`pe-chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onPick(on ? value.filter((x) => x !== k) : [...value, k])}>
+              {name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// The editor's sections, in the order you'd dress a miniature.
+const TABS = [['body', 'Body'], ['face', 'Face'], ['hair', 'Hair'], ['outfit', 'Outfit'], ['gear', 'Gear'], ['colours', 'Colours']];
+
 // Choices you judge by eye (a haircut, a beard) are shown as little portraits.
 function Faces({ label, options, value, onPick, faceFor, color, note }) {
   return (
@@ -109,6 +132,7 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange, showFig
   const fileRef = useRef(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState('body');
   const look = portrait.look || {};
   const preview = { ...sheet, portrait };
   const cur = resolveLook(preview);
@@ -186,45 +210,88 @@ export default function PortraitEditor({ sheet, portrait = {}, onChange, showFig
           <p className="pe-note">Your picture is used in the lobby, on your sheet and on the battle map. The colour above rings your token.</p>
         ) : (
           <>
-            {opts.bodies && <Chips label="Body" options={opts.bodies} value={cur.body || ''} onPick={(k) => set({ body: k })} />}
-            <Swatches label={opts.skinLabel} colors={opts.skins} value={cur.skin} onPick={(c) => set({ skin: c })} custom />
-            {opts.hairStyles && (
-              <Faces
-                label="Hair"
-                options={opts.hairStyles}
-                value={cur.hairStyle}
-                color={color}
-                // A haircut you can't see is no choice at all: picking one takes
-                // off headwear the hero was only wearing by default.
-                onPick={(k) => set({ hairStyle: k, ...(!look.headwear && cur.headwear ? { headwear: 'off' } : {}) })}
-                faceFor={(k) => faceWith({ hairStyle: k, headwear: 'off' })}
-              />
+            <div className="pe-tabs" role="tablist" aria-label="Look">
+              {TABS.map(([k, name]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} className={`pe-tab ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>
+                  {name}
+                </button>
+              ))}
+            </div>
+            {tab === 'body' && (
+              <>
+                {opts.bodies && <Chips label="Presentation" options={opts.bodies} value={cur.body || ''} onPick={(k) => set({ body: k })} />}
+                <Chips label="Build" options={Object.fromEntries(Object.entries(opts.frames).map(([k, f]) => [k, f.label]))} value={cur.frame} onPick={(k) => set({ frame: k })} />
+                <Chips label="Height" options={opts.heights} value={cur.height} onPick={(k) => set({ height: k })} />
+                <Swatches label={opts.skinLabel} colors={opts.skins} value={cur.skin} onPick={(c) => set({ skin: c })} custom />
+                {opts.robotHeads && <Chips label="Head" options={opts.robotHeads} value={cur.robotHead} onPick={(k) => set({ robotHead: k })} />}
+                {opts.finishes && <Chips label="Finish" options={opts.finishes} value={cur.finish} onPick={(k) => set({ finish: k })} />}
+              </>
             )}
-            {opts.hairColors && <Swatches label="Hair colour" colors={opts.hairColors} value={cur.hair} onPick={(c) => set({ hair: c })} custom />}
-            {opts.headwear && (
-              <Chips label="Headwear" options={{ on: opts.headwear, off: 'Nothing' }} value={cur.headwear ? 'on' : 'off'} onPick={(k) => set({ headwear: k })} />
+            {tab === 'face' && (
+              <>
+                {opts.faces && <Chips label="Face" options={opts.faces} value={cur.face} onPick={(k) => set({ face: k })} />}
+                <Swatches label={opts.eyesLabel} colors={opts.eyes} value={cur.eyes} onPick={(c) => set({ eyes: c })} />
+                {opts.eyeShapes && <Chips label="Eye shape" options={opts.eyeShapes} value={cur.eyeShape} onPick={(k) => set({ eyeShape: k })} />}
+                {opts.brows && <Chips label="Brows" options={opts.brows} value={cur.brows} onPick={(k) => set({ brows: k })} />}
+                {opts.noses && <Chips label="Nose" options={opts.noses} value={cur.nose} onPick={(k) => set({ nose: k })} />}
+                {opts.moods && (
+                  <Chips label="Expression" options={opts.moods} value={cur.mood} onPick={(k) => set({ mood: k })} note={masked ? 'The face mask hides the mouth; the brows still show it.' : null} />
+                )}
+                {opts.marks && <Chips label="Marks" options={opts.marks} value={cur.mark} onPick={(k) => set({ mark: k })} />}
+              </>
             )}
-            {opts.beards && (
-              <Faces
-                label="Facial hair"
-                options={opts.beards}
-                value={cur.beard}
-                color={color}
-                onPick={(k) => set({ beard: k })}
-                faceFor={(k) => faceWith({ beard: k, ...(masked ? { mark: 'none' } : {}) })}
-                note={masked ? 'Shown without the face mask; the mask covers it until you take it off under Marks.' : null}
-              />
+            {tab === 'hair' && (
+              <>
+                {opts.hairStyles ? (
+                  <Faces
+                    label="Hair"
+                    options={opts.hairStyles}
+                    value={cur.hairStyle}
+                    color={color}
+                    // A haircut you can't see is no choice at all: picking one takes
+                    // off headwear the hero was only wearing by default.
+                    onPick={(k) => set({ hairStyle: k, ...(!look.hat && !look.headwear && cur.hat !== 'none' ? { hat: 'none' } : {}) })}
+                    faceFor={(k) => faceWith({ hairStyle: k, hat: 'none' })}
+                  />
+                ) : <p className="pe-note">Nothing to style on this head.</p>}
+                {opts.hairColors && <Swatches label="Hair colour" colors={opts.hairColors} value={cur.hair} onPick={(c) => set({ hair: c })} custom />}
+                {opts.beards && (
+                  <Faces
+                    label="Facial hair"
+                    options={opts.beards}
+                    value={cur.beard}
+                    color={color}
+                    onPick={(k) => set({ beard: k })}
+                    faceFor={(k) => faceWith({ beard: k, ...(masked ? { mark: 'none' } : {}) })}
+                    note={masked ? 'Shown without the face mask; the mask covers it until you take it off under Face.' : null}
+                  />
+                )}
+              </>
             )}
-            <Swatches label={opts.eyesLabel} colors={opts.eyes} value={cur.eyes} onPick={(c) => set({ eyes: c })} />
-            {opts.moods && (
-              <Chips label="Expression" options={opts.moods} value={cur.mood} onPick={(k) => set({ mood: k })} note={masked ? 'The face mask hides the mouth; the brows still show it.' : null} />
+            {tab === 'outfit' && (
+              <>
+                {opts.outfits && <Chips label="Clothes" options={opts.outfits} value={cur.outfit} onPick={(k) => set({ outfit: k })} />}
+                <Chips label="Armour" options={opts.armours} value={cur.armour} onPick={(k) => set({ armour: k })} />
+                <Chips label="Cloak" options={opts.cloaks} value={cur.cloak} onPick={(k) => set({ cloak: k })} />
+                <Chips label="Headwear" options={opts.hats} value={cur.hat} onPick={(k) => set({ hat: k })} />
+              </>
             )}
-            {opts.marks && <Chips label="Marks" options={opts.marks} value={cur.mark} onPick={(k) => set({ mark: k })} />}
-            {opts.robotHeads && <Chips label="Head" options={opts.robotHeads} value={cur.robotHead} onPick={(k) => set({ robotHead: k })} />}
-            {opts.frames && <Chips label="Frame" options={opts.frames} value={cur.frame} onPick={(k) => set({ frame: k })} />}
-            {opts.finishes && <Chips label="Finish" options={opts.finishes} value={cur.finish} onPick={(k) => set({ finish: k })} />}
-            {opts.garbs && <Swatches label="Clothes" colors={opts.garbs} value={cur.cls.garb} onPick={(c) => set({ garb: c })} custom />}
-            <Swatches label={opts.trimLabel} colors={opts.trims} value={cur.cls.trim} onPick={(c) => set({ trim: c })} custom />
+            {tab === 'gear' && (
+              <>
+                <Chips label="Main hand" options={opts.mains} value={cur.main} onPick={(k) => set({ main: k })} />
+                <Chips label="Off hand" options={opts.offs} value={cur.off} onPick={(k) => set({ off: k })} note={TWO_HANDED.has(cur.main) ? 'Both hands are on the main weapon, so the off hand stays empty.' : null} />
+                <Toggles label="Carried" options={opts.extras} value={cur.extras} onPick={(v) => set({ extras: v })} />
+              </>
+            )}
+            {tab === 'colours' && (
+              <>
+                <Swatches label={opts.garbLabel} colors={opts.garbs} value={cur.garb} onPick={(c) => set({ garb: c })} custom />
+                <Swatches label={opts.trimLabel} colors={opts.trims} value={cur.trim} onPick={(c) => set({ trim: c })} custom />
+                {cur.cloak !== 'none' && cur.cloak !== 'mantle' && <Swatches label="Cloak" colors={opts.cloakColors} value={cur.cloakColor} onPick={(c) => set({ cloakColor: c })} custom />}
+                <Chips label="Leather" options={{ tan: 'Tan', brown: 'Brown', dark: 'Dark', black: 'Black', red: 'Oxblood', grey: 'Grey' }} value={cur.leatherKey} onPick={(k) => set({ leather: k })} />
+                <Chips label="Metal" options={opts.metals} value={cur.metal} onPick={(k) => set({ metal: k })} />
+              </>
+            )}
           </>
         )}
       </div>

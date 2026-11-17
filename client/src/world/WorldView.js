@@ -1142,8 +1142,9 @@ const sizeOff = (t) => (t.size || 1) / 2;
 
 function figureSig(t, sheet) {
   if (t.kind === 'pc' && sheet) {
-    const look = resolveLook(sheet);
-    return `pc|${look.body}|${look.skin}|${look.hair}|${look.hairStyle}|${look.beard}|${look.eyes}|${look.headwear}|${look.cls.garb}|${look.cls.trim}|${look.mark}|${look.classKey}|${sheet.raceIndex || sheet.race}|${sheet.subrace || ''}|${t.size || 1}`;
+    // everything that changes how the hero is built: the resolved look is
+    // derived from these, so the figure rebuilds exactly when the look does
+    return `pc|${sheet.raceIndex || sheet.race}|${sheet.subrace || ''}|${sheet.classIndex || sheet.className}|${sheet.name}|${JSON.stringify(sheet.portrait?.look || null)}|${t.size || 1}`;
   }
   return `${t.kind}|${artForToken(t)}|${t.label}|${t.color}|${t.body || ''}|${t.size || 1}`;
 }
@@ -1155,7 +1156,7 @@ function makeFigure(t, sheet) {
     fig = heroFigure(look, { seed: sheet.name, size: figureSize(sheet) });
   } else {
     const art = t.kind === 'npc' ? 'humanoid' : artForToken(t) || 'humanoid';
-    fig = creatureFigure(art, { seed: t.label || t.id, color: t.color, label: t.label || '', body: t.body, resolveLook });
+    fig = creatureFigure(art, { seed: t.label || t.id, color: t.color, label: t.label || '', body: t.body });
   }
   if ((t.size || 1) > 1) fig.body.scale.multiplyScalar(t.size * 0.8);
   return fig;

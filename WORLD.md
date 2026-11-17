@@ -31,13 +31,31 @@ and stays fast.
   the air, rain against the windows for the tavern), outdoors (sky, sun,
   long shadows, drifting leaves or snow by material), caves (cold blue dark,
   glowing crystals and mushrooms), lava and water that move and glow.
-* **Creatures**: heroes are assembled from `resolveLook()` — skin, hair
-  colour and style, beard, eyes, headwear, build, ears and race features
-  (horns, tusks, snout, antlers, cat ears, mushroom cap, clockwork plating)
-  plus class garb, trim, outfit and a class weapon. Change the portrait,
-  the figure changes. NPCs use the same system. Monsters use the 30
-  creature archetypes (rat, wolf, spider, goblinoid, skeleton, ghost,
-  dragon, ooze, golem…) with sizes from the token.
+* **Creatures** are chunky painted miniatures (rebuilt from scratch in v1.5):
+  a big head, about a third of the height, so faces read from across the
+  table; eyes with whites, irises and a glint; brows and mouths that show the
+  mood; chamfered blocks (`Kit.bevel`) for bodies, clothes and gear; small
+  readable details (belts, buckles, trims, pouches, rivets) and one shared
+  palette for figures and rooms alike (`world/palette.js`). Each figure is a
+  few pivoted parts (legs, torso, head, arms with hand groups, cloak, tail,
+  wings) so it can move.
+  - The look itself is data in `client/src/look/`: `catalog.js` lists every
+    option (presentation, build, height, face, eyes, brows, nose, marks, 18
+    hairstyles, 11 facial hair, 10 outfits, 6 armours, cloaks, 12 headwear,
+    17 main-hand and 9 off-hand items, extras, cloth/trim/cloak/leather/metal
+    paints), the class kits (each class's default silhouette) and the NPC
+    roles (innkeeper, guard, knight, merchant, noble, smith, …, read from the
+    token's name). `resolve.js` turns a sheet (or an NPC) into a full look;
+    old saved looks (headwear on/off, gearforged frames) map onto new choices.
+  - Builders: `world/fig/hero.js` (people, gearforged, skeletons), `fig/gear.js`
+    (weapons, shields, foci, carried things), `fig/beasts.js` (rats to dragons,
+    and the humanoid monsters' looks), `fig/rig.js` (the Figure base),
+    `world/figures.js` (the biped rig and the entry points).
+  - The 2D portrait (`components/Portrait.jsx`) draws the same look; options it
+    has no drawing for map to the nearest one it has (`catalog.js` `BUST`).
+  - QA contact sheets: `?world3d=qa&figqa=<set>` in dev, sets races, random,
+    gear, classes, hair, beards, outfits, hats, weapons, npcs, monsters
+    (`&faces=1` for close-ups).
 * **Motion**: idle breathing, walking along the real path, attack lunges
   and swings, arrows, spell bolts coloured by damage type, hit sparks and
   floating numbers, healing motes, death falls, a level-up pillar, a 3D d20

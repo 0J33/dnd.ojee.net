@@ -20,10 +20,14 @@ with Wizards of the Coast. See the in-app "licenses & credits" for the required 
 - **Interactive character sheets** — click any stat/skill/save/attack to roll it; spell slots,
   rests, death saves, conditions, level-up (subclass picks, new cantrips and spells), all math
   derived automatically (`client/src/rules/engine.js`).
-- **Portraits** — every hero gets a drawn likeness derived from their race, class and name
-  (`client/src/components/Portrait.jsx`). The same artwork is the map token, the party-list row, the
-  lobby card and the sheet header, so a character is recognisable everywhere. Monsters and NPCs get
-  matching silhouettes chosen from their SRD type and name.
+- **Looks** — every hero is a chunky painted miniature on the 3D table and a drawn bust
+  everywhere else, both from one look (`client/src/look/`): presentation, build and height;
+  face, eyes, brows, nose, expression and marks; 18 hairstyles and 11 kinds of facial hair;
+  outfit, armour, cloak, headwear; main and off hand; carried things; and cloth, trim, cloak,
+  leather and metal colours. Every class has its own default kit, so a hero nobody touched
+  still looks deliberate; the look editor (six tabs, with a live 3D preview) changes any of
+  it. People in the world dress for their role (read from their name), and monsters are
+  built in the same style from their SRD type and name.
 - **Battle maps** — pan/zoom canvas with a 5-ft grid, drag-drop tokens, fog of war, ruler, pings,
   drawing; a browsable library of ~30 built-in maps across five categories, plus blank grids and
   image URLs.

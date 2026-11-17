@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 
 // A tiny modelling kit. Shapes are added with a colour and a placement, and
 // the whole lot merges into ONE geometry with per-vertex colours — so a
@@ -60,6 +61,12 @@ export default class Kit {
   }
 
   box(w, h, d, color, o) { return this.add(new THREE.BoxGeometry(w, h, d), color, o); }
+  // A box with every edge chamfered: the workhorse of the miniature look.
+  // Light catches the bevels, so a block reads as a carved or stitched
+  // piece rather than a raw cube. o.b sets the bevel (default: a fifth of
+  // the thinnest side); o.taper narrows the top face (0..1) for wedges,
+  // skirts and tapering limbs.
+  bevel(w, h, d, color, o = {}) { return this.add(bevelGeo(w, h, d, o.b ?? Math.min(w, h, d) * 0.2, o.taper || 0, o.taperZ ?? o.taper ?? 0), color, o); }
   cyl(rt, rb, h, color, o = {}) { return this.add(new THREE.CylinderGeometry(rt, rb, h, seg(o.seg || 8), 1, o.open || false, 0, o.arc || Math.PI * 2), color, o); }
   cone(r, h, color, o = {}) { return this.add(new THREE.ConeGeometry(r, h, seg(o.seg || 8)), color, o); }
   ball(r, color, o = {}) { return this.add(new THREE.IcosahedronGeometry(r, DETAIL.k < 1 ? 0 : o.detail ?? 1), color, o); }
@@ -127,6 +134,29 @@ export default class Kit {
     g.computeBoundingSphere();
     return g;
   }
+}
+
+const BEVELS = new Map();
+function bevelGeo(w, h, d, b, tx = 0, tz = 0) {
+  b = Math.max(0.0005, Math.min(b, w * 0.45, h * 0.45, d * 0.45));
+  const key = `${w.toFixed(4)}|${h.toFixed(4)}|${d.toFixed(4)}|${b.toFixed(4)}|${tx}|${tz}`;
+  let g = BEVELS.get(key);
+  if (!g) {
+    const pts = [];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+      // the top face narrows by the taper
+      const kx = sy > 0 ? 1 - tx : 1, kz = sy > 0 ? 1 - tz : 1;
+      const X = (w / 2) * kx, Y = h / 2, Z = (d / 2) * kz, bx = Math.min(b, X * 0.45), bz = Math.min(b, Z * 0.45);
+      pts.push(new THREE.Vector3(sx * (X - bx), sy * (Y - b), sz * Z));
+      pts.push(new THREE.Vector3(sx * (X - bx), sy * Y, sz * (Z - bz)));
+      pts.push(new THREE.Vector3(sx * X, sy * (Y - b), sz * (Z - bz)));
+    }
+    g = new ConvexGeometry(pts);
+    g.deleteAttribute('uv');
+    if (BEVELS.size > 4000) BEVELS.clear();
+    BEVELS.set(key, g);
+  }
+  return g; // Kit.add clones it
 }
 
 // Shared materials. Faceted, matte, painted.

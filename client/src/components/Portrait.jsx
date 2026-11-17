@@ -46,251 +46,16 @@ const luma = (c) => {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 };
 
-/* ---------------- the options a player can choose from ---------------- */
+/* ---------------- the look itself ---------------- */
+// Every option and the rules for defaults live in src/look/ (shared with the
+// 3D figures); this file draws the bust from a resolved look.
 
-const SKIN = {
-  porcelain: '#f0d2bc', pale: '#e6c1a2', fair: '#d9aa84', tan: '#c38e64', olive: '#a87c52',
-  brown: '#8a5838', deep: '#643c24', ebony: '#46291a',
-  grey: '#9aa0a8', green: '#7d9464', red: '#b56a63', scaled: '#8a9a6a', blue: '#7d94b5',
-};
-const HUMAN_SKINS = [SKIN.porcelain, SKIN.pale, SKIN.fair, SKIN.tan, SKIN.olive, SKIN.brown, SKIN.deep, SKIN.ebony];
+import { resolveLook, lookOptions, randomLook, lookup, npcLook } from '../look/resolve';
+import { BODIES, HAIR_COLORS, EYE_COLORS, HAIR_STYLES, BEARDS, MOODS, MARKS, ROBOT_HEADS, ROBOT_FINISHES, ROBOT_ACCENTS, CLOTH_COLORS, TRIM_COLORS, FRAMES } from '../look/catalog';
 
-export const HAIR_COLORS = [
-  '#1a1512', '#2b2018', '#4a3320', '#6b4a28', '#8a6a3a', '#c8a860', '#e0cc90',
-  '#a83a2a', '#c86030', '#d8d2c2', '#8a8a90',
-  '#3a3a54', '#4a64b0', '#7a4a9a', '#3a8a6a', '#c85a8a',
-];
-const NATURAL_HAIR = HAIR_COLORS.slice(0, 11);
-
-export const EYE_COLORS = {
-  brown: '#5a3620', hazel: '#8a6630', green: '#4f8a44', blue: '#4f7fb8', grey: '#8a939c',
-  amber: '#c8902c', violet: '#8a64c0', red: '#c83a30', gold: '#e0b440', ice: '#bfe8ff',
-};
+export { resolveLook, lookOptions, randomLook, npcLook, BODIES, HAIR_COLORS, EYE_COLORS, HAIR_STYLES, BEARDS, MOODS, MARKS, ROBOT_HEADS, ROBOT_FINISHES, ROBOT_ACCENTS, CLOTH_COLORS, TRIM_COLORS, FRAMES };
+export const ROBOT_FRAMES = FRAMES;
 const E = EYE_COLORS;
-const ROBOT_GLOW = ['#5ef0e0', '#7fd0ff', '#ffb347', '#9dff8a', '#ff6a5a', '#d08aff'];
-
-export const HAIR_STYLES = {
-  crop: 'Cropped', swept: 'Swept', long: 'Long', wild: 'Wild', curls: 'Curls', braids: 'Braids',
-  ponytail: 'Ponytail', bun: 'Bun', topknot: 'Topknot', mohawk: 'Mohawk', bald: 'Bald',
-};
-export const BEARDS = {
-  none: 'None', stubble: 'Stubble', moustache: 'Moustache', goatee: 'Goatee',
-  short: 'Short beard', full: 'Full beard', braided: 'Braided beard',
-};
-// Ready-made heroes copied before body was a trait still look like themselves.
-const PREGEN_BODIES = { 'Brenna Ironvow': 'feminine', 'Piper Thistledown': 'neutral', 'Ansel Morrow': 'masculine', 'Sylvara Nightbreeze': 'feminine', 'Korgan Flamebrand': 'masculine', 'Elowen Vale': 'feminine' };
-export const BODIES = { feminine: 'Feminine', masculine: 'Masculine', neutral: 'Androgynous' };
-export const MOODS = { calm: 'Calm', smile: 'Smiling', grin: 'Grinning', stern: 'Stern', smirk: 'Smirking' };
-export const MARKS = { none: 'None', scar: 'Scar', freckles: 'Freckles', warpaint: 'War paint', tattoo: 'Tattoo', mask: 'Face mask' };
-const HEADWEAR_NAMES = {
-  helm: 'Helm', greathelm: 'Great helm', hood: 'Hood', cap: 'Feathered cap',
-  wizhat: 'Wizard hat', antlers: 'Antler crown', circlet: 'Circlet',
-};
-
-/* ---------------- races ---------------- */
-// jaw   - chin width, 0.35 fine to 0.66 heavy
-// beard - how often a hero of this people has one, and which kinds
-
-const COMMON_BEARDS = ['stubble', 'moustache', 'goatee', 'short', 'full'];
-
-const RACES = {
-  human: { skins: HUMAN_SKINS, ears: 'round', build: 1, jaw: 0.5, eyes: [E.brown, E.brown, E.hazel, E.blue, E.green, E.grey], beard: [0.4, COMMON_BEARDS] },
-  elf: { skins: [SKIN.porcelain, SKIN.pale, SKIN.fair, SKIN.tan, SKIN.brown], ears: 'point', build: 0.94, longFace: true, jaw: 0.36, eyes: [E.green, E.blue, E.hazel, E.violet, E.gold, E.grey] },
-  'half-elf': { skins: HUMAN_SKINS, ears: 'halfpoint', build: 0.97, jaw: 0.44, eyes: [E.green, E.blue, E.hazel, E.brown, E.grey], beard: [0.25, ['stubble', 'goatee', 'short']] },
-  dwarf: { skins: [SKIN.pale, SKIN.fair, SKIN.tan, SKIN.brown, SKIN.deep], ears: 'round', build: 1.12, jaw: 0.62, bushy: true, bigNose: true, eyes: [E.brown, E.grey, E.blue, E.hazel], beard: [1, ['full', 'braided', 'full', 'short']] },
-  halfling: { skins: [SKIN.pale, SKIN.fair, SKIN.tan, SKIN.olive, SKIN.brown, SKIN.deep], ears: 'round', build: 0.88, roundFace: true, jaw: 0.55, eyes: [E.brown, E.hazel, E.green, E.blue], beard: [0.12, ['stubble', 'short']] },
-  gnome: { skins: [SKIN.porcelain, SKIN.pale, SKIN.fair, SKIN.tan], ears: 'point', build: 0.86, roundFace: true, jaw: 0.55, bigNose: true, eyes: [E.blue, E.green, E.hazel, E.violet, E.brown], beard: [0.55, ['short', 'moustache', 'goatee', 'full']] },
-  'half-orc': { skins: [SKIN.green, SKIN.grey, '#8a8a6a', SKIN.brown], ears: 'point', build: 1.16, jaw: 0.66, tusks: true, bigNose: true, eyes: [E.brown, E.amber, E.red, E.grey], beard: [0.3, ['stubble', 'goatee', 'short']] },
-  dragonborn: { skins: [SKIN.scaled, SKIN.red, SKIN.blue, SKIN.grey, '#b89a4a', '#4a5a4a', '#c8ccd0'], ears: 'frill', build: 1.1, jaw: 0.6, snout: true, slit: true, hairless: true, crest: true, eyes: [E.gold, E.amber, E.red, E.green] },
-  tiefling: { skins: [SKIN.red, '#9a4a6a', '#6a4a8a', SKIN.tan, SKIN.deep], ears: 'point', build: 1, jaw: 0.45, horns: true, glowEyes: true, eyes: [E.gold, E.red, E.amber, E.violet], hairColors: ['#1a1512', '#2b2018', '#3a2a4a', '#5a2a3a', '#3a3a54', '#7a4a9a'], beard: [0.25, ['goatee', 'stubble']] },
-
-  // ---- SRD 5.2
-  goliath: { skins: ['#9aa0a8', '#8a8f96', '#b0a89c', '#7d8590'], ears: 'round', build: 1.2, jaw: 0.62, markings: true, eyes: [E.blue, E.grey, E.green, E.brown], beard: [0.15, ['stubble', 'short']] },
-  orc: { skins: [SKIN.green, '#6f8a5a', SKIN.grey], ears: 'point', build: 1.16, jaw: 0.66, tusks: true, bigNose: true, eyes: [E.amber, E.red, E.brown], beard: [0.3, ['stubble', 'goatee', 'short']] },
-
-  // ---- Tome of Heroes
-  // A soul in a clockwork body: metal plating, a visor with lit eyes, a glowing core.
-  gearforged: { skins: ['#b8923f', '#8e98a3', '#a0703e', '#b8734e', '#6f757c', '#3f454c'], ears: 'bolt', build: 1.02, robot: true, hairless: true, eyes: ROBOT_GLOW },
-  alseid: { skins: [SKIN.pale, SKIN.fair, SKIN.tan, SKIN.brown], ears: 'point', build: 0.96, jaw: 0.4, antlers: true, eyes: [E.brown, E.hazel, E.green, E.amber] },
-  catfolk: { skins: ['#c9a068', '#9a9088', '#4a4038', '#c8844a', '#e0cfae'], ears: 'cat', build: 0.96, jaw: 0.42, cat: true, slit: true, eyes: [E.green, E.amber, E.gold, E.blue] },
-  darakhul: { skins: ['#8f948c', '#7f8a78', '#a09a8e'], ears: 'point', build: 0.98, longFace: true, jaw: 0.4, fangs: true, glowEyes: true, eyes: ['#e6dc9a', E.gold, E.red], beard: [0.2, ['stubble']] },
-  derro: { skins: ['#8fa4c0', '#a7b6cc', '#9a94b8'], ears: 'round', build: 0.88, jaw: 0.55, bigNose: true, eyes: [E.grey, E.violet, E.ice], hairColors: ['#ece8e0', '#cfcac0', '#b8b2a8'], beard: [0.5, ['short', 'full', 'moustache']] },
-  drow: { skins: ['#3d3446', '#4a3f5a', '#2f3440'], ears: 'point', build: 0.94, longFace: true, jaw: 0.36, glowEyes: true, eyes: [E.red, E.violet, '#d8a0d8'], hairColors: ['#ece8f0', '#d8d2e0', '#c0b8d0'] },
-  erina: { skins: ['#8a6a4a', '#a8845c', '#6f5238'], ears: 'round', build: 0.86, roundFace: true, jaw: 0.5, spines: true, eyes: [E.brown, '#2a1a10'] },
-  minotaur: { skins: ['#6b4a30', '#4a3426', '#8a6444', '#2f2622'], ears: 'point', build: 1.18, jaw: 0.66, bull: true, eyes: [E.brown, '#2a1a10', E.red] },
-  mushroomfolk: { skins: ['#d8ccb4', '#bdb4a4', '#c8b8c8'], ears: 'none', build: 0.98, jaw: 0.5, cap: '#b0473a', hairless: true, eyes: [E.brown, '#2a1a10'] },
-  satarre: { skins: ['#6f6a85', '#5a6b6a', '#7a6a7a'], ears: 'point', build: 0.95, longFace: true, jaw: 0.4, glowEyes: true, eyes: ['#b8e090', E.gold] },
-  shade: { skins: ['#b8c4d0', '#a9b8c8', '#c8d0d8'], ears: 'round', build: 1, jaw: 0.5, ghostly: true, glowEyes: true, eyes: [E.ice] },
-};
-
-// Looks that depend on the subrace: a gearforged's chassis, a mushroomfolk's
-// clan, a shade's living origin.
-const SUBRACE_LOOKS = {
-  'dwarf-chassis': { beardFixed: 'full', build: 1.1 },
-  'gnome-chassis': { roundFace: true, build: 0.88 },
-  'kobold-chassis': { ears: 'frill', build: 0.9 },
-  malkin: { build: 0.86, roundFace: true },
-  'acid-cap': { cap: '#a8b83a' },
-  favored: { cap: '#8a5aa8' },
-  morel: { cap: '#7a5a3a', capPits: true, build: 0.9 },
-};
-const SHADE_SKINS = ['#b8c4d0', '#a9b8c8', '#c8d0d8'];
-
-function raceLook(sheet) {
-  const base = lookup(RACES, sheet?.raceIndex || sheet?.race || sheet?.raceName, 'human');
-  const sub = sheet?.subrace;
-  if (!sub) return base;
-  if (/^shade-/.test(sub)) {
-    // the shade keeps the shape of who they were, drained of colour
-    const origin = RACES[sub.replace(/^shade-/, '')] || RACES.human;
-    return { ...origin, skins: SHADE_SKINS, ghostly: true, glowEyes: true, eyes: [E.ice], hairColors: ['#d8dce4', '#b8c0cc'] };
-  }
-  return SUBRACE_LOOKS[sub] ? { ...base, ...SUBRACE_LOOKS[sub] } : base;
-}
-
-/* ---------------- classes ---------------- */
-// garb/trim - clothing colours    head - headwear    hairs/moods - likely looks
-// outfit    - what shows at the shoulders
-
-const CLASSES = {
-  barbarian: { garb: '#6b4a28', trim: '#c2542e', head: 'none', hairs: ['wild', 'braids', 'mohawk', 'long', 'bald'], moods: ['stern', 'grin'], mark: 'warpaint', outfit: 'fur' },
-  bard: { garb: '#6b3a6b', trim: '#e8c476', head: 'cap', hairs: ['swept', 'long', 'curls', 'ponytail'], moods: ['smile', 'smirk', 'grin'], outfit: 'ruff' },
-  cleric: { garb: '#c9c2ae', trim: '#d4a94f', head: 'hood', hairs: ['crop', 'bun', 'swept', 'bald'], moods: ['calm', 'smile'], chest: 'symbol', outfit: 'stole' },
-  druid: { garb: '#4a5c34', trim: '#8fae6a', head: 'antlers', hairs: ['long', 'braids', 'curls', 'wild'], moods: ['calm', 'smile'], outfit: 'leaf' },
-  fighter: { garb: '#6d6a63', trim: '#9aa0a8', head: 'helm', hairs: ['crop', 'swept', 'ponytail', 'bald'], moods: ['stern', 'calm', 'grin'], outfit: 'plate' },
-  monk: { garb: '#a86a3a', trim: '#e8c476', head: 'none', hairs: ['topknot', 'bald', 'bun'], moods: ['calm', 'smile'], outfit: 'wrap' },
-  paladin: { garb: '#8d8a95', trim: '#e8c476', head: 'greathelm', hairs: ['crop', 'swept', 'long'], moods: ['calm', 'stern'], chest: 'symbol', outfit: 'plate' },
-  ranger: { garb: '#3f5a3a', trim: '#6b4a28', head: 'hood', hairs: ['long', 'ponytail', 'braids', 'swept'], moods: ['calm', 'stern'], outfit: 'quiver' },
-  rogue: { garb: '#2f3138', trim: '#5f87a8', head: 'hood', hairs: ['swept', 'crop', 'ponytail'], moods: ['smirk', 'calm'], mark: 'mask', outfit: 'strap' },
-  sorcerer: { garb: '#7a2f3a', trim: '#e07040', head: 'none', hairs: ['wild', 'swept', 'curls', 'long'], moods: ['smirk', 'smile'], spark: true, outfit: 'collar' },
-  warlock: { garb: '#3a2f52', trim: '#8f7fd4', head: 'circlet', hairs: ['long', 'swept', 'bun'], moods: ['smirk', 'stern'], spark: true, outfit: 'collar' },
-  wizard: { garb: '#2f3f6b', trim: '#8f7fd4', head: 'wizhat', hairs: ['long', 'swept', 'bun', 'bald'], moods: ['calm', 'smile'], chest: 'symbol', outfit: 'robe' },
-  npc: { garb: '#5a5348', trim: '#8d8a95', head: 'none', hairs: ['crop', 'swept', 'long'], moods: ['calm'] },
-};
-
-// How often a hero wears their class's headwear when nobody has chosen.
-const HEAD_CHANCE = { helm: 0.55, greathelm: 0.35, hood: 0.6, cap: 0.7, wizhat: 0.85, antlers: 0.6, circlet: 1 };
-
-/* ---------------- resolving a sheet to a look ---------------- */
-
-/**
- * Every trait of a hero's portrait: the player's own choice where they made
- * one, otherwise the default their race, class and name give them.
- */
-export function resolveLook(sheet) {
-  const race = raceLook(sheet);
-  const classSource = sheet?.classIndex || sheet?.className;
-  const cls = lookup(CLASSES, classSource, 'npc');
-  const look = (sheet && sheet.portrait && sheet.portrait.look) || {};
-  const seed = look.seed || sheet?.name || 'hero';
-  const h = (k) => hashString(`${seed}-${k}`);
-
-  // Body: chosen in the portrait editor (or written into a ready-made hero or
-  // an adventure's NPC). Feminine and androgynous heroes don't get a beard
-  // unless the player picks one, and lean to longer hair.
-  const body = BODIES[look.body] ? look.body : BODIES[sheet?.body] ? sheet.body : PREGEN_BODIES[sheet?.name] || null;
-  const [beardChance, beardPool] = race.beard || [0, []];
-  const beardOdds = body === 'feminine' || body === 'neutral' ? 0 : body === 'masculine' ? Math.max(beardChance, Math.min(1, beardChance + 0.25)) : beardChance;
-  const defaultBeard = race.robot ? race.beardFixed || 'none' : h('beard') < beardOdds ? pick(beardPool, h('beardkind')) : 'none';
-  const hairPool = body === 'feminine' ? [...new Set([...cls.hairs.filter((x) => !['bald', 'crop', 'mohawk', 'swept'].includes(x)), 'long', 'ponytail', 'bun', 'braids'])] : cls.hairs;
-  const lightSkin = (c) => luma(c) > 0.5;
-
-  const skin = look.skin || pick(race.skins, h('skin'));
-  let defaultMark = 'none';
-  if (cls.mark && h('classmark') < 0.6) defaultMark = cls.mark;
-  else if (!race.robot) {
-    const r = h('mark');
-    if (r < 0.14) defaultMark = 'scar';
-    else if (r < 0.26 && lightSkin(skin)) defaultMark = 'freckles';
-  }
-
-  // Clothing colours: the class's own unless the player dyed them. A
-  // gearforged wears no clothes: its "clothes" are plating a shade darker than
-  // its head, its trim is the accent metal or light on the seams.
-  const skinC = look.skin || pick(race.skins, h('skin'));
-  const dyed = race.robot
-    ? { ...cls, garb: shade(skinC, 0.12), trim: look.trim || ROBOT_ACCENTS[0], trimDyed: true, outfit: 'chassis' }
-    : look.garb || look.trim ? { ...cls, garb: look.garb || cls.garb, trim: look.trim || cls.trim, trimDyed: !!look.trim } : cls;
-  return {
-    race,
-    cls: dyed,
-    classKey: String(classSource || 'npc').toLowerCase(),
-    seed,
-    skin,
-    hair: look.hair || (race.robot ? '#4a4540' : pick(race.hairColors || NATURAL_HAIR, h('hair'))),
-    hairStyle: race.hairless ? 'bald' : look.hairStyle || pick(hairPool, h('style')),
-    body,
-    beard: race.robot ? race.beardFixed || 'none' : look.beard || defaultBeard,
-    eyes: look.eyes || pick(race.eyes || [E.brown], h('eyes')),
-    mood: look.mood || pick(cls.moods, h('mood')),
-    headwear: cls.head !== 'none' && !race.cap && (look.headwear ? look.headwear === 'on' : h('head') < (HEAD_CHANCE[cls.head] || 0)),
-    mark: race.robot ? 'none' : look.mark || defaultMark,
-    // gearforged only: head shape, frame and how the metal has aged
-    robotHead: race.robot ? (ROBOT_HEADS[look.robotHead] ? look.robotHead : 'visor') : null,
-    frame: race.robot ? (ROBOT_FRAMES[look.frame] ? look.frame : 'standard') : null,
-    finish: race.robot ? (ROBOT_FINISHES[look.finish] ? look.finish : 'worn') : null,
-  };
-}
-
-/** What the portrait editor offers for this hero; null means "not for this body". */
-export function lookOptions(sheet) {
-  const race = raceLook(sheet);
-  const cls = lookup(CLASSES, sheet?.classIndex || sheet?.className, 'npc');
-  const organic = !race.robot;
-  const faceHair = organic && !race.snout && !race.cat && !race.bull && !race.cap;
-  const eyes = race.robot ? ROBOT_GLOW : [...new Set([...(race.eyes || []), ...Object.values(EYE_COLORS)])];
-  return {
-    skins: race.skins,
-    hairColors: organic && !race.hairless ? [...new Set([...(race.hairColors || []), ...HAIR_COLORS])] : null,
-    hairStyles: organic && !race.hairless ? HAIR_STYLES : null,
-    beards: faceHair ? BEARDS : null,
-    eyes,
-    eyesLabel: race.robot ? 'Eye glow' : 'Eyes',
-    skinLabel: race.robot ? 'Plating' : race.snout ? 'Scales' : race.cat || race.bull ? 'Fur' : 'Skin',
-    moods: organic ? MOODS : null,
-    headwear: cls.head !== 'none' && !race.cap ? HEADWEAR_NAMES[cls.head] : null,
-    marks: organic ? MARKS : null,
-    bodies: race.robot || race.skull ? null : BODIES,
-    garbs: race.robot ? null : [...new Set([cls.garb, ...CLOTH_COLORS])],
-    trims: race.robot ? ROBOT_ACCENTS : [...new Set([cls.trim, ...TRIM_COLORS])],
-    trimLabel: race.robot ? 'Accent' : 'Trim',
-    robotHeads: race.robot ? ROBOT_HEADS : null,
-    frames: race.robot ? ROBOT_FRAMES : null,
-    finishes: race.robot ? ROBOT_FINISHES : null,
-  };
-}
-
-// Gearforged choices.
-export const ROBOT_HEADS = { visor: 'Visor', dome: 'Dome', crest: 'Crested' };
-export const ROBOT_FRAMES = { slim: 'Slim', standard: 'Standard', heavy: 'Heavy' };
-export const ROBOT_FINISHES = { polished: 'Polished', worn: 'Worn', rusted: 'Rusted' };
-export const ROBOT_ACCENTS = ['#c8a050', '#b8734e', '#a8aeb5', '#e8d8a0', '#5ef0e0', '#7fd0ff', '#ff8a4a', '#c94f6d', '#8fe07a', '#b07aff', '#2a2d33'];
-
-// Dyes for clothes and for their trim (belt, hems, collar): earthy and
-// dyed-cloth colours that sit well on the table, plus the class's own.
-export const CLOTH_COLORS = ['#5a5348', '#6b4a28', '#3f5a3a', '#2f3f6b', '#7a2f3a', '#3a2f52', '#2f3138', '#6d6a63', '#c9c2ae', '#a86a3a', '#4a5c34', '#6b3a6b', '#1f4a4a', '#8a6a2a', '#e0d8c4', '#1c1a18'];
-export const TRIM_COLORS = ['#d4a94f', '#c2542e', '#9aa0a8', '#e8c476', '#8f7fd4', '#5f87a8', '#8fae6a', '#6b4a28', '#e07040', '#c94f6d', '#ece4d0', '#2a2622'];
-
-/** Every drawn trait at random (keeps the body the player chose). */
-export function randomLook(sheet, keep = {}) {
-  const opts = lookOptions(sheet);
-  const r = (xs) => (xs && xs.length ? xs[Math.floor(Math.random() * xs.length)] : undefined);
-  const look = { seed: Math.random().toString(36).slice(2, 10), ...keep };
-  look.skin = r(opts.skins);
-  if (opts.hairColors) look.hair = r(opts.hairColors);
-  if (opts.hairStyles) look.hairStyle = r(Object.keys(opts.hairStyles));
-  if (opts.beards && look.body !== 'feminine') look.beard = Math.random() < 0.45 ? r(Object.keys(opts.beards)) : 'none';
-  look.eyes = r(opts.eyes);
-  if (opts.moods) look.mood = r(Object.keys(opts.moods));
-  if (opts.headwear) look.headwear = Math.random() < 0.4 ? 'on' : 'off';
-  if (opts.marks) look.mark = Math.random() < 0.7 ? 'none' : r(Object.keys(opts.marks).filter((k) => k !== 'mask'));
-  if (opts.garbs) look.garb = r(opts.garbs);
-  look.trim = r(opts.trims.filter((c) => c !== look.garb));
-  if (opts.robotHeads) look.robotHead = r(Object.keys(opts.robotHeads));
-  if (opts.frames) look.frame = r(Object.keys(opts.frames));
-  if (opts.finishes) look.finish = r(Object.keys(opts.finishes));
-  return look;
-}
 
 /** A portrait picture a player uploaded, if it is one we are willing to draw. */
 export function safePortraitImage(src) {
@@ -655,17 +420,6 @@ export function artKeyForMonster({ name, type, index } = {}) {
 
 /* ---------------- the hero bust ---------------- */
 
-// Exact match first, then the longest matching key, so "half-elf" never
-// resolves to "elf" and "lightfoot halfling" lands on halfling.
-function lookup(table, value, fallbackKey) {
-  const key = String(value || '').toLowerCase().replace(/\s+/g, '-');
-  if (table[key]) return table[key];
-  const hit = Object.keys(table)
-    .sort((a, b) => b.length - a.length)
-    .find((k) => key.includes(k));
-  return hit ? table[hit] : table[fallbackKey];
-}
-
 // Hair behind the head: whatever falls past the ears. Drawn before the
 // shoulders, so long hair reads as falling behind them.
 function hairBack(style, g, fill) {
@@ -795,9 +549,12 @@ function beardShape(kind, g, fill) {
 function HeroBust({ sheet }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const L = resolveLook(sheet);
-  const { race, cls, classKey, skin, hair, hairStyle, beard, eyes, mood, mark } = L;
+  // the bust draws a smaller vocabulary than the figure: new choices arrive
+  // mapped to their nearest drawing (look/catalog.js BUST)
+  const { race, cls, classKey, skin, hair, eyes, mood } = L;
+  const { hairStyle, beard, mark } = L.bust;
   const showHeadwear = L.headwear;
-  const b = race.build * (L.frame === 'heavy' ? 1.14 : L.frame === 'slim' ? 0.86 : 1);
+  const b = race.build * (FRAMES[L.frame]?.w || 1);
   const hb = 1 + (b - 1) * 0.5; // the head grows with the body, but less
 
   // Head geometry. Everything else is positioned relative to these, so a
