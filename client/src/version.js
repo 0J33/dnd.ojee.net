@@ -5,6 +5,7 @@ export const CHANGELOG = [
     version: '1.5.0',
     date: '2026-11-17',
     notes: [
+      'AI assistant: run it on a model on your own computer, free and with no account: Ollama, LM Studio, llama.cpp, Jan, text-generation-webui, KoboldCpp, vLLM or any other local OpenAI-compatible server. "Find my models" checks the connection and lists what is loaded, with the exact fix if the page cannot reach it; models that cannot call tools are used for chat and suggestions instead of failing',
       'Every 3D figure rebuilt from scratch as a chunky painted miniature: bigger heads you can read from across the table, eyes with whites and a glint, brows and mouths that show the mood, belts, buckles, trims and pouches, all painted from one shared palette',
       'A new look editor in six tabs (Body, Face, Hair, Outfit, Gear, Colours). Pick presentation separately from build (slight to heavy) and height; face shape, eye shape, brows and nose; 18 hairstyles and 11 kinds of facial hair; eyepatch, eye scar and more marks',
       'Dress your hero: ten outfits (tunic, doublet, long coat, leathers, robe, vestments, gown, wraps, furs, work apron), five kinds of armour from leather to full plate, a cape, cloak or fur mantle, and twelve kinds of headwear',

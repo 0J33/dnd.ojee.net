@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { aiApi, MCP_URL } from './aiApi';
-import { ANTHROPIC_MODELS, PROVIDERS, providerOf, needsKey, loadKey, loadSettings, runAgent, saveKey, saveSettings, systemPrompt } from './llm';
+import { ANTHROPIC_MODELS, PROVIDERS, providerOf, needsKey, loadKey, loadSettings, runAgent, saveKey, saveSettings, systemPrompt, listModels, isLocalUrl } from './llm';
 import { configure, liveSession, requestSuggestions, startListening, stopListening, subscribe, update } from './liveSession';
 import { recognitionSupported, speak, stopSpeaking, ttsSupported } from './speech';
 import { FILTER_LEVELS, FILTER_STYLES } from '../../ai/profanity';
@@ -559,6 +559,7 @@ function ConnectTab({ code, settings, setSettings, apiKey, setApiKey }) {
   const [form, setForm] = useState({ name: 'My AI app', readOnly: false, autoApply: false, thisOnly: true });
   const [err, setErr] = useState(null);
   const [copied, setCopied] = useState(null);
+  const [modelCheck, setModelCheck] = useState(null);
   const load = async () => { const t = await aiApi.tokens(); if (Array.isArray(t)) setTokens(t); else setErr(t.error); };
   useEffect(() => { load(); }, []);
   const make = async (e) => {
@@ -574,6 +575,16 @@ function ConnectTab({ code, settings, setSettings, apiKey, setApiKey }) {
   const claudeCode = `claude mcp add --transport http dnd ${MCP_URL} --header "Authorization: Bearer ${secret}"`;
   const prov = providerOf(settings);
   const anthropic = settings.provider === 'anthropic';
+  const local = prov.local || isLocalUrl(settings.oaBaseUrl);
+  // Ask the server which models it has: a connection test and a picker in one.
+  const findModels = async () => {
+    setModelCheck({ busy: true });
+    try {
+      const ids = await listModels(settings, apiKey);
+      setModelCheck({ ok: true, ids, text: ids.length ? `Connected: ${ids.length} model${ids.length === 1 ? '' : 's'} found.` : 'Connected, but no models are loaded yet.' });
+      if (ids.length && !ids.includes(settings.oaModel)) setSettings({ oaModel: ids[0] });
+    } catch (e) { setModelCheck({ ok: false, text: e.message }); }
+  };
   return (
     <div className="ai-connect">
       <section>
@@ -597,10 +608,24 @@ function ConnectTab({ code, settings, setSettings, apiKey, setApiKey }) {
           ) : (
             <>
               <label className="ai-field"><span className="field-label">Base URL</span><input value={settings.oaBaseUrl} onChange={(e) => setSettings({ oaBaseUrl: e.target.value })} placeholder="https://api.openai.com/v1" /></label>
-              <label className="ai-field"><span className="field-label">Model</span><input value={settings.oaModel} onChange={(e) => setSettings({ oaModel: e.target.value })} placeholder="a model with tool calling" /></label>
+              <label className="ai-field"><span className="field-label">Model</span>
+                {modelCheck?.ids?.length ? (
+                  <select value={settings.oaModel} onChange={(e) => setSettings({ oaModel: e.target.value })}>
+                    {modelCheck.ids.map((id) => <option key={id} value={id}>{id}</option>)}
+                    {!modelCheck.ids.includes(settings.oaModel) && settings.oaModel && <option value={settings.oaModel}>{settings.oaModel}</option>}
+                  </select>
+                ) : <input value={settings.oaModel} onChange={(e) => setSettings({ oaModel: e.target.value })} placeholder="a model with tool calling" />}
+              </label>
+              <div className="ai-field ai-wide">
+                <span className="ai-keyrow">
+                  <button type="button" className="small-btn" onClick={findModels} disabled={modelCheck?.busy}>{modelCheck?.busy ? 'Checking…' : local ? 'Find my models' : 'Test and list models'}</button>
+                  {modelCheck?.text && <span className={`small ${modelCheck.ok ? 'ai-ok' : 'ai-bad'}`} role="status">{modelCheck.text}</span>}
+                </span>
+              </div>
+              <label className="ai-check"><input type="checkbox" checked={!!settings.noTools} onChange={(e) => setSettings({ noTools: e.target.checked })} /> This model can't call tools: use it for chat and suggestions only (it can't propose changes). Found out by itself if the model says so.</label>
             </>
           )}
-          <label className="ai-field ai-wide" htmlFor="ai-key"><span className="field-label">API key</span>
+          <label className="ai-field ai-wide" htmlFor="ai-key"><span className="field-label">API key{local ? ' (usually none for a local model)' : ''}</span>
             <span className="ai-keyrow">
               <input id="ai-key" type="password" autoComplete="off" spellCheck={false} value={keyDraft} onChange={(e) => setKeyDraft(e.target.value)} placeholder={anthropic ? 'sk-ant-...' : prov.keyHint || 'the provider\'s API key'} />
               <button type="button" className="small-btn primary-btn" disabled={keyDraft === apiKey} onClick={() => setApiKey(keyDraft.trim())}>Save</button>
@@ -622,7 +647,7 @@ function ConnectTab({ code, settings, setSettings, apiKey, setApiKey }) {
             <label className="ai-check"><input type="checkbox" checked={settings.relay} onChange={(e) => setSettings({ relay: e.target.checked })} /> Relay through dnd.ojee.net (for providers that block browser calls; the key then passes through the server for each request, never stored or logged)</label>
           </div>
         </details>
-        <p className="muted small"><InfoIcon size={12} /> Any model that can call tools works: pick its provider, or "Other OpenAI-compatible API" for anything else. The key stays in this browser and goes straight to {anthropic ? 'Anthropic' : prov.key === 'custom' ? 'that API' : prov.name}; usage is billed to your account.{prov.local ? ' A model on this computer must allow this site\'s origin (Ollama: OLLAMA_ORIGINS; LM Studio: enable CORS).' : ''} If a provider refuses browser calls, turn on the relay under Advanced.</p>
+        <p className="muted small"><InfoIcon size={12} /> Any model that can call tools works: pick its provider, or "Other OpenAI-compatible API" for anything else. {local ? '' : <>The key stays in this browser and goes straight to {anthropic ? 'Anthropic' : prov.key === 'custom' ? 'that API' : prov.name}; usage is billed to your account.</>}{local ? ` A model on this computer needs no account and costs nothing: nothing leaves your machine but the table's tool calls to dnd.ojee.net. ${prov.fix || 'It must allow this site (CORS).'} Small models (under ~7B) often can't call tools; Qwen 3, Llama 3.1/3.3, Mistral Small and gpt-oss can.` : ''} If a provider refuses browser calls, turn on the relay under Advanced.</p>
       </section>
 
       <section>

@@ -34,13 +34,63 @@ export const PROVIDERS = [
   { key: 'deepseek', name: 'DeepSeek', kind: 'openai', base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
   { key: 'xai', name: 'xAI (Grok)', kind: 'openai', base: 'https://api.x.ai/v1', model: 'grok-4' },
   { key: 'together', name: 'Together AI', kind: 'openai', base: 'https://api.together.xyz/v1', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
-  { key: 'ollama', name: 'Ollama (on this computer)', kind: 'openai', base: 'http://localhost:11434/v1', model: 'llama3.1', keyHint: 'not needed', local: true },
-  { key: 'lmstudio', name: 'LM Studio (on this computer)', kind: 'openai', base: 'http://localhost:1234/v1', model: '', keyHint: 'not needed', local: true },
+  // A model running on the DM's own computer: no account, no key, nothing billed.
+  // fix: what to do when the page can't reach it (the usual cause is the
+  // server refusing other sites' pages: CORS).
+  { key: 'ollama', name: 'Ollama (on this computer)', kind: 'openai', base: 'http://localhost:11434/v1', model: 'qwen3:8b', keyHint: 'not needed', local: true,
+    fix: 'Start Ollama allowing this site: OLLAMA_ORIGINS=https://dnd.ojee.net ollama serve (Windows/Mac app: set OLLAMA_ORIGINS in the environment and restart it). Pull a model that can call tools, e.g. ollama pull qwen3:8b.' },
+  { key: 'lmstudio', name: 'LM Studio (on this computer)', kind: 'openai', base: 'http://localhost:1234/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'In LM Studio: Developer tab, start the server and switch on "Enable CORS". Load a model first.' },
+  { key: 'llamacpp', name: 'llama.cpp server (on this computer)', kind: 'openai', base: 'http://localhost:8080/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'Run llama-server -m model.gguf --jinja (the --jinja flag turns on tool calling).' },
+  { key: 'jan', name: 'Jan (on this computer)', kind: 'openai', base: 'http://localhost:1337/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'In Jan: Settings, Local API Server, start it and add https://dnd.ojee.net to the allowed origins (CORS).' },
+  { key: 'textgen', name: 'text-generation-webui (on this computer)', kind: 'openai', base: 'http://localhost:5000/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'Start it with --api (the OpenAI-compatible API listens on port 5000).' },
+  { key: 'koboldcpp', name: 'KoboldCpp (on this computer)', kind: 'openai', base: 'http://localhost:5001/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'Start KoboldCpp with a model loaded; its OpenAI-compatible API is on port 5001.' },
+  { key: 'vllm', name: 'vLLM (on this computer)', kind: 'openai', base: 'http://localhost:8000/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'Start vllm serve <model> --enable-auto-tool-choice --tool-call-parser <parser> --allowed-origins \'["https://dnd.ojee.net"]\'.' },
+  { key: 'localother', name: 'Other server on this computer', kind: 'openai', base: 'http://localhost:8080/v1', model: '', keyHint: 'not needed', local: true,
+    fix: 'Any OpenAI-compatible server works if it allows this site\'s origin (CORS) and listens on localhost.' },
   { key: 'custom', name: 'Other OpenAI-compatible API', kind: 'openai', base: '', model: '' },
 ];
 /** Whether the assistant can't run yet for want of a key (local servers and custom APIs may need none). */
-export const needsKey = (s, apiKey) => { const p = providerOf(s); return !apiKey && !p.local && p.key !== 'custom'; };
+export const needsKey = (s, apiKey) => { const p = providerOf(s); return !apiKey && !p.local && p.key !== 'custom' && !(s.provider === 'openai' && isLocalUrl(s.oaBaseUrl)); };
 export const providerOf = (s) => PROVIDERS.find((p) => p.key === s.preset) || (s.provider === 'openai' ? PROVIDERS.find((p) => p.key === 'custom') : PROVIDERS[0]);
+
+/** Whether a base URL points at this computer (the browser lets an https page call http://localhost). */
+export const isLocalUrl = (u) => { try { const h = new URL(u).hostname; return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.localhost'); } catch { return false; } };
+
+/**
+ * The models an OpenAI-compatible server offers (GET /models; Ollama's own
+ * /api/tags as a fallback). Throws an Error whose message says how to fix it.
+ */
+export async function listModels(settings, apiKey) {
+  const base = (settings.oaBaseUrl || '').replace(/\/+$/, '');
+  const prov = providerOf(settings);
+  if (!base) throw new Error('Set the base URL first.');
+  let u;
+  try { u = new URL(base); } catch { throw new Error('That base URL is not a URL.'); }
+  if (u.protocol === 'http:' && !isLocalUrl(base) && window.location.protocol === 'https:') {
+    throw new Error('Browsers block plain http:// from this https page unless it is localhost. Run the model on this computer, or put the other machine behind https (for example tailscale serve, or a cloudflared tunnel) and use that address.');
+  }
+  const headers = apiKey ? { authorization: `Bearer ${apiKey}` } : {};
+  let res;
+  try {
+    res = await fetch(`${base}/models`, { headers });
+  } catch {
+    throw new Error(`Could not reach ${base}. Is the server running?${prov.local || isLocalUrl(base) ? ` ${prov.fix || 'It must also allow this site (CORS).'} If the browser asked to let this site reach devices on your network, allow it.` : ' If it blocks browser calls, try the relay under Advanced.'}`);
+  }
+  let data = await res.json().catch(() => null);
+  let ids = Array.isArray(data?.data) ? data.data.map((m) => m.id).filter(Boolean) : [];
+  if (!ids.length && /11434/.test(base)) {
+    // older Ollama: its own list
+    try { const r2 = await fetch(base.replace(/\/v1$/, '') + '/api/tags'); const d2 = await r2.json(); ids = (d2.models || []).map((m) => m.name); } catch { /* keep none */ }
+  }
+  if (!res.ok && !ids.length) throw new Error(data?.error?.message || data?.error || `The server answered ${res.status}.`);
+  return ids;
+}
 
 const SETTINGS_KEY = 'dnd.ai.settings';
 const KEY_KEY = 'dnd.ai.key';
@@ -54,6 +104,7 @@ export const DEFAULT_SETTINGS = {
   oaBaseUrl: 'https://api.openai.com/v1',
   oaModel: '',
   relay: false,
+  noTools: false, // the model can't call tools: chat and suggestions only
   rememberKey: true,
   autoApply: false, // prep changes from the assistant go in at once (still undoable)
   lang: 'en-US',
@@ -226,6 +277,19 @@ function apiErrorText(err) {
 
 // ---------------- OpenAI-compatible ----------------
 
+// Models found this session to have no tool calling.
+const noToolsFor = new Set();
+const NO_TOOLS_NOTE = `
+
+You cannot call tools in this conversation: answer in words only, and never claim to have changed the campaign. When asked for suggestions, answer with ONLY a JSON array like [{"kind":"narration","title":"A few words","text":"the draft"}] (kinds: narration, read_aloud, npc_line, next_beat, ruling, tactics, name, loot, scene_change, other).`;
+
+/** Suggestions written as a JSON array in prose (models without tools). */
+function suggestionsFromText(text) {
+  const m = String(text || '').match(/\[[\s\S]*\]/);
+  if (!m) return null;
+  try { const a = JSON.parse(m[0]); return Array.isArray(a) ? a.filter((x) => x && typeof x.text === 'string').map((x) => ({ kind: x.kind || 'other', title: x.title || 'Suggestion', text: x.text })) : null; } catch { return null; }
+}
+
 function toOpenAi(system, messages) {
   const out = [{ role: 'system', content: system }];
   for (const m of messages) {
@@ -251,19 +315,32 @@ async function runOpenAi({ settings, apiKey, campaign, system, messages, onText,
   const defs = list.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   let finalText = '';
   for (let step = 0; step < maxSteps; step++) {
-    const body = { model: settings.oaModel || 'gpt-4o', messages: toOpenAi(system, messages), tools: defs, tool_choice: 'auto' };
+    const plain = settings.noTools || noToolsFor.has(settings.oaModel);
+    const body = { model: settings.oaModel || 'gpt-4o', messages: toOpenAi(plain ? system + NO_TOOLS_NOTE : system, messages), ...(plain ? {} : { tools: defs, tool_choice: 'auto' }) };
     const headers = { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) };
-    const res = settings.relay
-      ? await fetch(aiApi.relayUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, headers, body }), signal })
-      : await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal });
+    let res;
+    try {
+      res = settings.relay
+        ? await fetch(aiApi.relayUrl, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, headers, body }), signal })
+        : await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal });
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      const prov = providerOf(settings);
+      throw new Error(`Could not reach the model at ${base}.${prov.local || isLocalUrl(base) ? ` ${prov.fix || 'Is the server running, and does it allow this site (CORS)?'}` : ' Try the relay under Advanced.'}`);
+    }
     const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.choices) throw new Error(data?.error?.message || data?.error || `The model request failed (${res.status}).`);
+    const errText = String(data?.error?.message || data?.error || '');
+    // A model that can't call tools (common with small local models): carry on
+    // without them for the rest of this session, as chat and suggestions.
+    if (!res.ok && !plain && /tool|function/i.test(errText)) { noToolsFor.add(settings.oaModel); onText?.('(This model can\'t call tools, so it will answer in words; changes to the table need a model that can.)\n'); step--; continue; }
+    if (!res.ok || !data?.choices) throw new Error(errText || `The model request failed (${res.status}).`);
     const choice = data.choices[0].message || {};
     const calls = choice.tool_calls || [];
     if (choice.content) { finalText = choice.content; onText?.(choice.content); }
     const blocks = [];
     if (choice.content) blocks.push({ type: 'text', text: choice.content });
-    const parsed = calls.map((c) => { let input = null; try { input = JSON.parse(c.function.arguments || '{}'); } catch { input = null; } return { type: 'tool_use', id: c.id, name: c.function.name, input }; });
+    // (some local servers send the arguments as an object, or leave out the id)
+    const parsed = calls.map((c, i) => { const a = c.function?.arguments; let input = null; try { input = typeof a === 'object' && a ? a : JSON.parse(a || '{}'); } catch { input = null; } return { type: 'tool_use', id: c.id || `call_${step}_${i}`, name: c.function?.name, input }; });
     blocks.push(...parsed);
     messages.push({ role: 'assistant', content: blocks });
     if (!parsed.length) return finalText;
@@ -299,6 +376,8 @@ export async function suggest({ settings, apiKey, campaign, scene, transcript, a
     onTool: (t) => { if (t.name === SUGGEST_TOOL.name && t.input?.suggestions) got = t.input.suggestions; },
   });
   if (got) return got.filter((s) => s && s.text).slice(0, 6);
+  const fromText = suggestionsFromText(text);
+  if (fromText?.length) return fromText.slice(0, 6);
   // a model that answered in prose: one suggestion with what it said
   return text ? [{ kind: 'other', title: 'Suggestion', text }] : [];
 }
