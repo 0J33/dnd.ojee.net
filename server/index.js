@@ -33,6 +33,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/characters', characterRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/srd', srdRoutes);
+// AI: the MCP server (/mcp) and the DM's assistant API (/api/ai), see server/ai/.
+const aiTables = {}; // the table actions, filled in once the socket handlers exist (below)
+require('./ai/mcp').mount(app);
+require('./ai/routes').mount(app, aiTables);
 app.get('/api/health', (req, res) => res.json({ ok: true, app: 'dnd', ts: Date.now() }));
 
 // SERVE_CLIENT=1 serves client/dist from this process too, so pages, API and
@@ -57,6 +61,7 @@ mongoose
   });
 
 const tables = registerSocketHandlers(io);
+Object.assign(aiTables, { dispatch: tables.dispatch, emitToUser: tables.emitToUser, isOnline: tables.isOnline });
 
 // Going down without losing anything: every room is written first (rooms are
 // otherwise saved a second or two after each change, socket/roomState.js).

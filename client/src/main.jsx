@@ -9,6 +9,7 @@
 //   hud, Map3D       - the v2 table HUD; the Tavern theme restyles it, so first
 //   index … explain  - base sheets, then the theme layer (tavern) and home
 //   dmquick, training - scoped component sheets that refine the above, so last
+//   ai               - the DM's AI dock (components/ai), scoped, after everything
 import './components/Map3D.css';
 import './styles/hud.css';
 import './styles/index.css';
@@ -25,6 +26,7 @@ import './styles/explain.css';
 import './styles/dmquick.css';
 import './styles/training.css';
 import './styles/items.css';
+import './styles/ai.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';

@@ -1,6 +1,26 @@
-export const VERSION = '1.4.0';
+export const VERSION = '1.5.0';
 
 export const CHANGELOG = [
+  {
+    version: '1.5.0',
+    date: '2026-11-17',
+    notes: [
+      'Every 3D figure rebuilt from scratch as a chunky painted miniature: bigger heads you can read from across the table, eyes with whites and a glint, brows and mouths that show the mood, belts, buckles, trims and pouches, all painted from one shared palette',
+      'A new look editor in six tabs (Body, Face, Hair, Outfit, Gear, Colours). Pick presentation separately from build (slight to heavy) and height; face shape, eye shape, brows and nose; 18 hairstyles and 11 kinds of facial hair; eyepatch, eye scar and more marks',
+      'Dress your hero: ten outfits (tunic, doublet, long coat, leathers, robe, vestments, gown, wraps, furs, work apron), five kinds of armour from leather to full plate, a cape, cloak or fur mantle, and twelve kinds of headwear',
+      'Arm your hero: seventeen main-hand choices (swords, axes, hammers, spears, staves, wands, bows, a crossbow, a lute, even a tankard), shields and other off-hand gear, and things to carry (satchel, quiver, bedroll, scarf, pendant and more). Two-handed weapons keep the off hand free',
+      'Paint it: clothes, trim, cloak, leather and metal (steel, dark iron, bronze, gilded, silver, blackened) each have their own colour',
+      'Every class has its own look out of the box, so a barbarian, a wizard and a ranger are easy to tell apart before anyone touches the editor',
+      'People in the world dress for their job: innkeepers, guards, knights, merchants, nobles, smiths, scholars, priests, mages, hunters, bandits, sailors, farmers, herbalists, elders, bards, captives and children. Ghosts look ghostly',
+      'Monsters rebuilt in the same style, from rats and wolves to dragons with long necks and wings, spiders, snakes, oozes, elementals and walking trees',
+      'Rooms re-modelled to match: doors, stairs, furniture, barrels and crates, fires and forges, trees, rocks, shrines and stone walls',
+      'DM: a new AI assistant (the Assistant button in a game you run). Bring your own model: Claude, OpenAI, Gemini, OpenRouter, Mistral, Groq, DeepSeek, xAI, a model on your own computer (Ollama, LM Studio) or any OpenAI-compatible API. The key stays in your browser',
+      'The assistant preps with you: whole adventures from a pitch (scenes, story beats with read-aloud, NPCs, balanced fights, traps and loot), people for a scene, fights balanced for your party, rules answers from the SRD, and "what now?" help mid-session',
+      'Every change an AI suggests waits in a Review queue: accept it, reject it or quick-edit it first, one at a time or all at once. Nothing reaches the players until you accept. Prep you let it apply at once can still be undone there',
+      'Listen: the assistant can follow your narration and the table talk through your microphone and offer suggestions (narration, NPC lines, rulings, tactics, names) as drafts you edit before sending. It can read them aloud. Swearing is bleeped before anything is kept or sent, and nothing is saved unless you save it',
+      'Connect any AI app that speaks MCP (Claude, ChatGPT, Gemini CLI, Cursor, VS Code, LM Studio...) to your campaigns with an access token from the Connect tab. Its changes land in the same Review queue',
+    ],
+  },
   {
     version: '1.4.0',
     date: '2026-10-31',

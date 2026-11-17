@@ -22,6 +22,7 @@ import SoundSettings from './SoundSettings';
 import { useGameAudio } from '../audio/useGameAudio';
 import { MonsterBrowser, StatBlock } from './MonsterBrowser';
 import ReferencePanel from './ReferencePanel';
+import AiLauncher from './ai/AiLauncher'; // the DM's AI assistant, review queue and MCP connection
 import CharacterSheet from './CharacterSheet';
 import CharacterBuilder from './CharacterBuilder';
 import Guide from './Guide';
@@ -658,6 +659,7 @@ export default function GameBoard({ user, code, state, chat, log, connected, onL
               <MapIcon size={13} /> <span className="hide-sm">Prep</span>
             </button>
           )}
+          {isDM && !guided && !previewing && state.dmId === user.id && <AiLauncher code={code} state={state} user={user} />}
           {((isDM && !guided) || previewing) && (
             <button
               className={`small-btn trn-viewas ${previewing ? 'primary-btn' : ''}`}

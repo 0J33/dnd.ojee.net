@@ -287,10 +287,15 @@ function registerSocketHandlers(io) {
     }
   }, EVICT_CHECK_MS);
 
-  io.on('connection', (socket) => {
+  // One connection's handlers. `preset` ({ code, userId }) is the AI tools'
+  // stand-in for a socket (server/ai/dispatch.js): already at that table as
+  // that user, without joining it, so its edits take exactly the paths a
+  // DM's own clicks take (checks, broadcasts, autosave) and nobody's
+  // presence changes.
+  function attach(socket, preset = null) {
     if (closing) return void socket.disconnect(true);
-    let currentRoom = null; // room code
-    let currentUserId = null;
+    let currentRoom = preset ? preset.code : null; // room code
+    let currentUserId = preset ? preset.userId : null;
     const authed = socket.data.user || null; // { id, username } from the login cookie
 
     // Which tab this is (socket.js), for telling a resend from a new edit.
@@ -1793,7 +1798,8 @@ function registerSocketHandlers(io) {
       }
       broadcastRoom(r.code);
     });
-  });
+  }
+  io.on('connection', (socket) => attach(socket));
 
   // Before the process goes (index.js): stop applying anything and write
   // every room. Connections stay up until the process exits; whatever tabs
@@ -1804,6 +1810,47 @@ function registerSocketHandlers(io) {
   };
   // Write every room now and carry on.
   api.saveAll = saveAll;
+  // The AI tools (server/ai/dispatch.js): run one table action as `userId`
+  // through the same handler a socket would, without a connection. Resolves
+  // with what the handler answered ({ error } when it refused, null when it
+  // answers nothing). Rooms not in memory are loaded first.
+  api.dispatch = async (code, userId, event, payload = {}) => {
+    let r = activeRooms.get(code);
+    if (!r) { r = await loadRoomFromDb(code); if (r) startAutoSave(code); }
+    if (!r) return { error: 'Campaign not found' };
+    const handlers = new Map();
+    const emitted = [];
+    const fake = {
+      id: `ai:${uuidv4()}`,
+      data: { user: null, cid: null },
+      handshake: { auth: {} },
+      on: (ev, fn) => { if (!handlers.has(ev)) handlers.set(ev, fn); },
+      use: () => {},
+      emit: (ev, data) => { emitted.push({ ev, data }); },
+      join: () => {}, leave: () => {}, disconnect: () => {},
+    };
+    attach(fake, { code, userId });
+    const fn = handlers.get(event);
+    if (!fn) return { error: `Unknown action ${event}` };
+    const answer = await new Promise((resolve) => {
+      let done = false;
+      const cb = (res) => { if (!done) { done = true; resolve(res ?? { ok: true }); } };
+      Promise.resolve(fn(payload, cb)).then(() => setTimeout(() => cb(null), 0), (err) => cb({ error: err.message }));
+    });
+    const rejected = emitted.find((e) => e.ev === 'actionRejected');
+    if (rejected && !(answer && answer.error)) return { error: rejected.data?.error || 'Refused' };
+    return answer;
+  };
+  // Something for one member's open tabs only (the DM's AI review queue).
+  api.emitToUser = (code, userId, event, payload) => {
+    const r = activeRooms.get(code);
+    const m = r && r.members.find((x) => x.userId === userId);
+    if (m) emitToMember(r, m, event, payload);
+  };
+  api.isOnline = (code, userId) => {
+    const r = activeRooms.get(code);
+    return !!(r && r.members.find((x) => x.userId === userId)?.socketId);
+  };
   return api;
 }
 
